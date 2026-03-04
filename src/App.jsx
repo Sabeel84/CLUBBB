@@ -294,7 +294,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .mclose:hover{background:var(--red-pale);color:var(--red)}
 @media(max-width:600px){
   .mover{padding:0;align-items:flex-end}
-  .modal{position:fixed;bottom:0;left:0;right:0;top:auto;border-radius:20px 20px 0 0;max-width:100%;width:100%;max-height:90dvh;min-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px calc(20px + env(safe-area-inset-bottom,16px));margin:0;border-bottom:none;animation:slideUp .28s cubic-bezier(.32,1.16,.64,1) both}
+  .modal{position:fixed;bottom:0;left:0;right:0;top:auto;border-radius:20px 20px 0 0;max-width:100%;width:100%;max-height:96dvh;height:96dvh;min-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px calc(80px + env(safe-area-inset-bottom,16px));margin:0;border-bottom:none;animation:slideUp .28s cubic-bezier(.32,1.16,.64,1) both}
   .modal-title{font-size:17px;margin-bottom:16px;padding-right:38px;letter-spacing:0}
   .mclose{top:10px;right:10px;width:30px;height:30px;font-size:10px}
 }
