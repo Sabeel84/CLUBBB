@@ -9,6 +9,7 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syne:wght@700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
 :root{
   --bg:#ffffff;
   --bg2:#fafafa;
@@ -146,16 +147,18 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .hero-scroll-dot{width:6px;height:6px;background:var(--mid2);border-radius:50%;animation:dotDance 2s 1s ease-in-out infinite}
 .hero-slash{display:none}
 @media(max-width:600px){
-  .hero{padding:60px 16px 70px}
+  .hero{padding:56px 20px 64px;text-align:center}
   .hero-blob1,.hero-blob2{display:none}
-  .hero-title{font-size:clamp(38px,16.5vw,80px);letter-spacing:-2px;line-height:.9;white-space:nowrap}
-  .hero-eyebrow{font-size:10px;letter-spacing:4px;margin-bottom:20px}
-  .hero-sub{font-size:15px;margin-bottom:40px}
+  .hero-title{font-size:clamp(40px,15vw,78px);letter-spacing:-2px;line-height:.92;white-space:normal;text-align:center;width:100%}
+  .hero-eyebrow{font-size:10px;letter-spacing:3.5px;margin-bottom:18px;justify-content:center}
+  .hero-sub{font-size:14px;margin-bottom:36px;text-align:center;padding:0 4px}
   .hero-ctas{flex-direction:row;flex-wrap:nowrap;justify-content:center;gap:10px;padding:0 4px}
-  .hero-ctas .btn{flex:1;justify-content:center;padding:13px 10px;font-size:13px;min-width:0;white-space:nowrap}
+  .hero-ctas .btn{flex:1;justify-content:center;padding:12px 10px;font-size:13px;min-width:0;white-space:nowrap}
   .hero-scroll-hint{display:none}
 }
-@media(max-width:400px){.hero-title{font-size:13vw;letter-spacing:-1.5px}}
+@media(max-width:400px){
+  .hero-title{font-size:clamp(34px,14vw,60px);letter-spacing:-1.5px}
+}
 
 /* ── BUTTONS ─────────────────────────────────────────── */
 .btn{padding:14px 30px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);border:none;border-radius:14px;letter-spacing:-.01em;position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px}
@@ -242,32 +245,33 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .umeta{font-size:12px;color:var(--mid2);margin-top:3px}
 
 /* ── DRIVE CARD ──────────────────────────────────────── */
-.dcard{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);padding:0;margin-bottom:16px;position:relative;overflow:hidden;transition:all .22s cubic-bezier(.4,0,.2,1);box-shadow:var(--sh-sm)}
-.dcard:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
-.dcard-accent{position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));border-radius:5px 0 0 5px;z-index:2;flex-shrink:0}
-.dcard-inner{padding:20px 20px 18px 28px;min-width:0;width:100%;box-sizing:border-box}
-.dcard-img{width:100%;height:190px;object-fit:cover;display:block;border-radius:var(--r-2xl) var(--r-2xl) 0 0}
-.dcard-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.4px;color:var(--ink);line-height:1.25;word-break:break-word;overflow-wrap:anywhere;margin-bottom:5px}
-.dcard-desc{font-size:13px;color:var(--mid);line-height:1.6;margin-bottom:12px;overflow-wrap:break-word;word-break:break-word}
-.dcard-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;align-items:center}
-.dcard-meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px 14px;margin-bottom:10px}
-.dm{font-size:13px;font-weight:500;color:var(--mid2);display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}
-.dm strong{color:var(--ink);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
-.capbar{height:5px;background:var(--bg3);border-radius:100px;margin:6px 0 10px;overflow:hidden}
-.capfill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc2));border-radius:100px;transition:width .5s cubic-bezier(.4,0,.2,1)}
-.waitbdg{font-size:11px;font-weight:700;color:var(--orange);background:var(--orange-pale);border:1px solid rgba(234,88,12,.18);padding:3px 10px;border-radius:100px;white-space:nowrap}
+.dcard{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:0;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--sh-sm);transition:box-shadow .2s}
+.dcard-accent{position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));z-index:2;pointer-events:none}
+.dcard-inner{padding:16px 16px 14px 20px;width:100%;box-sizing:border-box}
+.dcard-img{width:100%;height:180px;object-fit:cover;display:block;border-radius:20px 20px 0 0}
+.dcard-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.3px;color:var(--ink);line-height:1.3;margin-bottom:4px;display:block;width:100%;word-break:break-word;overflow-wrap:anywhere}
+.dcard-desc{font-size:13px;color:var(--mid);line-height:1.55;margin-bottom:10px;word-break:break-word}
+.dcard-badges{display:flex;flex-wrap:wrap;gap:4px 6px;margin-bottom:8px;align-items:center}
+.dcard-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px;margin-bottom:8px}
+.dcard-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-bottom:8px;align-items:center}
+.dm{font-size:12px;font-weight:500;color:var(--mid2);display:flex;align-items:center;gap:3px;overflow:hidden;max-width:100%}
+.dm strong{color:var(--ink);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.capbar{height:4px;background:var(--bg3);border-radius:100px;margin:4px 0 8px;overflow:hidden}
+.capfill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc2));border-radius:100px;transition:width .4s ease}
+.waitbdg{font-size:10px;font-weight:700;color:var(--orange);background:var(--orange-pale);border:1px solid rgba(234,88,12,.18);padding:2px 8px;border-radius:100px;white-space:nowrap}
+.dcard-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--line)}
 @media(max-width:600px){
-  .dcard{border-radius:16px;margin-bottom:12px}
-  .dcard-inner{padding:12px 12px 14px 20px}
-  .dcard-img{height:130px;border-radius:16px 16px 0 0}
-  .dcard-title{font-size:15px;letter-spacing:0;line-height:1.3}
-  .dcard-desc{font-size:12px;line-height:1.5;margin-bottom:8px}
-  .dcard-meta-grid{grid-template-columns:1fr;gap:4px;margin-bottom:8px}
-  .dcard-meta{gap:4px 10px}
-  .dm{font-size:12px;gap:3px}
-  .dm strong{font-size:12px}
-  .waitbdg{font-size:10px;padding:2px 8px}
+  .dcard{border-radius:14px;margin-bottom:10px}
+  .dcard-inner{padding:12px 12px 10px 16px}
+  .dcard-img{height:120px;border-radius:14px 14px 0 0}
+  .dcard-title{font-size:14px;letter-spacing:0;line-height:1.3;margin-bottom:3px}
+  .dcard-desc{font-size:11.5px;margin-bottom:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .dcard-meta-grid{grid-template-columns:1fr;gap:3px;margin-bottom:6px}
+  .dm{font-size:11px}
+  .dcard-badges{gap:3px 5px;margin-bottom:6px}
+  .dcard-actions{gap:4px;padding-top:6px}
 }
+
 
 /* ── VOTE CARD ───────────────────────────────────────── */
 .vcard{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-xl);padding:26px 28px;margin-bottom:13px;box-shadow:var(--sh-sm);transition:box-shadow .18s}
@@ -283,17 +287,19 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .adsub{font-size:13px;color:var(--mid)}
 
 /* ── MODAL ───────────────────────────────────────────── */
-.mover{position:fixed;inset:0;background:rgba(9,9,11,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:fadeIn .18s ease both;overflow-y:auto}
-.modal{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);max-width:600px;width:100%;max-height:calc(100vh - 32px);overflow-y:auto;padding:44px 40px 40px;position:relative;box-shadow:var(--sh-xl);animation:scaleIn .22s ease both;flex-shrink:0;margin:auto}
-.modal-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-1px;color:var(--ink);margin-bottom:26px;padding-right:48px;line-height:1.2;word-break:break-word}
-.mclose{position:absolute;top:16px;right:16px;background:var(--bg2);border:1.5px solid var(--line2);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mid);cursor:pointer;font-weight:700;transition:all .18s;z-index:10;flex-shrink:0}
-.mclose:hover{background:var(--red-pale);color:var(--red);border-color:rgba(220,38,38,.25)}
+.mover{position:fixed;inset:0;background:rgba(9,9,11,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:fadeIn .18s ease both}
+.modal{background:var(--bg);border:1px solid var(--line);border-radius:24px;max-width:580px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:36px 32px 32px;position:relative;box-shadow:var(--sh-xl);animation:scaleIn .22s ease both;margin:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.6px;color:var(--ink);margin-bottom:22px;padding-right:44px;line-height:1.2;word-break:break-word}
+.mclose{position:absolute;top:12px;right:12px;background:var(--bg2);border:1.5px solid var(--line2);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--mid);cursor:pointer;font-weight:800;transition:all .18s;z-index:10}
+.mclose:hover{background:var(--red-pale);color:var(--red)}
 @media(max-width:600px){
-  .mover{padding:0;align-items:flex-end;justify-content:center}
-  .modal{border-radius:24px 24px 0 0;max-width:100%;width:100%;max-height:88vh;padding:28px 18px 40px;margin:0;border-bottom:none}
-  .modal-title{font-size:19px;margin-bottom:20px;padding-right:44px}
-  .mclose{top:14px;right:14px;width:34px;height:34px;font-size:12px}
+  .mover{padding:0;align-items:flex-end}
+  .modal{position:fixed;bottom:0;left:0;right:0;top:auto;border-radius:20px 20px 0 0;max-width:100%;width:100%;max-height:90dvh;min-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px calc(20px + env(safe-area-inset-bottom,16px));margin:0;border-bottom:none;animation:slideUp .28s cubic-bezier(.32,1.16,.64,1) both}
+  .modal-title{font-size:17px;margin-bottom:16px;padding-right:38px;letter-spacing:0}
+  .mclose{top:10px;right:10px;width:30px;height:30px;font-size:10px}
 }
+@keyframes slideUp{from{transform:translateY(100%);opacity:.4}to{transform:translateY(0);opacity:1}}
+
 
 /* ── PROFILE HERO ────────────────────────────────────── */
 .profile-hero{background:linear-gradient(135deg,#ffffff 0%,#fffdf5 60%,#fff8e8 100%);border:1px solid var(--acc-pale3);border-radius:var(--r-2xl);padding:28px;margin-bottom:24px;position:relative;overflow:hidden;box-shadow:var(--sh-md)}
@@ -369,25 +375,39 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 @media(max-width:640px){.steps{grid-template-columns:1fr}}
 
 /* ── CLUB TILES ──────────────────────────────────────── */
-.clubs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-bottom:48px}
-.club-tile{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);position:relative;overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-sm)}
-.club-tile:hover{box-shadow:var(--sh-lg);transform:translateY(-6px)}
-.club-tile-banner{width:100%;height:130px;object-fit:cover;display:block;flex-shrink:0}
-.club-tile-placeholder{width:100%;height:110px;flex-shrink:0;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);display:flex;align-items:center;justify-content:center;font-size:44px;position:relative;overflow:hidden}
+.clubs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
+.club-tile{background:var(--bg);border:1px solid var(--line);border-radius:20px;position:relative;overflow:hidden;transition:all .22s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-sm)}
+.club-tile:hover{box-shadow:var(--sh-md);transform:translateY(-4px)}
+.club-tile-banner{width:100%;height:110px;object-fit:cover;display:block;flex-shrink:0}
+.club-tile-placeholder{width:100%;height:90px;flex-shrink:0;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
 .club-tile-placeholder::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(255,255,255,.5) 100%)}
-.club-tile-body{padding:16px 18px 20px;flex:1;display:flex;flex-direction:column;gap:8px;position:relative}
-.club-tile-logo-img{width:52px;height:52px;border:3px solid var(--bg);border-radius:16px;margin-top:-34px;position:relative;z-index:2;flex-shrink:0;object-fit:cover;box-shadow:var(--sh-md)}
-.club-tile-logo-init{width:52px;height:52px;border:3px solid var(--bg);border-radius:16px;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#0a0a0a;margin-top:-34px;position:relative;z-index:2;flex-shrink:0;box-shadow:var(--sh-gold);letter-spacing:-0.5px}
-.club-tile-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-.3px;color:var(--ink);line-height:1.2;word-break:break-word;hyphens:auto}
-.club-tile-desc{font-size:12px;color:var(--mid);line-height:1.55;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.club-tile-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px solid var(--line);margin-top:auto}
-.club-tile-stat{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+.club-tile-body{padding:14px 14px 16px;flex:1;display:flex;flex-direction:column;gap:6px;position:relative}
+.club-tile-logo-img{width:46px;height:46px;border:3px solid var(--bg);border-radius:14px;margin-top:-30px;position:relative;z-index:2;flex-shrink:0;object-fit:cover;box-shadow:var(--sh-md)}
+.club-tile-logo-init{width:46px;height:46px;border:3px solid var(--bg);border-radius:14px;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#0a0a0a;margin-top:-30px;position:relative;z-index:2;flex-shrink:0;box-shadow:var(--sh-gold)}
+.club-tile-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--ink);line-height:1.2;word-break:break-word}
+.club-tile-desc{font-size:12px;color:var(--mid);line-height:1.5;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.club-tile-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:10px;border-top:1px solid var(--line);margin-top:auto}
+.club-tile-stat{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;overflow:hidden}
 .club-tile-stat.right{align-items:flex-end}
-.club-tile-stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1}
-.club-tile-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--mid2);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;white-space:nowrap}
-.club-tile-badge{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:3px 10px;border-radius:100px;z-index:3;box-shadow:0 2px 12px rgba(232,130,12,.4)}
-@media(max-width:640px){.clubs-grid{grid-template-columns:1fr}}
-@media(max-width:400px){.clubs-grid{grid-template-columns:1fr}}
+.club-tile-stat-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1}
+.club-tile-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;color:var(--mid2);letter-spacing:1px;font-weight:700;text-transform:uppercase;white-space:normal;word-break:break-word;max-width:80px;line-height:1.2}
+.club-tile-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:3px 9px;border-radius:100px;z-index:3;box-shadow:0 2px 10px rgba(232,130,12,.35)}
+@media(max-width:600px){
+  .clubs-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px}
+  .club-tile{border-radius:16px}
+  .club-tile-placeholder{height:80px;font-size:32px}
+  .club-tile-banner{height:80px}
+  .club-tile-body{padding:10px 10px 12px;gap:4px}
+  .club-tile-logo-init,.club-tile-logo-img{width:38px;height:38px;font-size:13px;border-radius:11px;margin-top:-24px}
+  .club-tile-name{font-size:13px;letter-spacing:-.2px}
+  .club-tile-desc{font-size:11px;-webkit-line-clamp:2}
+  .club-tile-foot{padding-top:8px;gap:4px}
+  .club-tile-stat-num{font-size:17px;letter-spacing:-.5px}
+  .club-tile-stat-label{font-size:8px;letter-spacing:.5px;max-width:60px}
+}
+@media(max-width:360px){
+  .clubs-grid{grid-template-columns:1fr}
+}
 
 /* ── MARKETPLACE ─────────────────────────────────────── */
 .mkt-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:36px}
@@ -1292,14 +1312,16 @@ function Dashboard({ state, go, showToast }) {
             {d.image && <img src={d.image} alt={d.title} className="dcard-img" />}
             <div className="dcard-inner">
               <div className="dcard-title">{d.title}</div>
+              <div className="dcard-badges">
+                <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={d.clubId} />
+              </div>
               {d.description && <div className="dcard-desc">{d.description}</div>}
               <div className="dcard-meta-grid">
                 {d.location  && <div className="dm">📍 <strong>{d.location}</strong></div>}
                 {d.date      && <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>}
-                {d.coordinates && <div className="dm">🗺 <strong>{d.coordinates}</strong></div>}
                 {d.startTime && <div className="dm">🕐 <strong>{fmtTime(d.startTime)}</strong></div>}
+                {d.coordinates && <div className="dm">🗺 <strong>{d.coordinates}</strong></div>}
               </div>
-              <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={d.clubId} />
             </div>
           </div>
         ))
@@ -1376,41 +1398,30 @@ function Drives({ state, upd, showToast, pushNotif }) {
             <div className="dcard-accent" />
             {drive.image && <img src={drive.image} alt={drive.title} className="dcard-img" />}
             <div className="dcard-inner">
-              {/* Title row */}
-              <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6, alignItems:"flex-start", marginBottom:6}}>
-                <div className="dcard-title" style={{flex:"1 1 60%", minWidth:0}}>{drive.title}</div>
-                <div style={{display:"flex", gap:5, flexWrap:"wrap", flexShrink:0, maxWidth:"100%"}}>
-                  <RankBadge rankId={drive.requiredRankId} clubRanks={clubRanks} clubId={drive.clubId} />
-                  {cl && <span className="bdg d">{cl.name}</span>}
-                </div>
+              <div className="dcard-title">{drive.title}</div>
+              <div className="dcard-badges">
+                <RankBadge rankId={drive.requiredRankId} clubRanks={clubRanks} clubId={drive.clubId} />
+                {cl && <span className="bdg d">{cl.name}</span>}
+                {drive.cancelled && <span className="bdg r">CANCELLED</span>}
               </div>
-
-              {/* Description */}
               {drive.description && <div className="dcard-desc">{drive.description}</div>}
-
-              {/* Meta grid — 2 columns */}
               <div className="dcard-meta-grid">
                 {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
                 {drive.date      && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
-                {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
                 {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
+                {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
                 <div className="dm">👥 <strong>{confirmed}/{drive.capacity}</strong> confirmed</div>
-                {waiting > 0 && <div className="dm"><span className="waitbdg">⏳ {waiting} WAITING</span></div>}
+                {waiting > 0 && <div className="dm"><span className="waitbdg">⏳ {waiting} waiting</span></div>}
               </div>
-
-              {/* Capacity bar */}
               <div className="capbar"><div className="capfill" style={{width:`${pct}%`}} /></div>
-
-              {drive.attendanceRecorded && <div style={{marginBottom:10}}><span className="bdg g">✓ ATTENDANCE RECORDED</span></div>}
-
-              {/* Actions row */}
-              <div style={{display:"flex", gap:6, marginTop:10, flexWrap:"wrap", alignItems:"center", rowGap:6}}>
-                {myReg && <span className={`bdg ${myReg.status === "confirmed" ? "g" : "o"}`}>{myReg.status === "confirmed" ? "✓ REGISTERED" : "⏳ WAITING"}</span>}
+              {drive.attendanceRecorded && <div style={{marginBottom:8}}><span className="bdg g">✓ ATTENDED</span></div>}
+              <div className="dcard-actions">
+                {myReg && <span className={`bdg ${myReg.status === "confirmed" ? "g" : "o"}`}>{myReg.status === "confirmed" ? "✓ CONFIRMED" : "⏳ WAITLIST"}</span>}
                 {!myReg && uLevel >= reqLevel && <button className="btn gold xs" onClick={() => register(drive)}>REGISTER</button>}
-                {!myReg && uLevel < reqLevel  && <span className="bdg d">RANK TOO LOW</span>}
+                {!myReg && uLevel < reqLevel  && <span className="bdg d">RANK LOW</span>}
                 {isOwner && waiting > 0 && <button className="btn out xs" onClick={() => setWaitM(drive)}>WAITLIST ({waiting})</button>}
                 {isOwner && !drive.attendanceRecorded && confirmed > 0 && <button className="btn out-grn xs" onClick={() => setAttM(drive)}>ATTENDANCE</button>}
-                <button className="btn out xs" style={{marginLeft:"auto"}} onClick={() => setDetail(drive)}>DETAILS →</button>
+                <button className="btn out xs" style={{marginLeft:"auto"}} onClick={() => setDetail(drive)}>VIEW →</button>
               </div>
             </div>
           </div>
@@ -3052,6 +3063,31 @@ export default function App() {
   const [toast, setToast]   = useState(null);
   const [mobOpen, setMob]   = useState(false);
   const { notifs, push: pushNotif, dismiss } = useNotifications();
+
+  // Inject essential mobile meta tags on mount
+  useEffect(() => {
+    // Viewport — MUST exist for mobile to not zoom out and show code
+    let vp = document.querySelector('meta[name="viewport"]');
+    if (!vp) {
+      vp = document.createElement('meta');
+      vp.name = 'viewport';
+      document.head.prepend(vp);
+    }
+    vp.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
+
+    // Theme color
+    let tc = document.querySelector('meta[name="theme-color"]');
+    if (!tc) { tc = document.createElement('meta'); tc.name='theme-color'; document.head.appendChild(tc); }
+    tc.content = '#ffffff';
+
+    // Page title
+    document.title = 'CLUBBB — Desert Driving Club';
+
+    // Body styles
+    Object.assign(document.body.style, {
+      margin:'0', padding:'0', overflowX:'hidden', background:'#f7f7f8'
+    });
+  }, []);
 
   const showToast = msg => setToast(msg);
   const upd  = patch => setS(s => ({...s, ...patch}));
