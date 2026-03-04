@@ -137,9 +137,9 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .hero-eyebrow{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--acc);margin-bottom:26px;position:relative;display:flex;align-items:center;justify-content:center;gap:12px;animation:fadeIn .9s ease both}
 .hero-eyebrow::before,.hero-eyebrow::after{content:'';flex:0 0 28px;height:1.5px;background:linear-gradient(90deg,transparent,var(--acc2));border-radius:2px}
 .hero-eyebrow::after{background:linear-gradient(90deg,var(--acc2),transparent)}
-.hero-title{font-family:'Syne',sans-serif;font-size:clamp(80px,16vw,176px);font-weight:800;line-height:.84;color:var(--ink);position:relative;margin-bottom:8px;letter-spacing:-5px;animation:fadeUp .8s .08s ease both}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(42px,11vw,176px);font-weight:800;line-height:.88;color:var(--ink);position:relative;margin-bottom:8px;letter-spacing:-4px;animation:fadeUp .8s .08s ease both;white-space:nowrap}
 .hero-title span{background:linear-gradient(135deg,var(--acc3),var(--acc2) 45%,var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
-.hero-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(16px,2vw,20px);font-weight:400;color:var(--mid);margin-bottom:58px;animation:fadeUp .8s .18s ease both;line-height:1.5}
+.hero-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(14px,2vw,20px);font-weight:400;color:var(--mid);margin-bottom:48px;animation:fadeUp .8s .18s ease both;line-height:1.5}
 .hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s .28s ease both}
 .hero-scroll-hint{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.4;animation:fadeIn 1.2s .8s ease both}
 .hero-scroll-hint span{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--mid)}
@@ -148,13 +148,14 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 @media(max-width:760px){
   .hero{padding:72px 20px 80px}
   .hero-blob1,.hero-blob2{display:none}
-  .hero-title{font-size:clamp(58px,18vw,80px);letter-spacing:-3px;line-height:.88}
+  .hero-title{font-size:clamp(38px,16.5vw,80px);letter-spacing:-2px;line-height:.9;white-space:nowrap}
   .hero-eyebrow{font-size:10px;letter-spacing:4px;margin-bottom:20px}
   .hero-sub{font-size:15px;margin-bottom:40px}
   .hero-ctas{flex-direction:row;flex-wrap:nowrap;justify-content:center;gap:10px;padding:0 4px}
   .hero-ctas .btn{flex:1;justify-content:center;padding:13px 10px;font-size:13px;min-width:0;white-space:nowrap}
   .hero-scroll-hint{display:none}
 }
+@media(max-width:400px){.hero-title{font-size:13vw;letter-spacing:-1.5px}}
 
 /* ── BUTTONS ─────────────────────────────────────────── */
 .btn{padding:14px 30px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);border:none;border-radius:14px;letter-spacing:-.01em;position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px}
@@ -240,22 +241,22 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 /* ── DRIVE CARD ──────────────────────────────────────── */
 .dcard{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);padding:0;margin-bottom:18px;position:relative;overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1);box-shadow:var(--sh-sm)}
 .dcard:hover{box-shadow:var(--sh-lg);transform:translateY(-5px)}
-.dcard-accent{position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));border-radius:5px 0 0 5px}
-.dcard-inner{padding:26px 28px 26px 34px}
+.dcard-accent{position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));border-radius:5px 0 0 5px;z-index:1}
+.dcard-inner{padding:24px 24px 22px 32px}
 .dcard-img{width:100%;height:220px;object-fit:cover;display:block;border-radius:var(--r-2xl) var(--r-2xl) 0 0}
-.dcard-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.6px;color:var(--ink);margin-bottom:8px;line-height:1.1}
-.dcard-desc{font-size:14px;color:var(--mid);line-height:1.65;margin-bottom:18px}
-.dcard-meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
-.dm{font-size:13px;font-weight:500;color:var(--mid2);display:flex;align-items:center;gap:5px}
-.dm strong{color:var(--ink);font-weight:700}
-.capbar{height:8px;background:var(--bg3);border-radius:100px;margin:12px 0;overflow:hidden}
+.dcard-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.5px;color:var(--ink);line-height:1.15;word-break:break-word;margin-bottom:6px}
+.dcard-desc{font-size:13px;color:var(--mid);line-height:1.6;margin-bottom:16px}
+.dcard-meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 20px;margin-bottom:14px}
+.dm{font-size:13px;font-weight:500;color:var(--mid2);display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
+.dm strong{color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.capbar{height:6px;background:var(--bg3);border-radius:100px;margin:10px 0 12px;overflow:hidden}
 .capfill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc2));border-radius:100px;transition:width .5s cubic-bezier(.4,0,.2,1)}
-.waitbdg{font-size:11px;font-weight:700;color:var(--orange);background:var(--orange-pale);border:1px solid rgba(234,88,12,.18);padding:3px 11px;border-radius:100px}
+.waitbdg{font-size:11px;font-weight:700;color:var(--orange);background:var(--orange-pale);border:1px solid rgba(234,88,12,.18);padding:3px 11px;border-radius:100px;white-space:nowrap}
 @media(max-width:800px){
-  .dcard-inner{padding:20px 20px 20px 26px}
+  .dcard-inner{padding:18px 16px 18px 24px}
   .dcard-img{height:170px}
-  .dcard-title{font-size:18px}
-  .dcard-meta{gap:10px}
+  .dcard-title{font-size:17px}
+  .dcard-meta-grid{grid-template-columns:1fr;gap:6px}
   .dm{font-size:12px}
 }
 
@@ -985,31 +986,43 @@ function Drives({ state, upd, showToast, pushNotif }) {
           <div key={drive.id} className="dcard">
             <div className="dcard-accent" />
             {drive.image && <img src={drive.image} alt={drive.title} className="dcard-img" />}
-            <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, alignItems:"flex-start"}}>
-              <div className="dcard-title">{drive.title}</div>
-              <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
-                <RankBadge rankId={drive.requiredRankId} clubRanks={clubRanks} clubId={drive.clubId} />
-                {cl && <span className="bdg d">{cl.name}</span>}
+            <div className="dcard-inner">
+              {/* Title row */}
+              <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, alignItems:"flex-start", marginBottom:8}}>
+                <div className="dcard-title" style={{flex:1, minWidth:0}}>{drive.title}</div>
+                <div style={{display:"flex", gap:6, flexWrap:"wrap", flexShrink:0}}>
+                  <RankBadge rankId={drive.requiredRankId} clubRanks={clubRanks} clubId={drive.clubId} />
+                  {cl && <span className="bdg d">{cl.name}</span>}
+                </div>
               </div>
-            </div>
-            <div className="dcard-desc">{drive.description}</div>
-            <div className="dcard-meta">
-              <div className="dm">📍 <strong>{drive.location}</strong></div>
-              {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
-              <div className="dm">📅 <strong>{drive.date}</strong></div>
-              {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
-              <div className="dm">👥 <strong>{confirmed}/{drive.capacity}</strong> confirmed</div>
-              {waiting > 0 && <span className="waitbdg">⏳ {waiting} WAITING</span>}
-            </div>
-            <div className="capbar"><div className="capfill" style={{width:`${pct}%`}} /></div>
-            {drive.attendanceRecorded && <div style={{marginTop:8}}><span className="bdg g">ATTENDANCE RECORDED</span></div>}
-            <div style={{display:"flex", gap:8, marginTop:14, flexWrap:"wrap", alignItems:"center"}}>
-              {myReg && <span className={`bdg ${myReg.status === "confirmed" ? "g" : "o"}`}>{myReg.status === "confirmed" ? "✓ REGISTERED" : "⏳ WAITING LIST"}</span>}
-              {!myReg && uLevel >= reqLevel && <button className="btn gold xs" onClick={() => register(drive)}>REGISTER</button>}
-              {!myReg && uLevel < reqLevel  && <span className="bdg d">RANK TOO LOW</span>}
-              {isOwner && waiting > 0 && <button className="btn out xs" onClick={() => setWaitM(drive)}>WAITING LIST ({waiting})</button>}
-              {isOwner && !drive.attendanceRecorded && confirmed > 0 && <button className="btn out-grn xs" onClick={() => setAttM(drive)}>RECORD ATTENDANCE</button>}
-              <button className="btn out xs" style={{marginLeft:"auto"}} onClick={() => setDetail(drive)}>VIEW DRIVE →</button>
+
+              {/* Description */}
+              {drive.description && <div className="dcard-desc">{drive.description}</div>}
+
+              {/* Meta grid — 2 columns */}
+              <div className="dcard-meta-grid">
+                {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
+                {drive.date      && <div className="dm">📅 <strong>{drive.date}</strong></div>}
+                {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
+                {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
+                <div className="dm">👥 <strong>{confirmed}/{drive.capacity}</strong> confirmed</div>
+                {waiting > 0 && <div className="dm"><span className="waitbdg">⏳ {waiting} WAITING</span></div>}
+              </div>
+
+              {/* Capacity bar */}
+              <div className="capbar"><div className="capfill" style={{width:`${pct}%`}} /></div>
+
+              {drive.attendanceRecorded && <div style={{marginBottom:10}}><span className="bdg g">✓ ATTENDANCE RECORDED</span></div>}
+
+              {/* Actions row */}
+              <div style={{display:"flex", gap:8, marginTop:12, flexWrap:"wrap", alignItems:"center"}}>
+                {myReg && <span className={`bdg ${myReg.status === "confirmed" ? "g" : "o"}`}>{myReg.status === "confirmed" ? "✓ REGISTERED" : "⏳ WAITING LIST"}</span>}
+                {!myReg && uLevel >= reqLevel && <button className="btn gold xs" onClick={() => register(drive)}>REGISTER</button>}
+                {!myReg && uLevel < reqLevel  && <span className="bdg d">RANK TOO LOW</span>}
+                {isOwner && waiting > 0 && <button className="btn out xs" onClick={() => setWaitM(drive)}>WAITING LIST ({waiting})</button>}
+                {isOwner && !drive.attendanceRecorded && confirmed > 0 && <button className="btn out-grn xs" onClick={() => setAttM(drive)}>RECORD ATTENDANCE</button>}
+                <button className="btn out xs" style={{marginLeft:"auto"}} onClick={() => setDetail(drive)}>VIEW DRIVE →</button>
+              </div>
             </div>
           </div>
         );
