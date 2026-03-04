@@ -587,6 +587,7 @@ function getRank(rankId, clubRanks, clubId) {
 function getUser(us, id)  { return us ? us.find(u => u.id === id)  : null; }
 function getClub(cs, id)  { return cs ? cs.find(c => c.id === id)  : null; }
 function fmtTime(t)       { if (!t) return null; const [h,m]=t.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; }
+function fmtDate(d)       { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
 
 /* ─── SHARED UI ─────────────────────────────────────────────── */
 function RankBadge({ rankId, clubRanks, clubId }) {
@@ -759,8 +760,8 @@ function Home({ go, state }) {
             <div key={r.id} className="rank-row" style={{flex:"1 1 160px"}}>
               <div className="rank-num" style={{color:RANK_COLORS[i]}}>{r.level}</div>
               <div>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:RANK_COLORS[i]}}>{r.name}</div>
-                <div style={{fontSize:11,color:"var(--chalk3)",marginTop:2,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:1}}>LEVEL {r.level}</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontSize:16,letterSpacing:2,color:RANK_COLORS[i]}}>{r.name}</div>
+                <div style={{fontSize:11,color:"var(--mid)",marginTop:2,fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:1}}>LEVEL {r.level}</div>
               </div>
             </div>
           ))}
@@ -791,10 +792,10 @@ function Login({ users, onLogin, back }) {
         </div>
         <div className="ibox" style={{marginBottom:20}}>
           Demo accounts:<br/>
-          <strong style={{color:"var(--sand)"}}>ahmed@email.com</strong> (Admin) ·{" "}
-          <strong style={{color:"var(--sand)"}}>khalid@email.com</strong> (Marshal) ·{" "}
-          <strong style={{color:"var(--sand)"}}>mohammed@email.com</strong> (Member) ·{" "}
-          <strong style={{color:"var(--sand)"}}>admin@clubbb.ae</strong> (App Admin)
+          <strong style={{color:"var(--acc2)"}}>ahmed@email.com</strong> (Admin) ·{" "}
+          <strong style={{color:"var(--acc2)"}}>khalid@email.com</strong> (Marshal) ·{" "}
+          <strong style={{color:"var(--acc2)"}}>mohammed@email.com</strong> (Member) ·{" "}
+          <strong style={{color:"var(--acc2)"}}>admin@clubbb.ae</strong> (App Admin)
         </div>
         <button className="btn gold" style={{width:"100%"}} onClick={go}>SIGN IN</button>
       </div>
@@ -1173,7 +1174,7 @@ function Dashboard({ state, go, showToast }) {
         <div style={{display:"flex", gap:18, alignItems:"flex-start", flexWrap:"wrap", position:"relative"}}>
           <div className="ava" style={{width:64, height:64, fontSize:28, clipPath:"polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%)"}}>{(cu.name||"U")[0]}</div>
           <div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:3, color:"var(--chalk)"}}>{cu.name}</div>
+            <div style={{fontFamily:"'Syne',sans-serif", fontSize:32, letterSpacing:3, color:"var(--ink2)"}}>{cu.name}</div>
             <div style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center", marginTop:6}}>
               <RankBadge rankId={cu.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
               <span className={`bdg ${cu.role === "admin" || cu.role === "app_admin" ? "r" : cu.role === "marshal" ? "o" : "d"}`}>
@@ -1181,7 +1182,7 @@ function Dashboard({ state, go, showToast }) {
               </span>
               {myCl && <span className="bdg d">{myCl.name}</span>}
             </div>
-            <div style={{fontSize:12, color:"var(--chalk3)", marginTop:8}}>{cu.email} · {cu.phone}</div>
+            <div style={{fontSize:12, color:"var(--mid)", marginTop:8}}>{cu.email} · {cu.phone}</div>
           </div>
         </div>
       </div>
@@ -1197,8 +1198,8 @@ function Dashboard({ state, go, showToast }) {
       {activeAds.filter(a => a.featured).length > 0 && (
         <>
           <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12}}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:3, color:"var(--sand)", textTransform:"uppercase", display:"flex", alignItems:"center", gap:8}}>
-              <span style={{width:16, height:2, background:"var(--sand)", display:"inline-block"}} /> Featured Offer
+            <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, letterSpacing:3, color:"var(--acc2)", textTransform:"uppercase", display:"flex", alignItems:"center", gap:8}}>
+              <span style={{width:16, height:2, background:"var(--acc2)", display:"inline-block"}} /> Featured Offer
             </div>
             <button className="btn out xs" onClick={() => go("market")}>VIEW MARKETPLACE</button>
           </div>
@@ -1223,7 +1224,7 @@ function Dashboard({ state, go, showToast }) {
         <div className="sh-title">MY UPCOMING DRIVES</div>
       </div>
       {myDrives.length === 0
-        ? <div style={{color:"var(--chalk3)", fontSize:14, marginBottom:32}}>
+        ? <div style={{color:"var(--mid)", fontSize:14, marginBottom:32}}>
             No registered drives yet.{" "}
             <button className="btn out xs" onClick={() => go("drives")} style={{marginLeft:8}}>BROWSE DRIVES</button>
           </div>
@@ -1235,7 +1236,7 @@ function Dashboard({ state, go, showToast }) {
             <div className="dcard-desc">{d.description}</div>
             <div className="dcard-meta">
               <div className="dm">📍 <strong>{d.location}</strong></div>
-              <div className="dm">📅 <strong>{d.date}</strong>{d.startTime && <> · 🕐 <strong>{fmtTime(d.startTime)}</strong></>}</div>
+              <div className="dm">📅 <strong>{fmtDate(d.date)}</strong>{d.startTime && <> · 🕐 <strong>{fmtTime(d.startTime)}</strong></>}</div>
               <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={d.clubId} />
             </div>
           </div>
@@ -1249,7 +1250,7 @@ function Dashboard({ state, go, showToast }) {
             <div className="dcard-accent" style={{background:"var(--green)"}} />
             <div className="dcard-title">{d.title}</div>
             <div className="dcard-meta">
-              <div className="dm">📅 <strong>{d.date}</strong></div>
+              <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>
               <span className="bdg g">✓ COMPLETED</span>
             </div>
           </div>
@@ -1273,10 +1274,14 @@ function Drives({ state, upd, showToast, pushNotif }) {
 
   function register(drive) {
     if (drive.registrations.find(r => r.userId === cu.id)) { showToast("Already registered"); return; }
+    if (drive.cancelled) { showToast("This drive has been cancelled"); return; }
+    if (drive.attendanceRecorded) { showToast("This drive has already taken place"); return; }
+    const today = new Date().toISOString().split("T")[0];
+    if (drive.date && drive.date < today) { showToast("This drive date has passed"); return; }
     const reqLevel = getRank(drive.requiredRankId, clubRanks, drive.clubId)?.level || 1;
     if (uLevel < reqLevel) { showToast("Your rank is too low for this drive"); return; }
     const confirmed = drive.registrations.filter(r => r.status === "confirmed").length;
-    const status    = confirmed >= drive.capacity ? "waiting" : "confirmed";
+    const status    = confirmed >= Number(drive.capacity) ? "waiting" : "confirmed";
     upd({ drives: ds.map(d => d.id === drive.id ? {...d, registrations:[...d.registrations, {userId:cu.id, status}]} : d) });
     showToast(status === "confirmed" ? "✓ Registered!" : "Added to waiting list");
   }
@@ -1292,13 +1297,13 @@ function Drives({ state, upd, showToast, pushNotif }) {
         {canCreate && <button className="btn gold sm" onClick={() => setCreate(true)}>+ POST DRIVE</button>}
       </div>
 
-      {list.length === 0 && <div style={{color:"var(--chalk3)", fontSize:14, padding:"20px 0"}}>No drives posted yet.</div>}
+      {list.length === 0 && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>No drives posted yet.</div>}
 
       {list.map(drive => {
         const confirmed = drive.registrations.filter(r => r.status === "confirmed").length;
         const waiting   = drive.registrations.filter(r => r.status === "waiting").length;
         const myReg     = drive.registrations.find(r => r.userId === cu.id);
-        const isOwner   = drive.postedBy === cu.id || cu.role === "admin";
+        const isOwner   = drive.postedBy === cu.id || cu.role === "admin" || cu.role === "marshal";
         const reqLevel  = getRank(drive.requiredRankId, clubRanks, drive.clubId)?.level || 1;
         const cl        = getClub(cs, drive.clubId);
         const pct       = drive.capacity > 0 ? Math.min(confirmed / drive.capacity * 100, 100) : 0;
@@ -1322,7 +1327,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
               {/* Meta grid — 2 columns */}
               <div className="dcard-meta-grid">
                 {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
-                {drive.date      && <div className="dm">📅 <strong>{drive.date}</strong></div>}
+                {drive.date      && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
                 {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
                 {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
                 <div className="dm">👥 <strong>{confirmed}/{drive.capacity}</strong> confirmed</div>
@@ -1376,7 +1381,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
 
       {waitM && (
         <Modal title="WAITING LIST" onClose={() => setWaitM(null)}>
-          <div style={{fontSize:13, color:"var(--chalk3)", marginBottom:20}}>{waitM.title}</div>
+          <div style={{fontSize:13, color:"var(--mid)", marginBottom:20}}>{waitM.title}</div>
           {waitM.registrations.filter(r => r.status === "waiting").map(reg => {
             const u = getUser(state.users, reg.userId);
             if (!u) return null;
@@ -1389,7 +1394,6 @@ function Drives({ state, upd, showToast, pushNotif }) {
                 </div>
                 <button className="btn gold xs" onClick={() => {
                   upd({ drives: ds.map(d => d.id === waitM.id ? {...d, registrations: d.registrations.map(r => r.userId === reg.userId ? {...r, status:"confirmed"} : r)} : d) });
-                  setWaitM(null);
                   showToast("Member accepted!");
                 }}>ACCEPT</button>
               </div>
@@ -1398,27 +1402,43 @@ function Drives({ state, upd, showToast, pushNotif }) {
         </Modal>
       )}
 
-      {attM && (
-        <Modal title="RECORD ATTENDANCE" onClose={() => setAttM(null)}>
-          <div style={{fontSize:13, color:"var(--chalk3)", marginBottom:16}}>{attM.title} — confirmed attendees will be marked complete.</div>
-          {attM.registrations.filter(r => r.status === "confirmed").map(reg => {
-            const u = getUser(state.users, reg.userId);
-            if (!u) return null;
-            return (
-              <div key={reg.userId} className="urow">
-                <div className="ava">{(u.name||"?")[0]}</div>
-                <div style={{flex:1}}><div className="uname">{u.name}</div></div>
-                <span className="bdg g">✓ PRESENT</span>
-              </div>
-            );
-          })}
-          <button className="btn gold" style={{width:"100%", marginTop:20}} onClick={() => {
-            upd({ drives: ds.map(d => d.id === attM.id ? {...d, attendanceRecorded:true} : d) });
-            setAttM(null);
-            showToast("Attendance recorded!");
-          }}>CONFIRM ATTENDANCE</button>
-        </Modal>
-      )}
+      {attM && (() => {
+        const AttModal = () => {
+          const confirmed = attM.registrations.filter(r => r.status === "confirmed");
+          const [present, setPresent] = useState(() => {
+            const init = {}; confirmed.forEach(r => { init[r.userId] = true; }); return init;
+          });
+          const presentCount = Object.values(present).filter(Boolean).length;
+          return (
+            <Modal title="RECORD ATTENDANCE" onClose={() => setAttM(null)}>
+              <div style={{fontSize:13, color:"var(--mid)", marginBottom:16}}>{attM.title} — tick who actually showed up.</div>
+              {confirmed.map(reg => {
+                const u = getUser(state.users, reg.userId);
+                if (!u) return null;
+                return (
+                  <div key={reg.userId} className="urow" style={{cursor:"pointer"}} onClick={() => setPresent(p => ({...p, [reg.userId]: !p[reg.userId]}))}>
+                    <div className="ava">{(u.name||"?")[0]}</div>
+                    <div style={{flex:1}}><div className="uname">{u.name}</div></div>
+                    <div style={{width:24, height:24, borderRadius:7, border:`2px solid ${present[reg.userId] ? "var(--green)" : "var(--line2)"}`,
+                      background: present[reg.userId] ? "var(--green)" : "transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:"#fff", fontWeight:800, transition:"all .15s", flexShrink:0}}>
+                      {present[reg.userId] ? "✓" : ""}
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{fontSize:12, color:"var(--mid)", margin:"10px 0 4px"}}>{presentCount} / {confirmed.length} members marked present</div>
+              <button className="btn gold" style={{width:"100%", marginTop:12}} onClick={() => {
+                upd({ drives: ds.map(d => d.id === attM.id ? {...d, attendanceRecorded:true,
+                  registrations: d.registrations.map(r => r.status === "confirmed" ? {...r, attended: !!present[r.userId]} : r)} : d) });
+                setAttM(null);
+                showToast(`Attendance recorded — ${presentCount} present`);
+              }}>CONFIRM ATTENDANCE</button>
+            </Modal>
+          );
+        };
+        return <AttModal />;
+      })()}
     </div>
   );
 }
@@ -1432,7 +1452,7 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
       <div className="fg">
         <label className="fl">Drive Cover Image <span style={{color:"var(--red)"}}>*</span></label>
         <ImageUpload value={f.image} onChange={v => setF({...f, image:v})} height={160} label="Upload Cover Photo" hint="Required · JPG, PNG, WEBP · Max 5MB" />
-        {!f.image && <div style={{fontSize:11, color:"var(--red)", marginTop:6, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:1}}>A cover image is required</div>}
+        {!f.image && <div style={{fontSize:11, color:"var(--red)", marginTop:6, fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:1}}>A cover image is required</div>}
       </div>
       <div className="fg"><label className="fl">Drive Name <span style={{color:"var(--red)"}}>*</span></label><input className="fi" value={f.title} onChange={s("title")} placeholder="Liwa Dunes Expedition" /></div>
       <div className="fg"><label className="fl">Description</label><textarea className="fi fi-ta" value={f.description} onChange={s("description")} /></div>
@@ -1443,7 +1463,7 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
       <div className="fg">
         <label className="fl">Start Time <span style={{color:"var(--red)"}}>*</span></label>
         <input className="fi" type="time" value={f.startTime} onChange={s("startTime")} />
-        {f.startTime && <div style={{fontSize:11, color:"var(--chalk3)", marginTop:5, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:1}}>
+        {f.startTime && <div style={{fontSize:11, color:"var(--mid)", marginTop:5, fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:1}}>
           Meetup: {(() => { const [h,m]=f.startTime.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; })()}
         </div>}
       </div>
@@ -1489,7 +1509,7 @@ function ClubAdmin({ state, upd, showToast }) {
     setEditRanks(arr.map((r, i) => ({...r, level:i+1})));
   }
 
-  if (!cl) return <div className="page"><div style={{color:"var(--chalk3)"}}>Club not found.</div></div>;
+  if (!cl) return <div className="page"><div style={{color:"var(--mid)"}}>Club not found.</div></div>;
 
   return (
     <div className="page">
@@ -1600,7 +1620,7 @@ function ClubAdmin({ state, upd, showToast }) {
       {tab === "rankings" && (
         <div>
           <div className="ibox" style={{marginBottom:24}}>
-            <strong style={{color:"var(--sand)"}}>RANK EDITOR</strong><br />
+            <strong style={{color:"var(--acc2)"}}>RANK EDITOR</strong><br />
             Rename ranks and reorder hierarchy using the arrows. Level 1 = lowest, Level 5 = highest. Changes apply to all members in your club.
           </div>
           <div style={{marginBottom:20}}>
@@ -1615,7 +1635,7 @@ function ClubAdmin({ state, upd, showToast }) {
                   onChange={e => setEditRanks(editRanks.map((x, j) => j === i ? {...x, name:e.target.value} : x))}
                   placeholder={`Rank ${i + 1} name...`}
                 />
-                <span style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:2, color:"var(--chalk3)", textTransform:"uppercase", flexShrink:0, width:56, textAlign:"right"}}>LVL {i + 1}</span>
+                <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:10, letterSpacing:2, color:"var(--mid)", textTransform:"uppercase", flexShrink:0, width:56, textAlign:"right"}}>LVL {i + 1}</span>
                 <button className="rank-arr-btn" onClick={() => moveRank(i, -1)} disabled={i === 0}>▲</button>
                 <button className="rank-arr-btn" onClick={() => moveRank(i, 1)}  disabled={i === editRanks.length - 1}>▼</button>
               </div>
@@ -1630,7 +1650,7 @@ function ClubAdmin({ state, upd, showToast }) {
             <button className="btn out sm" onClick={() => setEditRanks(DEFAULT_RANKS.map(r => ({...r})))}>RESET TO DEFAULTS</button>
           </div>
           <div className="dvd" />
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:2, color:"var(--chalk3)", textTransform:"uppercase", marginBottom:12}}>Preview</div>
+          <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, letterSpacing:2, color:"var(--mid)", textTransform:"uppercase", marginBottom:12}}>Preview</div>
           <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
             {editRanks.map((r, i) => (
               <span key={r.id} className={`rbdg rbdg-${i + 1}`}>
@@ -1795,7 +1815,7 @@ function ClubAdmin({ state, upd, showToast }) {
                       {d.cancelled && <span className="bdg r">CANCELLED</span>}
                     </div>
                     <div className="dcard-meta">
-                      {d.date      && <div className="dm">📅 <strong>{d.date}</strong></div>}
+                      {d.date      && <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>}
                       {d.startTime && <div className="dm">🕐 <strong>{(() => { const [h,m]=d.startTime.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; })()}</strong></div>}
                       {d.location  && <div className="dm">📍 <strong>{d.location}</strong></div>}
                       <div className="dm">👥 <strong>{confirmed}/{d.capacity||"∞"}</strong> confirmed</div>
@@ -1848,7 +1868,7 @@ function ClubAdmin({ state, upd, showToast }) {
           <div className="ibox" style={{marginBottom:24}}>
             Two active marshals must vote YES before you can finalize a Marshal promotion.
           </div>
-          {myPromos.length === 0 && <div style={{color:"var(--chalk3)", fontSize:14}}>No pending promotion requests.</div>}
+          {myPromos.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No pending promotion requests.</div>}
           {myPromos.map(req => {
             const target = getUser(us, req.userId);
             const yes    = req.votes.filter(v => v.vote === "yes").length;
@@ -1859,21 +1879,21 @@ function ClubAdmin({ state, upd, showToast }) {
                   <div>
                     <div className="vcard-name">{target ? target.name : "Unknown"}</div>
                     <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginTop:4}}>
-                      <span style={{fontSize:12, color:"var(--chalk3)"}}>Promote to:</span>
+                      <span style={{fontSize:12, color:"var(--mid)"}}>Promote to:</span>
                       <RankBadge rankId={req.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
                     </div>
                   </div>
                   <span className={`bdg ${req.status === "approved" ? "g" : "o"}`}>{req.status.toUpperCase()}</span>
                 </div>
                 <div style={{display:"flex", gap:24, marginBottom:12}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
+                  <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
+                  <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
                 </div>
                 {req.votes.map(v => {
                   const vtr = getUser(us, v.voterId);
                   return (
-                    <div key={v.voterId} style={{fontSize:12, color:"var(--chalk3)", marginBottom:3}}>
-                      <strong style={{color:"var(--chalk)"}}>{vtr ? vtr.name : "Unknown"}</strong>:{" "}
+                    <div key={v.voterId} style={{fontSize:12, color:"var(--mid)", marginBottom:3}}>
+                      <strong style={{color:"var(--ink2)"}}>{vtr ? vtr.name : "Unknown"}</strong>:{" "}
                       <span style={{color: v.vote === "yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
                       {v.comment && ` — ${v.comment}`}
                     </div>
@@ -1909,29 +1929,30 @@ function MarshalPanel({ state, upd, showToast }) {
         <div className="sh-title">PROMOTION VOTES</div>
         <div className="sh-sub">Cast your votes on pending promotion requests</div>
       </div>
-      {reqs.length === 0 && <div style={{color:"var(--chalk3)", fontSize:14, padding:"20px 0"}}>No pending votes at this time.</div>}
+      {reqs.length === 0 && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>No pending votes at this time.</div>}
       {reqs.map(req => {
         const target   = getUser(us, req.userId);
         const hasVoted = req.votes.find(v => v.voterId === cu.id);
+        const isOwnPromo = req.userId === cu.id;
         const yes      = req.votes.filter(v => v.vote === "yes").length;
         return (
           <div key={req.id} className="vcard">
             <div style={{marginBottom:14}}>
               <div className="vcard-name">{target ? target.name : "Unknown"}</div>
               <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:6}}>
-                <span style={{fontSize:12, color:"var(--chalk3)"}}>Current:</span>
+                <span style={{fontSize:12, color:"var(--mid)"}}>Current:</span>
                 <RankBadge rankId={target ? target.rankId : 1} clubRanks={clubRanks} clubId={cu.clubId} />
-                <span style={{fontSize:12, color:"var(--chalk3)"}}>→ Proposed:</span>
+                <span style={{fontSize:12, color:"var(--mid)"}}>→ Proposed:</span>
                 <RankBadge rankId={req.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
               </div>
             </div>
             <div style={{marginBottom:14}}>
-              <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:2, color:"var(--chalk3)", marginBottom:8}}>VOTES CAST ({req.votes.length})</div>
+              <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, letterSpacing:2, color:"var(--mid)", marginBottom:8}}>VOTES CAST ({req.votes.length})</div>
               {req.votes.map(v => {
                 const vtr = getUser(us, v.voterId);
                 return (
-                  <div key={v.voterId} style={{fontSize:13, marginBottom:4, color:"var(--chalk3)"}}>
-                    <strong style={{color:"var(--chalk)"}}>{vtr ? vtr.name : "Unknown"}</strong>:{" "}
+                  <div key={v.voterId} style={{fontSize:13, marginBottom:4, color:"var(--mid)"}}>
+                    <strong style={{color:"var(--ink2)"}}>{vtr ? vtr.name : "Unknown"}</strong>:{" "}
                     <span style={{color: v.vote === "yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
                     {v.comment && ` — ${v.comment}`}
                   </div>
@@ -1940,6 +1961,8 @@ function MarshalPanel({ state, upd, showToast }) {
             </div>
             {hasVoted
               ? <span className="bdg d">YOUR VOTE: {hasVoted.vote.toUpperCase()}</span>
+              : isOwnPromo
+              ? <span className="bdg o">⚠️ You cannot vote on your own promotion</span>
               : <div>
                   <div className="fg">
                     <label className="fl">Your Comment (optional)</label>
@@ -2008,8 +2031,8 @@ function AppAdmin({ state, upd, showToast }) {
               <div className="fg"><label className="fl">Link URL (optional)</label><input className="fi" value={form.link} onChange={s("link")} placeholder="https://..." /></div>
             </div>
             <div style={{display:"flex", alignItems:"center", gap:12, margin:"8px 0 16px"}}>
-              <input type="checkbox" id="featured-chk" checked={form.featured} onChange={e => setForm({...form, featured:e.target.checked})} style={{width:16, height:16, accentColor:"var(--sand)", cursor:"pointer"}} />
-              <label htmlFor="featured-chk" style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, letterSpacing:1, color:"var(--chalk)", cursor:"pointer"}}>
+              <input type="checkbox" id="featured-chk" checked={form.featured} onChange={e => setForm({...form, featured:e.target.checked})} style={{width:16, height:16, accentColor:"var(--acc2)", cursor:"pointer"}} />
+              <label htmlFor="featured-chk" style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:700, letterSpacing:1, color:"var(--ink2)", cursor:"pointer"}}>
                 ⭐ Feature on member dashboards
               </label>
             </div>
@@ -2021,8 +2044,8 @@ function AppAdmin({ state, upd, showToast }) {
             }}>POST TO MARKETPLACE</button>
           </div>
 
-          <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:2, color:"var(--chalk)", marginBottom:14}}>ACTIVE ADS</div>
-          {ads.filter(a => a.active).length === 0 && <div style={{color:"var(--chalk3)", fontSize:13, marginBottom:20}}>No active ads yet.</div>}
+          <div style={{fontFamily:"'Syne',sans-serif", fontSize:18, letterSpacing:2, color:"var(--ink2)", marginBottom:14}}>ACTIVE ADS</div>
+          {ads.filter(a => a.active).length === 0 && <div style={{color:"var(--mid)", fontSize:13, marginBottom:20}}>No active ads yet.</div>}
           {ads.filter(a => a.active).map(ad => (
             <div key={ad.id} className="adbanner" style={{alignItems:"flex-start", gap:14}}>
               {ad.thumbnail
@@ -2036,10 +2059,10 @@ function AppAdmin({ state, upd, showToast }) {
                   {ad.category && <span className="bdg d">{ad.category}</span>}
                 </div>
                 <div className="adsub">{ad.desc}</div>
-                {ad.link && <div style={{fontSize:11, color:"var(--sand3)", marginTop:4, fontFamily:"'Barlow Condensed',sans-serif"}}>{ad.link}</div>}
+                {ad.link && <div style={{fontSize:11, color:"var(--acc3)", marginTop:4, fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{ad.link}</div>}
               </div>
               <div style={{display:"flex", flexDirection:"column", gap:6, flexShrink:0}}>
-                <button className="btn xs" style={{background: ad.featured ? "var(--sand3)" : "transparent", color: ad.featured ? "var(--ink)" : "var(--chalk3)", border:"1px solid var(--sand3)", clipPath:"none", fontSize:10, letterSpacing:1, padding:"4px 10px"}}
+                <button className="btn xs" style={{background: ad.featured ? "var(--acc3)" : "transparent", color: ad.featured ? "var(--ink)" : "var(--mid)", border:"1px solid var(--acc3)", clipPath:"none", fontSize:10, letterSpacing:1, padding:"4px 10px"}}
                   onClick={() => { upd({ ads: ads.map(a => a.id === ad.id ? {...a, featured:!a.featured} : a) }); showToast(ad.featured ? "Removed from featured" : "Pinned to dashboards!"); }}>
                   {ad.featured ? "UNFEATURE" : "⭐ FEATURE"}
                 </button>
@@ -2191,12 +2214,12 @@ function AdDetail({ ad, onClose }) {
 
         <div className="ad-modal-content">
           {ad.featured && (
-            <div style={{display:"inline-flex", alignItems:"center", gap:6, background:"var(--sand)", color:"var(--ink)", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", padding:"3px 10px", marginBottom:14}}>
+            <div style={{display:"inline-flex", alignItems:"center", gap:6, background:"var(--acc2)", color:"var(--ink)", fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", padding:"3px 10px", marginBottom:14}}>
               ⭐ FEATURED OFFER
             </div>
           )}
           <div className="ad-modal-cat">
-            <span style={{width:14, height:2, background:"var(--sand3)", display:"inline-block"}} />
+            <span style={{width:14, height:2, background:"var(--acc3)", display:"inline-block"}} />
             {ad.category || "Promotion"}
           </div>
           <div className="ad-modal-title">{ad.title}</div>
@@ -2204,8 +2227,8 @@ function AdDetail({ ad, onClose }) {
 
           {ad.details && (
             <>
-              <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--sand)", marginBottom:12, display:"flex", alignItems:"center", gap:8}}>
-                <span style={{width:16, height:2, background:"var(--sand)", display:"inline-block"}} />
+              <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--acc2)", marginBottom:12, display:"flex", alignItems:"center", gap:8}}>
+                <span style={{width:16, height:2, background:"var(--acc2)", display:"inline-block"}} />
                 Offer Details
               </div>
               <div className="ad-modal-details">{ad.details}</div>
@@ -2215,7 +2238,7 @@ function AdDetail({ ad, onClose }) {
           <div className="ad-modal-actions">
             {ad.link
               ? <a href={ad.link} target="_blank" rel="noreferrer" className="btn gold sm" style={{textDecoration:"none"}}>VISIT OFFER PAGE →</a>
-              : <span style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color:"var(--chalk3)"}}>Contact the advertiser for more information.</span>
+              : <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, color:"var(--mid)"}}>Contact the advertiser for more information.</span>
             }
             <button className="btn out sm" onClick={onClose}>CLOSE</button>
           </div>
@@ -2248,26 +2271,26 @@ function Marketplace({ state }) {
       {/* Featured strip */}
       {featured.length > 0 && (
         <>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:3, color:"var(--sand)", textTransform:"uppercase", marginBottom:14, display:"flex", alignItems:"center", gap:10}}>
-            <span style={{width:20, height:2, background:"var(--sand)", display:"inline-block"}} />
+          <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, letterSpacing:3, color:"var(--acc2)", textTransform:"uppercase", marginBottom:14, display:"flex", alignItems:"center", gap:10}}>
+            <span style={{width:20, height:2, background:"var(--acc2)", display:"inline-block"}} />
             Featured Promotions
           </div>
           <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, marginBottom:40}}>
             {featured.map(ad => (
-              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--ink3),var(--ink2))", border:"1px solid var(--sand3)", position:"relative", overflow:"hidden", cursor:"pointer", transition:"transform .15s,box-shadow .2s"}}
+              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--bg3),var(--bg4))", border:"1px solid var(--acc3)", position:"relative", overflow:"hidden", cursor:"pointer", transition:"transform .15s,box-shadow .2s"}}
                 onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 12px 36px rgba(0,0,0,.45)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=""; }}>
-                <div style={{position:"absolute", top:0, left:0, right:0, height:3, background:"linear-gradient(90deg,var(--sand),var(--sand2))"}} />
+                <div style={{position:"absolute", top:0, left:0, right:0, height:3, background:"linear-gradient(90deg,var(--acc2),var(--acc3))"}} />
                 {ad.thumbnail
                   ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%", height:130, objectFit:"cover", display:"block"}} />
-                  : <div style={{width:"100%", height:130, background:"linear-gradient(135deg,var(--ink4),var(--ink3))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:44}}>{ad.icon}</div>
+                  : <div style={{width:"100%", height:130, background:"linear-gradient(135deg,var(--ink3),var(--ink3))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:44}}>{ad.icon}</div>
                 }
                 <div style={{padding:"16px 18px 18px"}}>
-                  <div style={{position:"absolute", top:ad.thumbnail ? 116 : 116, right:10, fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:"var(--ink)", background:"var(--sand)", padding:"3px 8px"}}>⭐ FEATURED</div>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", color:"var(--sand3)", marginBottom:5}}>{ad.category}</div>
-                  <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:17, letterSpacing:2, color:"var(--chalk)", lineHeight:1.1, marginBottom:6}}>{ad.title}</div>
-                  <div style={{fontSize:12, color:"var(--chalk3)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>{ad.desc}</div>
-                  <div style={{marginTop:12, fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, letterSpacing:1.5, color:"var(--sand)"}}>VIEW DETAILS →</div>
+                  <div style={{position:"absolute", top:ad.thumbnail ? 112 : 118, right:10, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:"var(--ink)", background:"var(--acc2)", padding:"3px 8px"}}>⭐ FEATURED</div>
+                  <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:10, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", color:"var(--acc3)", marginBottom:5}}>{ad.category}</div>
+                  <div style={{fontFamily:"'Syne',sans-serif", fontSize:17, letterSpacing:2, color:"var(--ink)", lineHeight:1.1, marginBottom:6}}>{ad.title}</div>
+                  <div style={{fontSize:12, color:"var(--mid)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>{ad.desc}</div>
+                  <div style={{marginTop:12, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:1.5, color:"var(--acc2)"}}>VIEW DETAILS →</div>
                 </div>
               </div>
             ))}
@@ -2284,7 +2307,7 @@ function Marketplace({ state }) {
 
       {/* All offers grid */}
       {list.length === 0
-        ? <div style={{color:"var(--chalk3)", fontSize:14, padding:"24px 0"}}>No offers in this category yet.</div>
+        ? <div style={{color:"var(--mid)", fontSize:14, padding:"24px 0"}}>No offers in this category yet.</div>
         : <div className="mkt-grid">
             {list.map(ad => (
               <div key={ad.id} className="mkt-card" onClick={() => setSelected(ad)}>
@@ -2329,6 +2352,15 @@ function LiveTracker({ drive, state, upd, showToast }) {
   const driveTrack = liveTrack[drive.id] || {};
   const isSharing  = driveTrack[cu.id]?.sharing || false;
   const [watchId, setWatchId] = useState(null);
+
+  // Cleanup GPS watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation && navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [watchId]);
 
   // Simulate positions for demo members already on drive
   const positions = Object.entries(driveTrack).map(([uid, pos]) => {
@@ -2547,9 +2579,10 @@ function NotifBanner({ notifs, dismiss }) {
 /* ════════════════════════════════════════════════════════
    FEATURE 4 — CLUB CHAT
 ════════════════════════════════════════════════════════ */
-function ClubChat({ state, upd, showToast }) {
+function ClubChat({ state, upd, showToast, forcedClubId }) {
   const { currentUser:cu, users:us, clubs:cs, chat = {} } = state;
-  const clubId   = cu.clubId;
+  const clubId   = forcedClubId || cu.clubId;
+  if (!clubId) return <div style={{padding:"20px 0", color:"var(--mid)", fontSize:14}}>You must be a club member to access chat.</div>;
   const msgs     = chat[clubId] || [];
   const [text, setText] = useState("");
   const endRef   = useRef(null);
@@ -2935,16 +2968,16 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
           <div className="dcard-meta" style={{ flexDirection:"column", gap:10 }}>
             {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
             {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
-            {drive.date      && <div className="dm">📅 <strong>{drive.date}</strong></div>}
+            {drive.date      && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
             {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
             {drive.mapLink   && <a href={drive.mapLink} target="_blank" rel="noreferrer" className="btn out sm" style={{ marginTop:8 }}>🗺 Open in Google Maps</a>}
           </div>
         </div>
       )}
       {tab === "tracker"   && <LiveTracker   drive={drive} state={state} upd={upd} showToast={showToast} />}
-      {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={() => {}} />}
+      {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={showToast} />}
       {tab === "checklist" && <DriveChecklist drive={drive} state={state} upd={upd} showToast={showToast} />}
-      {tab === "chat"      && <ClubChat      state={state} upd={upd} showToast={showToast} />}
+      {tab === "chat"      && <ClubChat      state={state} upd={upd} showToast={showToast} forcedClubId={drive.clubId} />}
       {tab === "rating"    && <DriveRating   drive={drive} state={state} upd={upd} showToast={showToast} />}
     </Modal>
   );
@@ -2963,6 +2996,8 @@ export default function App() {
   const logout = ()  => { setS(s => ({...s, currentUser:null, page:"home"})); setMob(false); };
 
   function reg(type, form) {
+    const emailExists = S.users.find(u => u.email.toLowerCase() === form.email.toLowerCase());
+    if (emailExists) { alert("An account with this email already exists. Please sign in instead."); return; }
     if (type === "member") {
       const u = {id:Date.now(), name:form.name, email:form.email, phone:form.phone, role:"member", rankId:1, clubId:Number(form.clubId), drives:0};
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
