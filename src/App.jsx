@@ -143,7 +143,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .hero-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(14px,2vw,20px);font-weight:400;color:var(--mid);margin-bottom:48px;animation:fadeUp .8s .18s ease both;line-height:1.5}
 .hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s .28s ease both}
 .hero-scroll-hint{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.4;animation:fadeIn 1.2s .8s ease both}
-.hero-scroll-hint span{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--mid)}
+.hero-scroll-hint span{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--mid)}
 .hero-scroll-dot{width:6px;height:6px;background:var(--mid2);border-radius:50%;animation:dotDance 2s 1s ease-in-out infinite}
 .hero-slash{display:none}
 @media(max-width:600px){
@@ -281,7 +281,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 /* ── AD BANNER (legacy - kept for admin panel) ───────── */
 .adbanner{background:linear-gradient(135deg,#fffdf5,#fff9ea);border:1px solid rgba(232,130,12,.18);border-left:4px solid var(--acc2);border-radius:var(--r-lg);padding:18px 22px;margin-bottom:14px;display:flex;align-items:center;gap:18px;position:relative;transition:box-shadow .18s}
 .adbanner:hover{box-shadow:var(--sh-sm)}
-.adbanner::after{content:'SPONSORED';position:absolute;top:10px;right:16px;font-size:8px;font-weight:800;letter-spacing:2.5px;color:var(--acc);text-transform:uppercase;opacity:.65}
+.adbanner::after{content:'SPONSORED';position:absolute;top:10px;right:16px;font-size:9px;font-weight:800;letter-spacing:2px;color:var(--acc);text-transform:uppercase;opacity:.65}
 .adicon{width:54px;height:44px;background:var(--acc-pale2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
 .adtitle{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:3px}
 .adsub{font-size:13px;color:var(--mid)}
@@ -391,7 +391,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .club-tile-stat.right{align-items:flex-end}
 .club-tile-stat-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1}
 .club-tile-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;color:var(--mid2);letter-spacing:1px;font-weight:700;text-transform:uppercase;white-space:normal;word-break:break-word;max-width:80px;line-height:1.2}
-.club-tile-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:3px 9px;border-radius:100px;z-index:3;box-shadow:0 2px 10px rgba(232,130,12,.35)}
+.club-tile-badge{position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:3px 9px;border-radius:100px;z-index:3;box-shadow:0 2px 10px rgba(232,130,12,.35)}
 @media(max-width:600px){
   .clubs-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px}
   .club-tile{border-radius:16px}
@@ -403,7 +403,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
   .club-tile-desc{font-size:11px;-webkit-line-clamp:2}
   .club-tile-foot{padding-top:8px;gap:4px}
   .club-tile-stat-num{font-size:17px;letter-spacing:-.5px}
-  .club-tile-stat-label{font-size:8px;letter-spacing:.5px;max-width:60px}
+  .club-tile-stat-label{font-size:9px;letter-spacing:.3px;max-width:60px}
 }
 @media(max-width:360px){
   .clubs-grid{grid-template-columns:1fr}
