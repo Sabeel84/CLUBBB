@@ -356,22 +356,24 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 @media(max-width:640px){.steps{grid-template-columns:1fr}}
 
 /* ── CLUB TILES ──────────────────────────────────────── */
-.clubs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:24px;margin-bottom:56px}
+.clubs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-bottom:48px}
 .club-tile{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);position:relative;overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-sm)}
 .club-tile:hover{box-shadow:var(--sh-lg);transform:translateY(-6px)}
 .club-tile-banner{width:100%;height:130px;object-fit:cover;display:block;flex-shrink:0}
-.club-tile-placeholder{width:100%;height:130px;flex-shrink:0;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;overflow:hidden}
+.club-tile-placeholder{width:100%;height:110px;flex-shrink:0;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);display:flex;align-items:center;justify-content:center;font-size:44px;position:relative;overflow:hidden}
 .club-tile-placeholder::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(255,255,255,.5) 100%)}
-.club-tile-body{padding:20px 22px 24px;flex:1;display:flex;flex-direction:column;gap:10px;position:relative}
-.club-tile-logo-img{width:56px;height:56px;border:3px solid var(--bg);border-radius:18px;margin-top:-38px;position:relative;z-index:2;flex-shrink:0;object-fit:cover;box-shadow:var(--sh-md)}
-.club-tile-logo-init{width:56px;height:56px;border:3px solid var(--bg);border-radius:18px;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#0a0a0a;margin-top:-38px;position:relative;z-index:2;flex-shrink:0;box-shadow:var(--sh-gold);letter-spacing:-0.5px}
-.club-tile-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.5px;color:var(--ink);line-height:1.1}
-.club-tile-desc{font-size:13px;color:var(--mid);line-height:1.55;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.club-tile-foot{display:flex;align-items:center;justify-content:space-between;padding-top:14px;border-top:1px solid var(--line);margin-top:auto}
-.club-tile-count{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:baseline;gap:5px;letter-spacing:-1px}
-.club-tile-count span{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--mid2);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;-webkit-text-fill-color:var(--mid2)}
-.club-tile-badge{position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:4px 12px;border-radius:100px;z-index:3;box-shadow:0 2px 12px rgba(232,130,12,.4)}
-@media(max-width:640px){.clubs-grid{grid-template-columns:1fr 1fr}}
+.club-tile-body{padding:16px 18px 20px;flex:1;display:flex;flex-direction:column;gap:8px;position:relative}
+.club-tile-logo-img{width:52px;height:52px;border:3px solid var(--bg);border-radius:16px;margin-top:-34px;position:relative;z-index:2;flex-shrink:0;object-fit:cover;box-shadow:var(--sh-md)}
+.club-tile-logo-init{width:52px;height:52px;border:3px solid var(--bg);border-radius:16px;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#0a0a0a;margin-top:-34px;position:relative;z-index:2;flex-shrink:0;box-shadow:var(--sh-gold);letter-spacing:-0.5px}
+.club-tile-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-.3px;color:var(--ink);line-height:1.2;word-break:break-word;hyphens:auto}
+.club-tile-desc{font-size:12px;color:var(--mid);line-height:1.55;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.club-tile-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px solid var(--line);margin-top:auto}
+.club-tile-stat{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+.club-tile-stat.right{align-items:flex-end}
+.club-tile-stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1}
+.club-tile-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--mid2);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+.club-tile-badge{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:3px 10px;border-radius:100px;z-index:3;box-shadow:0 2px 12px rgba(232,130,12,.4)}
+@media(max-width:640px){.clubs-grid{grid-template-columns:1fr}}
 @media(max-width:400px){.clubs-grid{grid-template-columns:1fr}}
 
 /* ── MARKETPLACE ─────────────────────────────────────── */
@@ -718,10 +720,13 @@ function Home({ go, state }) {
                     <div className="club-tile-name">{cl.name}</div>
                     {cl.description && <div className="club-tile-desc">{cl.description}</div>}
                     <div className="club-tile-foot">
-                      <div className="club-tile-count">{memberCount}<span>Members</span></div>
-                      <div style={{textAlign:"right"}}>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"var(--chalk3)"}}>{upcomingDrives}</div>
-                        <div style={{fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:1.5, color:"var(--chalk3)", textTransform:"uppercase"}}>Upcoming Drives</div>
+                      <div className="club-tile-stat">
+                        <div className="club-tile-stat-num">{memberCount}</div>
+                        <div className="club-tile-stat-label">Members</div>
+                      </div>
+                      <div className="club-tile-stat right">
+                        <div className="club-tile-stat-num">{upcomingDrives}</div>
+                        <div className="club-tile-stat-label">Upcoming Drives</div>
                       </div>
                     </div>
                   </div>
@@ -798,42 +803,357 @@ function Login({ users, onLogin, back }) {
 }
 
 /* ─── REGISTRATION ──────────────────────────────────────────── */
+const CLUBBB_TERMS = `CLUBBB PLATFORM — TERMS & CONDITIONS FOR CLUB REGISTRATION
+
+Last Updated: March 2026 | Version 1.0
+
+By registering a club on CLUBBB, the Club Administrator agrees on behalf of themselves and all club members to these terms. This is a legally binding agreement between the Club Admin, members, and CLUBBB.
+
+1. NATURE OF THE PLATFORM
+CLUBBB is a social networking platform only. It is not an event organiser, tour operator, or safety authority. All drives are organised independently by clubs. CLUBBB bears no responsibility for planning, execution, safety, or outcome of any activity.
+
+2. ACCIDENTS & PERSONAL INJURY
+Desert and off-road driving is inherently dangerous. The Club Admin accepts full responsibility for the safety of all participants. CLUBBB expressly disclaims all liability for any personal injury, bodily harm, death, or medical emergency occurring during any drive or activity, whether or not advertised on CLUBBB. Members participate entirely at their own risk. All clubs and members are strongly advised to carry comprehensive personal accident and vehicle insurance suitable for off-road desert driving.
+
+3. VEHICLE DAMAGE & PROPERTY CLAIMS
+CLUBBB accepts no responsibility for any damage to, loss of, or destruction of any vehicle, equipment, or property arising from any club activity. Any damage claim between members is solely between those parties. CLUBBB will not mediate, arbitrate, or act as guarantor in any such dispute. Vehicle roadworthiness is solely the owner's responsibility.
+
+4. CONDUCT, RACISM & DISCRIMINATION
+Any form of racism, racial vilification, ethnic discrimination, religious intolerance, sexism, or harassment is strictly prohibited. Club Admins must immediately remove any offending member. CLUBBB reserves the right to permanently remove any club or member engaging in discriminatory behaviour. Any racial expression claim or discrimination allegation between members is solely the legal responsibility of those individuals and clubs.
+
+5. MISCONDUCT & MEMBER BEHAVIOUR
+Club Admins are solely responsible for member conduct. Misconduct includes reckless driving, altercations, threatening behaviour, fraud, impersonation, and criminal activity. Any resulting civil or criminal matter is entirely the responsibility of the individuals involved. CLUBBB's liability is expressly excluded.
+
+6. PLATFORM LIABILITY LIMITATION
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, CLUBBB SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES. CLUBBB's total aggregate liability shall not exceed AED 0 (zero), as the Platform is a free social community service.
+
+7. DATA & PRIVACY
+Registration constitutes consent to collection of name, email, phone, and activity data to operate the Platform. GPS data from the Live Tracker is visible only to same-drive members and not stored permanently. Personal data will not be sold to third parties.
+
+8. SOS & EMERGENCY FEATURES
+The SOS feature is a supplementary tool only — not a substitute for official emergency services (Police: 999, Ambulance: 998, Civil Defence: 997). CLUBBB does not guarantee SOS alert delivery and accepts no liability for failures.
+
+9. INDEMNIFICATION
+The Club Admin agrees to fully indemnify and hold harmless CLUBBB from all claims, damages, losses, liabilities, and expenses arising from any drive, injury, property damage, member conduct, or breach of these Terms.
+
+10. GOVERNING LAW
+These Terms are governed by the laws of the United Arab Emirates. All disputes are subject to UAE court jurisdiction. CLUBBB may amend these Terms at any time; continued use constitutes acceptance.
+
+CLUBBB — Desert Driving Community Platform
+contact@clubbb.ae | clubbb.ae`;
+
 function Registration({ type, clubs, onReg, back }) {
-  const [f, setF] = useState({name:"", email:"", phone:"", clubId:""});
-  const s = k => e => setF({...f, [k]: e.target.value});
+  const [f, setF]               = useState({name:"", email:"", phone:"", clubId:""});
+  const [termsOpen, setTermsOpen]     = useState(false);
+  const [clubTermsOpen, setClubTermsOpen] = useState(false);
+  const [accepted, setAccepted]       = useState(false);
+  const [clubAccepted, setClubAccepted] = useState(false);
+  const s = k => e => { setF({...f, [k]: e.target.value}); if (k === "clubId") setClubAccepted(false); };
+
+  const selectedClub = clubs.find(c => String(c.id) === String(f.clubId));
+  const hasClubTerms = selectedClub && selectedClub.terms && selectedClub.terms.trim().length > 0;
+
   function go() {
-    if (!f.name || !f.email || !f.phone) { alert("Fill all required fields"); return; }
-    if (type === "member" && !f.clubId) { alert("Select a club"); return; }
+    if (!f.name || !f.email || !f.phone) { alert("Please fill all required fields"); return; }
+    if (type === "member" && !f.clubId) { alert("Please select a club"); return; }
+    if (type === "club" && !accepted) { alert("You must read and accept the CLUBBB Terms & Conditions to register a club"); return; }
+    if (type === "member" && hasClubTerms && !clubAccepted) { alert(`You must accept ${selectedClub.name}'s Terms & Conditions to join`); return; }
     onReg(f);
   }
+
   return (
-    <div className="page" style={{maxWidth:500}}>
+    <div className="page" style={{maxWidth:520}}>
       <button className="btn out sm" onClick={back} style={{marginBottom:32}}>← BACK</button>
       <div className="sh">
         <div className="sh-label">{type === "member" ? "Membership" : "Club Registration"}</div>
         <div className="sh-title">{type === "member" ? "JOIN A CLUB" : "REGISTER YOUR CLUB"}</div>
         <div className="sh-sub">{type === "member" ? "Become part of a desert driving family" : "Create your club — you'll be the Admin"}</div>
       </div>
+
       <div className="card">
-        <div className="fg"><label className="fl">{type === "club" ? "Club Name" : "Full Name"}</label><input className="fi" value={f.name} onChange={s("name")} placeholder={type === "club" ? "Al Ain Desert Raiders" : "Your full name"} /></div>
-        <div className="fg"><label className="fl">Email Address</label><input className="fi" type="email" value={f.email} onChange={s("email")} placeholder="email@example.com" /></div>
-        <div className="fg"><label className="fl">Phone Number</label><input className="fi" value={f.phone} onChange={s("phone")} placeholder="+971 50 123 4567" /></div>
+        <div className="fg"><label className="fl">{type === "club" ? "Club Name" : "Full Name"} *</label><input className="fi" value={f.name} onChange={s("name")} placeholder={type === "club" ? "Al Ain Desert Raiders" : "Your full name"} /></div>
+        <div className="fg"><label className="fl">Email Address *</label><input className="fi" type="email" value={f.email} onChange={s("email")} placeholder="email@example.com" /></div>
+        <div className="fg"><label className="fl">Phone Number *</label><input className="fi" value={f.phone} onChange={s("phone")} placeholder="+971 50 123 4567" /></div>
+
         {type === "member" && (
-          <div className="fg">
-            <label className="fl">Select Club</label>
-            <select className="fi fi-sel" value={f.clubId} onChange={s("clubId")}>
-              <option value="">Choose your club...</option>
-              {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+          <>
+            <div className="fg">
+              <label className="fl">Select Club</label>
+              <select className="fi fi-sel" value={f.clubId} onChange={s("clubId")}>
+                <option value="">Choose your club...</option>
+                {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Club T&C acceptance — shown only when a club with terms is selected */}
+            {f.clubId && hasClubTerms && (
+              <div style={{marginTop:4}}>
+                <div style={{background:"var(--bg3)", border:"1.5px solid var(--line2)", borderRadius:"var(--r-xl)", padding:"14px 16px", marginBottom:12}}>
+                  <div style={{fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--acc)", marginBottom:6}}>
+                    📋 {selectedClub.name} — Club Terms
+                  </div>
+                  <div style={{fontSize:12, color:"var(--mid)", lineHeight:1.55, marginBottom:10}}>
+                    This club has its own terms and conditions. You must read and accept them before joining.
+                  </div>
+                  <button className="btn out sm" style={{width:"100%"}} onClick={() => setClubTermsOpen(true)}>
+                    📄 Read {selectedClub.name} Terms
+                  </button>
+                </div>
+
+                <div onClick={() => setClubAccepted(a => !a)}
+                  style={{display:"flex", alignItems:"flex-start", gap:12, cursor:"pointer", padding:"13px 15px",
+                    background: clubAccepted ? "rgba(22,163,74,.05)" : "var(--bg)",
+                    border:`1.5px solid ${clubAccepted ? "rgba(22,163,74,.3)" : "var(--line2)"}`,
+                    borderRadius:"var(--r-xl)", transition:"all .2s"}}>
+                  <div style={{width:22, height:22, borderRadius:7, border:`2px solid ${clubAccepted ? "var(--green)" : "var(--line2)"}`,
+                    background: clubAccepted ? "var(--green)" : "transparent",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    flexShrink:0, marginTop:1, transition:"all .2s", fontSize:13, color:"#fff", fontWeight:800}}>
+                    {clubAccepted ? "✓" : ""}
+                  </div>
+                  <div style={{fontSize:13, color:"var(--ink)", lineHeight:1.55}}>
+                    I have read and accept{" "}
+                    <span style={{color:"var(--acc)", fontWeight:700}}>{selectedClub.name}</span>'s Terms & Conditions and agree to follow all club rules.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* No terms set — simple notice */}
+            {f.clubId && !hasClubTerms && (
+              <div style={{fontSize:12, color:"var(--mid2)", padding:"8px 4px"}}>
+                ℹ️ This club hasn't set specific terms yet. You'll be bound by the CLUBBB platform terms.
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── PLATFORM TERMS (club registration only) ── */}
+        {type === "club" && (
+          <div style={{marginTop:8}}>
+            <div style={{background:"var(--bg3)", border:"1.5px solid var(--line2)", borderRadius:"var(--r-xl)", padding:"16px 18px", marginBottom:14}}>
+              <div style={{fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--acc)", marginBottom:8}}>📋 Terms & Conditions</div>
+              <div style={{fontSize:12, color:"var(--mid)", lineHeight:1.6, marginBottom:12}}>
+                Before registering your club on CLUBBB, you must read and accept our Terms & Conditions covering safety, accidents, liability, conduct, and platform rules.
+              </div>
+              <button className="btn out sm" style={{width:"100%"}} onClick={() => setTermsOpen(true)}>📄 Read Full Terms & Conditions</button>
+            </div>
+            <div onClick={() => setAccepted(a => !a)}
+              style={{display:"flex", alignItems:"flex-start", gap:12, cursor:"pointer", padding:"14px 16px",
+                background: accepted ? "rgba(22,163,74,.05)" : "var(--bg)",
+                border:`1.5px solid ${accepted ? "rgba(22,163,74,.3)" : "var(--line2)"}`,
+                borderRadius:"var(--r-xl)", transition:"all .2s"}}>
+              <div style={{width:22, height:22, borderRadius:7, border:`2px solid ${accepted ? "var(--green)" : "var(--line2)"}`,
+                background: accepted ? "var(--green)" : "transparent",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                flexShrink:0, marginTop:1, transition:"all .2s", fontSize:13, color:"#fff", fontWeight:800}}>
+                {accepted ? "✓" : ""}
+              </div>
+              <div style={{fontSize:13, color:"var(--ink)", lineHeight:1.55}}>
+                I have read and agree to the{" "}
+                <span style={{color:"var(--acc)", fontWeight:700, textDecoration:"underline"}} onClick={e => { e.stopPropagation(); setTermsOpen(true); }}>CLUBBB Terms & Conditions</span>.
+                I accept full responsibility for my club's activities and member conduct.
+              </div>
+            </div>
           </div>
         )}
-        <button className="btn gold" style={{width:"100%", marginTop:8}} onClick={go}>
+
+        <button className="btn gold" style={{width:"100%", marginTop:16,
+          opacity: (type === "club" && !accepted) || (type === "member" && hasClubTerms && !clubAccepted) ? .5 : 1}}
+          onClick={go}>
           {type === "member" ? "JOIN CLUB NOW" : "REGISTER & BECOME ADMIN"}
         </button>
       </div>
+
+      {/* ── PLATFORM TERMS MODAL ── */}
+      {termsOpen && (
+        <div className="mover" onClick={() => setTermsOpen(false)}>
+          <div className="modal" style={{maxWidth:660, maxHeight:"88vh"}} onClick={e => e.stopPropagation()}>
+            <button className="mclose" onClick={() => setTermsOpen(false)}>✕</button>
+            <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:6}}>
+              <div style={{width:42, height:42, background:"var(--acc2)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0}}>📋</div>
+              <div>
+                <div className="modal-title" style={{marginBottom:0, fontSize:20}}>Terms & Conditions</div>
+                <div style={{fontSize:12, color:"var(--mid)"}}>CLUBBB Platform — Club Registration Agreement</div>
+              </div>
+            </div>
+            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
+            <div style={{overflowY:"auto", maxHeight:"54vh", paddingRight:8, fontSize:12, lineHeight:1.75, color:"var(--ink2)", fontFamily:"'Plus Jakarta Sans',sans-serif", whiteSpace:"pre-wrap"}}>{CLUBBB_TERMS}</div>
+            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
+            <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+              <button className="btn out sm" style={{flex:1}} onClick={() => setTermsOpen(false)}>Close</button>
+              <button className="btn gold sm" style={{flex:2}} onClick={() => { setAccepted(true); setTermsOpen(false); }}>✓ I Accept These Terms</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CLUB TERMS MODAL ── */}
+      {clubTermsOpen && selectedClub && (
+        <div className="mover" onClick={() => setClubTermsOpen(false)}>
+          <div className="modal" style={{maxWidth:620, maxHeight:"88vh"}} onClick={e => e.stopPropagation()}>
+            <button className="mclose" onClick={() => setClubTermsOpen(false)}>✕</button>
+            <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:6}}>
+              <div style={{width:42, height:42, background:"var(--acc2)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:16, color:"#0a0a0a", flexShrink:0}}>
+                {selectedClub.name.slice(0,2).toUpperCase()}
+              </div>
+              <div>
+                <div className="modal-title" style={{marginBottom:0, fontSize:20}}>{selectedClub.name}</div>
+                <div style={{fontSize:12, color:"var(--mid)"}}>Club Terms & Conditions — Member Agreement</div>
+              </div>
+            </div>
+            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
+            <div style={{overflowY:"auto", maxHeight:"52vh", paddingRight:8, fontSize:13, lineHeight:1.75, color:"var(--ink2)", fontFamily:"'Plus Jakarta Sans',sans-serif", whiteSpace:"pre-wrap"}}>{selectedClub.terms}</div>
+            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
+            <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+              <button className="btn out sm" style={{flex:1}} onClick={() => setClubTermsOpen(false)}>Close</button>
+              <button className="btn gold sm" style={{flex:2}} onClick={() => { setClubAccepted(true); setClubTermsOpen(false); }}>✓ I Accept {selectedClub.name}'s Terms</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+Last Updated: March 2026 | Version 1.0
+
+By registering a club on the CLUBBB platform, the Club Administrator ("Club Admin") agrees, on behalf of themselves and all members of the registered club, to the following terms and conditions in full. These terms form a legally binding agreement between the Club Admin, the club members, and CLUBBB (the "Platform").
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. NATURE OF THE PLATFORM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1.1 CLUBBB is a social networking and community organisation platform designed exclusively to help desert driving enthusiasts discover clubs, coordinate drives, and connect with other members.
+
+1.2 CLUBBB is not an event organiser, tour operator, safety authority, or driving instruction service. The Platform does not plan, supervise, lead, or participate in any desert drive or off-road activity arranged through the Platform.
+
+1.3 All drives, activities, and events listed on the Platform are organised entirely and independently by the registered clubs. CLUBBB bears no responsibility whatsoever for the planning, execution, safety, or outcome of any such activity.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ACCIDENTS & PERSONAL INJURY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+2.1 Desert and off-road driving is an inherently dangerous activity. By registering a club and listing drives on the Platform, the Club Admin acknowledges this risk and accepts full responsibility for the safety of all participants.
+
+2.2 CLUBBB expressly disclaims any and all liability for any personal injury, bodily harm, death, or medical emergency that occurs during or in connection with any drive or activity organised through the Platform, whether or not the drive was advertised on CLUBBB.
+
+2.3 Club Admins are solely responsible for ensuring that appropriate safety measures are in place before, during, and after every drive, including but not limited to: vehicle recovery equipment, first aid provisions, emergency communication, and qualified marshals.
+
+2.4 Members who register for a drive do so voluntarily and entirely at their own risk. Participation in any drive constitutes the member's informed acceptance of all associated risks.
+
+2.5 CLUBBB strongly recommends that all clubs and individual members carry comprehensive personal accident insurance and vehicle insurance appropriate for off-road desert driving.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. VEHICLE DAMAGE & PROPERTY CLAIMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3.1 CLUBBB accepts no responsibility for any damage to, loss of, or destruction of any vehicle, equipment, personal property, or any other asset belonging to any member, third party, or club, arising from or in connection with any activity organised through the Platform.
+
+3.2 Any vehicle damage claim arising between members, clubs, or third parties is solely a matter between those parties. CLUBBB will not act as mediator, arbitrator, or guarantor in any such dispute.
+
+3.3 Club Admins are responsible for clearly communicating to members the risks of vehicle damage associated with the terrain and conditions of each drive. CLUBBB is not liable for any damage resulting from inadequate member briefing.
+
+3.4 CLUBBB does not verify, certify, or inspect the condition of any vehicle participating in a drive. Vehicle roadworthiness and suitability for off-road conditions is solely the responsibility of the vehicle owner.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. CONDUCT, RACISM & DISCRIMINATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4.1 CLUBBB is committed to maintaining a respectful, inclusive, and welcoming community. Any form of racism, racial vilification, ethnic discrimination, religious intolerance, sexism, or harassment is strictly prohibited on the Platform and within any activity associated with it.
+
+4.2 Club Admins are responsible for moderating the conduct of all members within their club. Any member who engages in racist, discriminatory, or hateful conduct — whether on the Platform, during a drive, or in any CLUBBB-associated activity — must be immediately removed by the Club Admin.
+
+4.3 CLUBBB reserves the right to permanently remove any club or member found to have engaged in, facilitated, or tolerated discriminatory behaviour, without notice and without any obligation of refund or compensation.
+
+4.4 Any racial expression claim, discrimination allegation, or harassment complaint arising between members or between clubs is solely the legal responsibility of the individuals and clubs directly involved. CLUBBB accepts no liability for any such claim and will cooperate with relevant authorities where required by law.
+
+4.5 Users agree not to post, share, transmit, or display any content on the Platform that is offensive, defamatory, discriminatory, sexually explicit, or otherwise unlawful. CLUBBB reserves the right to remove any such content and suspend or permanently ban any account in breach of this clause.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. MISCONDUCT & MEMBER BEHAVIOUR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+5.1 Club Admins are solely responsible for the conduct of all registered members of their club. CLUBBB is not responsible for the actions, statements, or behaviour of any individual user or club on or off the Platform.
+
+5.2 Misconduct includes but is not limited to: reckless driving endangering others, verbal or physical altercations during drives, threatening behaviour, fraud, impersonation, submission of false information during registration, and any criminal activity.
+
+5.3 In the event of any misconduct claim, civil dispute, or criminal matter involving a club or its members, CLUBBB's liability is expressly excluded. Such matters are entirely the responsibility of the individuals and clubs involved.
+
+5.4 Club Admins must ensure that all members are properly briefed on expected standards of behaviour before participating in any drive. Failure to do so does not create any liability for CLUBBB.
+
+5.5 CLUBBB reserves the right to suspend or permanently deactivate any club or user account found to be in breach of these conduct standards, at its sole discretion, without any requirement to provide a reason.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. PLATFORM LIABILITY LIMITATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+6.1 TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, CLUBBB, ITS OWNERS, OPERATORS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE USE OF THE PLATFORM OR ANY ACTIVITY ORGANISED THROUGH IT.
+
+6.2 CLUBBB provides the Platform on an "as is" and "as available" basis without warranties of any kind, express or implied. CLUBBB does not guarantee uninterrupted or error-free operation of the Platform.
+
+6.3 CLUBBB's total aggregate liability, in any event where liability cannot be entirely excluded, shall not exceed the sum of AED 0 (zero dirhams), as the Platform is provided as a free social community service.
+
+6.4 CLUBBB is not responsible for the accuracy of any information, drive details, route descriptions, terrain conditions, or safety guidance provided by clubs or members on the Platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. DATA & PRIVACY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+7.1 By registering, Club Admins and members consent to the collection and storage of their name, email address, phone number, and activity data for the purpose of operating the Platform.
+
+7.2 GPS and location data shared voluntarily through the Live Tracker feature is only visible to members within the same drive and is not permanently stored by CLUBBB beyond the duration of the active drive.
+
+7.3 CLUBBB will not sell or share personal data with third parties for commercial purposes without explicit consent, except where required by applicable law or a competent legal authority.
+
+7.4 Club Admins are responsible for ensuring that any data they collect from members through the Platform complies with all applicable data protection laws in their jurisdiction.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. SOS & EMERGENCY FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+8.1 The SOS feature is provided as a supplementary community alert tool only. It is not a substitute for contacting official emergency services (Police: 999, Ambulance: 998, Civil Defence: 997 in the UAE).
+
+8.2 CLUBBB does not guarantee the delivery, timeliness, or receipt of any SOS alert. CLUBBB accepts no liability if an SOS alert is not received, is delayed, or does not result in timely assistance.
+
+8.3 Club Admins and members must always contact official emergency services as the primary response in any life-threatening situation. The SOS feature within CLUBBB is a secondary notification tool only.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. INDEMNIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+9.1 By registering a club, the Club Admin agrees to fully indemnify, defend, and hold harmless CLUBBB and its operators from and against any and all claims, damages, losses, liabilities, costs, and expenses (including legal fees) arising from:
+
+  (a) Any drive, event, or activity organised through the Platform;
+  (b) Any injury, death, or property damage suffered by any member or third party;
+  (c) Any conduct, statement, or action of the Club Admin or any club member;
+  (d) Any breach of these Terms & Conditions by the Club Admin or any member;
+  (e) Any violation of applicable law by the Club Admin or any member.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. GOVERNING LAW & JURISDICTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+10.1 These Terms & Conditions are governed by and construed in accordance with the laws of the United Arab Emirates.
+
+10.2 Any dispute arising out of or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of the UAE.
+
+10.3 CLUBBB reserves the right to amend these Terms & Conditions at any time. Continued use of the Platform following any amendment constitutes acceptance of the revised terms.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DECLARATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+By ticking the acceptance box during club registration, the Club Admin declares that:
+
+  ✓ They have read and fully understood these Terms & Conditions;
+  ✓ They accept these Terms on behalf of themselves and all club members;
+  ✓ They are authorised to register the club and bind its members to these Terms;
+  ✓ All information provided during registration is accurate and truthful;
+  ✓ They understand that CLUBBB is a social platform only and accepts no liability for any activities, incidents, or claims arising from club operations.
+
+CLUBBB — Desert Driving Community Platform
+contact@clubbb.ae | clubbb.ae`;
 
 /* ─── DASHBOARD ─────────────────────────────────────────────── */
 function Dashboard({ state, go, showToast }) {
@@ -1186,34 +1506,93 @@ function ClubAdmin({ state, upd, showToast }) {
 
       {/* ── PROFILE TAB ── */}
       {tab === "profile" && (
-        <div className="card">
-          <div className="fg">
-            <label className="fl">Club Banner</label>
-            <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={180} label="Upload Banner Image" hint="1200×400px recommended · Max 5MB" />
-          </div>
-          <div className="g2" style={{marginTop:8}}>
+        <div>
+          <div className="card">
+            <div className="card-label">Club Branding</div>
             <div className="fg">
-              <label className="fl">Club Logo</label>
-              <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={130} label="Upload Logo" hint="Square image preferred" />
+              <label className="fl">Club Banner</label>
+              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={180} label="Upload Banner Image" hint="1200×400px recommended · Max 5MB" />
             </div>
+            <div className="g2" style={{marginTop:8}}>
+              <div className="fg">
+                <label className="fl">Club Logo</label>
+                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={130} label="Upload Logo" hint="Square image preferred" />
+              </div>
+              <div className="fg">
+                <label className="fl">Club Description</label>
+                <textarea className="fi fi-ta" style={{height:130, resize:"none"}} value={form.description || ""} onChange={s("description")} />
+              </div>
+            </div>
+            <button className="btn gold sm" style={{marginTop:4}} onClick={() => {
+              upd({ clubs: cs.map(c => c.id === cl.id ? {...c, ...form} : c) });
+              showToast("Club profile updated!");
+            }}>SAVE PROFILE</button>
+          </div>
+
+          {/* ── CLUB TERMS EDITOR ── */}
+          <div className="card" style={{marginTop:4}}>
+            <div className="card-label">📋 Club Terms & Conditions</div>
+            <div className="ibox" style={{marginBottom:18}}>
+              These terms will be shown to every member who applies to join your club. Members <strong>must accept</strong> before their registration is processed. Write clearly — include safety requirements, gear rules, conduct expectations, and anything specific to your club.
+            </div>
+
+            {/* Quick-insert template buttons */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginBottom:8}}>Quick Insert Sections</div>
+              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                {[
+                  ["⚙️ Safety Rules",     "SAFETY REQUIREMENTS\n\n• All members must carry a full recovery kit on every drive.\n• Minimum tyre pressure and vehicle spec requirements apply.\n• Members must follow the convoy leader at all times.\n• No overtaking within the convoy without marshal approval.\n• All drivers must have valid UAE driving licence."],
+                  ["🏴 Conduct Rules",    "MEMBER CONDUCT\n\n• Respectful behaviour towards all members is mandatory.\n• Zero tolerance for reckless driving endangering others.\n• Alcohol and substance use before or during drives is strictly prohibited.\n• Members are expected to assist fellow members in recovery situations."],
+                  ["⚠️ Liability Waiver", "LIABILITY & RISK WAIVER\n\n• All drives are undertaken voluntarily and entirely at the member's own risk.\n• The club accepts no responsibility for personal injury, vehicle damage, or loss of property during any club activity.\n• Members are responsible for maintaining adequate vehicle and personal accident insurance.\n• The club reserves the right to refuse participation to any member deemed unfit or inadequately equipped."],
+                  ["👥 Membership Rules", "MEMBERSHIP RULES\n\n• Club membership is subject to admin approval.\n• Members must maintain attendance standards to retain active status.\n• Membership may be revoked for repeated misconduct or extended inactivity.\n• Members must notify the admin in advance if unable to attend a confirmed drive."],
+                ].map(([label, text]) => (
+                  <button key={label} className="btn out xs" onClick={() => {
+                    const cur = form.terms || "";
+                    setForm({...form, terms: cur ? cur + "\n\n" + text : text});
+                  }}>{label}</button>
+                ))}
+                <button className="btn out-red xs" onClick={() => { if(window.confirm("Clear all terms?")) setForm({...form, terms:""}); }}>🗑 Clear</button>
+              </div>
+            </div>
+
             <div className="fg">
-              <label className="fl">Club Description</label>
-              <textarea className="fi fi-ta" style={{height:130, resize:"none"}} value={form.description || ""} onChange={s("description")} />
+              <label className="fl">Terms Text <span style={{fontWeight:400, color:"var(--mid2)"}}>(members will see this before joining)</span></label>
+              <textarea
+                className="fi fi-ta"
+                style={{minHeight:280, fontFamily:"monospace", fontSize:12, lineHeight:1.7}}
+                value={form.terms || ""}
+                onChange={s("terms")}
+                placeholder={"Write your club's terms and conditions here...\n\nTip: Be specific about:\n• Safety gear required\n• Driving standards expected\n• Conduct rules\n• Liability waiver\n• What happens if rules are broken"}
+              />
+            </div>
+
+            {/* Preview */}
+            {form.terms && (
+              <div style={{background:"var(--bg3)", border:"1px solid var(--line)", borderRadius:"var(--r-xl)", padding:"16px 18px", marginTop:4}}>
+                <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--acc)", marginBottom:10}}>👁 Member Preview</div>
+                <div style={{fontSize:12, color:"var(--ink2)", lineHeight:1.75, whiteSpace:"pre-wrap", maxHeight:200, overflowY:"auto"}}>{form.terms}</div>
+              </div>
+            )}
+
+            <div style={{display:"flex", alignItems:"center", gap:10, marginTop:16, padding:"12px 16px", background:"var(--acc-pale)", border:"1px solid var(--acc-pale3)", borderRadius:"var(--r-xl)"}}>
+              <span style={{fontSize:18}}>ℹ️</span>
+              <div style={{fontSize:12, color:"var(--ink2)", lineHeight:1.55}}>
+                Members joining your club will see these terms in a modal and must tick <strong>"I accept"</strong> before their membership is confirmed. You can update these terms at any time — existing members will be notified on next login.
+              </div>
+            </div>
+
+            <button className="btn gold" style={{marginTop:16, width:"100%"}} onClick={() => {
+              upd({ clubs: cs.map(c => c.id === cl.id ? {...c, ...form} : c) });
+              showToast("✓ Club terms saved — members will accept on next join");
+            }}>SAVE TERMS & CONDITIONS</button>
+          </div>
+
+          <div className="card" style={{marginTop:4}}>
+            <div className="ibox">
+              <strong>ROLE RULES</strong><br />
+              Admin, Marshal & Support can post drives. To promote to Marshal, 2 marshals must vote YES.
             </div>
           </div>
-          <div className="fg">
-            <label className="fl">Terms & Conditions</label>
-            <textarea className="fi fi-ta" style={{minHeight:110}} value={form.terms || ""} onChange={s("terms")} />
-          </div>
-          <div className="dvd" />
-          <div className="ibox" style={{marginBottom:18}}>
-            <strong style={{color:"var(--sand)"}}>ROLE RULES</strong><br />
-            Admin & Marshal can post drives. To promote to Marshal, 2 marshals must vote YES.
-          </div>
-          <button className="btn gold" onClick={() => {
-            upd({ clubs: cs.map(c => c.id === cl.id ? {...c, ...form} : c) });
-            showToast("Club updated!");
-          }}>SAVE CHANGES</button>
         </div>
       )}
 
@@ -2278,19 +2657,45 @@ const CHECKLIST_ITEMS = [
 ];
 
 function DriveChecklist({ drive, state, upd, showToast }) {
-  const { currentUser:cu, users:us, checklists = {} } = state;
-  const driveChecks = checklists[drive.id] || {};
-  const myCheck     = driveChecks[cu.id] || {};
-  const isAdmin     = ["admin","marshal","support"].includes(cu.role);
-  const confirmed   = drive.registrations.filter(r => r.status === "confirmed");
-  const done        = CHECKLIST_ITEMS.filter(i => myCheck[i.id]).length;
-  const pct         = Math.round(done / CHECKLIST_ITEMS.length * 100);
-  const allDone     = done === CHECKLIST_ITEMS.length;
+  const { currentUser:cu, users:us, checklists = {}, clubs:cs } = state;
+  const driveChecks  = checklists[drive.id] || {};
+  const myCheck      = driveChecks[cu.id]   || {};
+  const isAdmin      = ["admin","marshal","support"].includes(cu.role);
+  const confirmed    = drive.registrations.filter(r => r.status === "confirmed");
+
+  // Combine base items with drive-specific custom items
+  const customItems  = drive.checklistItems || [];
+  const allItems     = [...CHECKLIST_ITEMS, ...customItems];
+
+  const done    = allItems.filter(i => myCheck[i.id]).length;
+  const pct     = allItems.length ? Math.round(done / allItems.length * 100) : 0;
+  const allDone = done === allItems.length;
+
+  // Custom item editor state (admin only)
+  const [newLabel, setNewLabel] = useState("");
+  const [newIcon,  setNewIcon]  = useState("✅");
+  const ICON_OPTS = ["✅","🔦","🪖","🧯","🩹","🧰","🛞","📡","🗺","⛺","🪢","🔋","🧲","🪝"];
 
   function toggle(itemId) {
     const updated = { ...myCheck, [itemId]: !myCheck[itemId], ts: Date.now() };
     upd({ checklists: { ...checklists, [drive.id]: { ...driveChecks, [cu.id]: updated } } });
-    if (!myCheck[itemId] && done + 1 === CHECKLIST_ITEMS.length) showToast("✅ All checks done — you're ready!");
+    if (!myCheck[itemId] && done + 1 === allItems.length) showToast("✅ All checks done — you're ready!");
+  }
+
+  function addCustomItem() {
+    const label = newLabel.trim();
+    if (!label) { showToast("Enter a label for the checklist item"); return; }
+    const id = "custom_" + Date.now();
+    const item = { id, label, icon: newIcon, custom: true };
+    const updatedItems = [...customItems, item];
+    upd({ drives: state.drives.map(d => d.id === drive.id ? {...d, checklistItems: updatedItems} : d) });
+    setNewLabel("");
+    showToast("✓ Checklist item added");
+  }
+
+  function removeCustomItem(id) {
+    upd({ drives: state.drives.map(d => d.id === drive.id ? {...d, checklistItems: customItems.filter(i => i.id !== id)} : d) });
+    showToast("Item removed");
   }
 
   return (
@@ -2300,10 +2705,12 @@ function DriveChecklist({ drive, state, upd, showToast }) {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <div style={{ fontSize:14, fontWeight:700, color:"var(--ink)" }}>My Vehicle Checklist</div>
           <span style={{ fontSize:13, fontWeight:700, color: allDone ? "var(--green)" : "var(--mid)" }}>
-            {done}/{CHECKLIST_ITEMS.length} {allDone ? "✅ Ready!" : ""}
+            {done}/{allItems.length} {allDone ? "✅ Ready!" : ""}
           </span>
         </div>
         <div className="checklist-progress"><div className="checklist-fill" style={{ width:`${pct}%` }} /></div>
+
+        {/* Base items */}
         {CHECKLIST_ITEMS.map(item => (
           <div key={item.id} className={`check-item${myCheck[item.id] ? " done" : ""}`} onClick={() => toggle(item.id)}>
             <span className="check-icon">{item.icon}</span>
@@ -2311,7 +2718,62 @@ function DriveChecklist({ drive, state, upd, showToast }) {
             <div className="check-box">{myCheck[item.id] ? "✓" : ""}</div>
           </div>
         ))}
+
+        {/* Custom items */}
+        {customItems.length > 0 && (
+          <>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--acc)", margin:"16px 0 8px", display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:16, height:1.5, background:"var(--acc)", display:"inline-block" }} />
+              Club Custom Checks
+              <span style={{ width:16, height:1.5, background:"var(--acc)", display:"inline-block" }} />
+            </div>
+            {customItems.map(item => (
+              <div key={item.id} className={`check-item${myCheck[item.id] ? " done" : ""}`}
+                style={{ borderColor: myCheck[item.id] ? "rgba(22,163,74,.3)" : "var(--acc-pale3)", background: myCheck[item.id] ? "rgba(22,163,74,.04)" : "var(--acc-pale4)" }}
+                onClick={() => toggle(item.id)}>
+                <span className="check-icon">{item.icon}</span>
+                <span className="check-label">{item.label}</span>
+                {isAdmin && (
+                  <button onClick={e => { e.stopPropagation(); removeCustomItem(item.id); }}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"var(--mid3)", fontSize:14, padding:"0 4px", marginRight:4 }}>✕</button>
+                )}
+                <div className="check-box">{myCheck[item.id] ? "✓" : ""}</div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
+
+      {/* Admin: add custom item */}
+      {isAdmin && (
+        <div className="card" style={{ marginBottom:24, padding:"18px 20px" }}>
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--acc)", marginBottom:12 }}>➕ Add Custom Check Item</div>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"flex-end" }}>
+            {/* Icon picker */}
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:"var(--mid2)" }}>Icon</label>
+              <select value={newIcon} onChange={e => setNewIcon(e.target.value)}
+                className="fi fi-sel" style={{ width:70, padding:"9px 8px", fontSize:16, textAlign:"center" }}>
+                {ICON_OPTS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
+              </select>
+            </div>
+            {/* Label input */}
+            <div style={{ flex:1, display:"flex", flexDirection:"column", gap:4, minWidth:160 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:"var(--mid2)" }}>Checklist Item Label</label>
+              <input className="fi" value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                placeholder='e.g. "Sand flag attached"'
+                onKeyDown={e => { if (e.key === "Enter") addCustomItem(); }}
+                style={{ padding:"9px 14px" }} />
+            </div>
+            <button className="btn gold sm" onClick={addCustomItem} style={{ flexShrink:0 }}>Add Item</button>
+          </div>
+          {customItems.length > 0 && (
+            <div style={{ fontSize:11, color:"var(--mid2)", marginTop:10 }}>
+              {customItems.length} custom item{customItems.length !== 1 ? "s" : ""} added · Click ✕ on any item to remove it
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Marshal view — see all members status */}
       {isAdmin && confirmed.length > 0 && (
@@ -2320,16 +2782,16 @@ function DriveChecklist({ drive, state, upd, showToast }) {
           {confirmed.map(reg => {
             const u      = getUser(us, reg.userId);
             const uCheck = driveChecks[reg.userId] || {};
-            const uDone  = CHECKLIST_ITEMS.filter(i => uCheck[i.id]).length;
-            const ready  = uDone === CHECKLIST_ITEMS.length;
+            const uDone  = allItems.filter(i => uCheck[i.id]).length;
+            const ready  = uDone === allItems.length;
             return (
               <div key={reg.userId} className={`marshal-check-row${ready ? " all-done" : ""}`}>
                 <div className="ava" style={{ width:34, height:34, fontSize:13, borderRadius:10 }}>{(u?.name||"?")[0]}</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>{u?.name}</div>
-                  <div style={{ fontSize:11, color:"var(--mid2)", marginTop:2 }}>{uDone}/{CHECKLIST_ITEMS.length} items checked</div>
+                  <div style={{ fontSize:11, color:"var(--mid2)", marginTop:2 }}>{uDone}/{allItems.length} items checked</div>
                 </div>
-                <span className={`bdg ${ready ? "g" : "d"}`}>{ready ? "✅ READY" : `${uDone}/${CHECKLIST_ITEMS.length}`}</span>
+                <span className={`bdg ${ready ? "g" : "d"}`}>{ready ? "✅ READY" : `${uDone}/${allItems.length}`}</span>
               </div>
             );
           })}
