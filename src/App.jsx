@@ -315,6 +315,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .rolebdg-admin{color:var(--red);background:var(--red-pale);border:1px solid rgba(220,38,38,.18)}
 .rolebdg-marshal{color:var(--orange);background:var(--orange-pale);border:1px solid rgba(234,88,12,.18)}
 .rolebdg-member{color:var(--mid);background:var(--bg3);border:1px solid var(--line2)}
+.rolebdg-support{color:var(--blue);background:var(--blue-pale);border:1px solid rgba(37,99,235,.18)}
 .rolebdg-app_admin{color:var(--purple);background:var(--purple-pale);border:1px solid rgba(124,58,237,.18)}
 
 /* ── IMAGE UPLOAD ────────────────────────────────────── */
@@ -432,6 +433,87 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .rank-arr-btn:disabled{opacity:.3;cursor:not-allowed}
 
 @media(max-width:640px){.mkt-grid{grid-template-columns:1fr}.ad-modal{max-height:95vh;border-radius:var(--r-2xl) var(--r-2xl) 0 0;position:fixed;bottom:0;left:0;right:0;max-width:100%}.ad-modal-content{padding:24px 20px 30px}}
+
+/* ── LIVE TRACKER ───────────────────────────────────────── */
+.map-wrap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);margin-bottom:18px;position:relative}
+.map-frame{width:100%;height:360px;background:linear-gradient(160deg,#e8f0e8 0%,#d4e4c8 40%,#c8d8b8 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.05) 1px,transparent 1px);background-size:40px 40px}
+.map-car{position:absolute;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:all .6s ease;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3))}
+.map-car-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);background:rgba(9,9,11,.85);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;letter-spacing:.3px}
+.map-car.me{animation:mapPulse 2s ease-in-out infinite}
+@keyframes mapPulse{0%,100%{filter:drop-shadow(0 3px 8px rgba(232,130,12,.4))}50%{filter:drop-shadow(0 3px 18px rgba(232,130,12,.8))}}
+.map-legend{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.92);border-radius:12px;padding:10px 14px;font-size:11px;font-weight:600;border:1px solid var(--line);backdrop-filter:blur(8px)}
+.map-legend-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:var(--ink2)}
+.map-legend-row:last-child{margin-bottom:0}
+.track-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 18px;background:var(--bg2);border-top:1px solid var(--line)}
+.track-sharing{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green)}
+.track-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:mapPulse 1.5s infinite}
+@media(max-width:800px){.map-frame{height:260px}}
+
+/* ── SOS BUTTON ─────────────────────────────────────────── */
+.sos-btn{background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;border:none;border-radius:20px;padding:18px 36px;cursor:pointer;box-shadow:0 6px 28px rgba(220,38,38,.5);transition:all .2s;display:flex;align-items:center;gap:10px;animation:sosPulse 2s ease-in-out infinite}
+@keyframes sosPulse{0%,100%{box-shadow:0 6px 28px rgba(220,38,38,.5)}50%{box-shadow:0 6px 40px rgba(220,38,38,.85),0 0 0 8px rgba(220,38,38,.15)}}
+.sos-btn:hover{transform:scale(1.04)}
+.sos-btn:active{transform:scale(.97)}
+.sos-active{background:rgba(220,38,38,.06);border:2px solid rgba(220,38,38,.3);border-radius:var(--r-xl);padding:20px 24px;margin-bottom:16px}
+.sos-list-item{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(220,38,38,.04);border:1px solid rgba(220,38,38,.18);border-radius:var(--r-xl);margin-bottom:10px}
+.sos-ping{width:10px;height:10px;border-radius:50%;background:var(--red);animation:sosPulse 1.5s infinite;flex-shrink:0}
+
+/* ── PUSH NOTIFICATION ──────────────────────────────────── */
+.notif-banner{position:fixed;top:80px;right:20px;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 20px;max-width:340px;box-shadow:var(--sh-xl);animation:tup .3s ease both;display:flex;align-items:flex-start;gap:12px}
+.notif-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.notif-icon.sos{background:var(--red-pale)}
+.notif-icon.drive{background:var(--acc-pale2)}
+.notif-icon.reg{background:var(--green-pale)}
+.notif-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.notif-body{font-size:12px;color:var(--mid);line-height:1.5}
+.notif-time{font-size:10px;color:var(--mid3);margin-top:4px;font-weight:600}
+.notif-close{background:none;border:none;color:var(--mid2);cursor:pointer;font-size:16px;padding:0;margin-left:auto;flex-shrink:0;line-height:1}
+
+/* ── CLUB CHAT ───────────────────────────────────────────── */
+.chat-wrap{display:flex;flex-direction:column;height:520px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);overflow:hidden}
+.chat-msgs{flex:1;overflow-y:auto;padding:20px 18px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{display:flex;gap:10px;align-items:flex-start;animation:fadeUp .2s ease both}
+.chat-msg.me{flex-direction:row-reverse}
+.chat-bubble{max-width:72%;padding:11px 16px;border-radius:18px;font-size:14px;line-height:1.55;color:var(--ink)}
+.chat-bubble.them{background:var(--bg3);border:1px solid var(--line);border-bottom-left-radius:6px}
+.chat-bubble.me{background:linear-gradient(135deg,var(--acc3),var(--acc2) 55%,var(--acc));color:#fff;border-bottom-right-radius:6px}
+.chat-bubble.pinned{border-left:3px solid var(--acc);background:var(--acc-pale)}
+.chat-meta{font-size:10px;color:var(--mid3);margin-top:4px;font-weight:600}
+.chat-meta.me{text-align:right}
+.chat-sender{font-size:11px;font-weight:700;color:var(--acc);margin-bottom:3px}
+.chat-pin-badge{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--acc);text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.chat-input-row{display:flex;gap:10px;padding:14px 16px;border-top:1px solid var(--line);background:var(--bg2);align-items:flex-end}
+.chat-input{flex:1;padding:12px 16px;border-radius:14px;border:1.5px solid var(--line2);font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;resize:none;min-height:44px;max-height:120px;background:var(--bg);transition:border-color .18s;line-height:1.5}
+.chat-input:focus{outline:none;border-color:var(--acc)}
+.chat-send{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--acc3),var(--acc));border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s}
+.chat-send:hover{transform:scale(1.06)}
+@media(max-width:800px){.chat-wrap{height:420px}}
+
+/* ── PRE-DRIVE CHECKLIST ────────────────────────────────── */
+.check-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:var(--r-xl);border:1.5px solid var(--line);margin-bottom:10px;cursor:pointer;transition:all .2s;background:var(--bg)}
+.check-item.done{border-color:rgba(22,163,74,.3);background:rgba(22,163,74,.04)}
+.check-item:hover{border-color:var(--acc-pale3);background:var(--acc-pale)}
+.check-box{width:26px;height:26px;border-radius:8px;border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;font-size:14px}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:#fff}
+.check-label{font-size:15px;font-weight:600;color:var(--ink);flex:1}
+.check-item.done .check-label{color:var(--mid);text-decoration:line-through}
+.check-icon{font-size:22px;flex-shrink:0}
+.checklist-progress{height:6px;background:var(--bg3);border-radius:100px;margin-bottom:20px;overflow:hidden}
+.checklist-fill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--green));border-radius:100px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.marshal-check-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--r-xl);border:1px solid var(--line);margin-bottom:8px;background:var(--bg)}
+.marshal-check-row.all-done{border-color:rgba(22,163,74,.25);background:rgba(22,163,74,.04)}
+
+/* ── DRIVE RATING ───────────────────────────────────────── */
+.stars-row{display:flex;gap:6px;margin-bottom:14px}
+.star{font-size:32px;cursor:pointer;transition:transform .15s;line-height:1}
+.star:hover{transform:scale(1.2)}
+.star.lit{filter:drop-shadow(0 2px 6px rgba(245,158,11,.5))}
+.rating-card{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-xl);padding:18px 20px;margin-bottom:10px;box-shadow:var(--sh-xs)}
+.rating-stars{font-size:16px;letter-spacing:1px;margin-bottom:6px}
+.rating-comment{font-size:13px;color:var(--mid);line-height:1.55;margin-bottom:6px}
+.rating-meta{font-size:11px;color:var(--mid3);font-weight:600}
+.avg-score{font-family:'Syne',sans-serif;font-size:56px;font-weight:800;letter-spacing:-3px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
 `
 
 /* ─── CONSTANTS ─────────────────────────────────────────────── */
@@ -478,6 +560,11 @@ const INIT = {
   promos:[
     {id:1, userId:5, rankId:4, role:"marshal", clubId:1, by:1, status:"voting", votes:[], date:"2025-02-20"},
   ],
+  chat:{},         // { clubId: [{id, userId, text, ts, pinned}] }
+  checklists:{},   // { driveId: { userId: {fuel,tyres,gear,spare,ts} } }
+  ratings:{},      // { driveId: [{userId, stars, comment, ts}] }
+  sos:[],          // [{id, userId, lat, lng, ts, resolved}]
+  liveTrack:{},    // { driveId: { userId: {lat,lng,ts,sharing} } }
   ads:[
     {id:1, title:"Toyota GR Sport — Born for the Dunes", desc:"Unmatched capability, legendary reliability. Book your test drive today at your nearest Toyota dealership.", details:"The Toyota GR Sport is engineered for the harshest desert conditions. With a reinforced chassis, adaptive suspension, and 4WD terrain modes, it handles everything from Liwa mega dunes to rocky wadis.\n\n✅ Offer: Free accessory package (value AED 8,000) with every test drive booking.\n✅ Valid until: 31 May 2025\n✅ Locations: All UAE Toyota dealerships\n✅ Contact: Call 800-TOYOTA or book via app\n\nExclusive CLUBBB member perk: Priority test drive slots on weekends.", icon:"🚙", thumbnail:"", active:true, featured:true,  category:"Vehicles", link:""},
     {id:2, title:"Desert Recovery Gear — 20% Off",       desc:"Premium sand ladders, snatch blocks & full recovery kits. Use code DUNES20 at checkout.",                 details:"Get fully equipped for any desert situation. This exclusive CLUBBB member discount covers the complete SandMaster recovery range:\n\n🔧 MaxTrax Sand Ladders (pair) — AED 720 → AED 576\n🔧 Snatch Block Kit — AED 340 → AED 272\n🔧 Full Recovery Bag (10-piece) — AED 980 → AED 784\n\n✅ Code: DUNES20 at checkout\n✅ Free shipping on orders over AED 500\n✅ Valid for CLUBBB members only — limited stock\n\nShop at desertrecoverygear.ae or visit their Dubai Al Quoz showroom.", icon:"⛏️", thumbnail:"", active:true, featured:false, category:"Gear",     link:""},
@@ -852,12 +939,13 @@ function Dashboard({ state, go, showToast }) {
 }
 
 /* ─── DRIVES ────────────────────────────────────────────────── */
-function Drives({ state, upd, showToast }) {
+function Drives({ state, upd, showToast, pushNotif }) {
   const { currentUser:cu, drives:ds, clubs:cs, clubRanks } = state;
   const [createOpen, setCreate] = useState(false);
   const [waitM, setWaitM]       = useState(null);
   const [attM,  setAttM]        = useState(null);
-  const canCreate = ["admin","marshal"].includes(cu.role);
+  const [detailDrive, setDetail] = useState(null);
+  const canCreate = ["admin","marshal","support"].includes(cu.role);
   const myRanks   = getClubRanks(clubRanks, cu.clubId);
   const uLevel    = getRank(cu.rankId, clubRanks, cu.clubId)?.level || 1;
   const list      = cu.role === "app_admin" ? ds : ds.filter(d => d.clubId === cu.clubId);
@@ -921,6 +1009,7 @@ function Drives({ state, upd, showToast }) {
               {!myReg && uLevel < reqLevel  && <span className="bdg d">RANK TOO LOW</span>}
               {isOwner && waiting > 0 && <button className="btn out xs" onClick={() => setWaitM(drive)}>WAITING LIST ({waiting})</button>}
               {isOwner && !drive.attendanceRecorded && confirmed > 0 && <button className="btn out-grn xs" onClick={() => setAttM(drive)}>RECORD ATTENDANCE</button>}
+              <button className="btn out xs" style={{marginLeft:"auto"}} onClick={() => setDetail(drive)}>VIEW DRIVE →</button>
             </div>
           </div>
         );
@@ -932,10 +1021,23 @@ function Drives({ state, upd, showToast }) {
           ranks={myRanks}
           onClose={() => setCreate(false)}
           onSave={d => {
-            upd({ drives: [...ds, {...d, id:Date.now(), postedBy:cu.id, registrations:[], attendanceRecorded:false}] });
+            const newDrive = {...d, id:Date.now(), postedBy:cu.id, registrations:[], attendanceRecorded:false};
+            upd({ drives: [...ds, newDrive] });
             setCreate(false);
-            showToast("Drive posted!");
+            showToast("Drive posted! Members are being notified.");
+            pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
+            if (window.__clubbb_hooks?.onDrivePosted) window.__clubbb_hooks.onDrivePosted(newDrive);
           }}
+        />
+      )}
+
+      {detailDrive && (
+        <DriveDetailModal
+          drive={detailDrive}
+          state={state}
+          upd={upd}
+          showToast={showToast}
+          onClose={() => setDetail(null)}
         />
       )}
 
@@ -1209,6 +1311,32 @@ function ClubAdmin({ state, upd, showToast }) {
                 >
                   {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
+              )}
+
+              {/* Role selector */}
+              {u.id !== cu.id && (
+                <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
+                  <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginBottom:2}}>Role</div>
+                  <select
+                    className="fi fi-sel"
+                    style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:120, flexShrink:0,
+                      borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : u.role==="support" ? "rgba(37,99,235,.3)" : "var(--line2)",
+                      color: u.role==="admin" ? "var(--red)" : u.role==="marshal" ? "var(--orange)" : u.role==="support" ? "var(--blue)" : "var(--ink)"
+                    }}
+                    value={u.role || "member"}
+                    onChange={e => {
+                      const newRole = e.target.value;
+                      if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
+                      upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
+                      showToast(`${u.name} is now ${newRole.toUpperCase()}`);
+                    }}
+                  >
+                    <option value="member">👤 Member</option>
+                    <option value="marshal">🏴 Marshal</option>
+                    <option value="admin">⚙️ Admin</option>
+                    <option value="support">🛠 Support</option>
+                  </select>
+                </div>
               )}
 
               {/* Action buttons */}
@@ -1572,7 +1700,7 @@ function AppAdmin({ state, upd, showToast }) {
                           <div style={{fontSize:14, fontWeight:700, color:"var(--ink)"}}>{u.name}</div>
                           <div style={{fontSize:12, color:"var(--mid)"}}>{u.email}</div>
                         </div>
-                        <span className={`bdg ${u.role === "admin" ? "r" : u.role === "marshal" ? "o" : "d"}`}>{(u.role||"member").toUpperCase()}</span>
+                        <span className={`bdg ${u.role === "admin" ? "r" : u.role === "marshal" ? "o" : u.role === "support" ? "s" : "d"}`}>{(u.role||"member").toUpperCase()}</span>
                         <button className="btn out-red xs" onClick={() => {
                           if (!window.confirm(`Remove member "${u.name}" from this club?`)) return;
                           upd({ users: us.map(x => x.id === u.id ? {...x, clubId:null, role:"member"} : x) });
@@ -1609,7 +1737,7 @@ function AppAdmin({ state, upd, showToast }) {
                   <div style={{fontSize:12, color:"var(--mid)", marginTop:2}}>{u.email} · {u.phone}</div>
                   <div style={{display:"flex", gap:6, flexWrap:"wrap", marginTop:6}}>
                     <RankBadge rankId={u.rankId} clubRanks={clubRanks} clubId={u.clubId} />
-                    <span className={`bdg ${u.role === "admin" ? "r" : u.role === "marshal" ? "o" : "d"}`}>{(u.role||"member").toUpperCase()}</span>
+                    <span className={`bdg ${u.role === "admin" ? "r" : u.role === "marshal" ? "o" : u.role === "support" ? "s" : "d"}`}>{(u.role||"member").toUpperCase()}</span>
                     {cl && <span className="bdg d">🏴 {cl.name}</span>}
                   </div>
                 </div>
@@ -1801,10 +1929,557 @@ function Marketplace({ state }) {
 }
 
 /* ═══ ROOT ══════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════
+   FEATURE 1 — LIVE DRIVE TRACKER
+════════════════════════════════════════════════════════ */
+function LiveTracker({ drive, state, upd, showToast }) {
+  const { currentUser:cu, users:us, liveTrack = {} } = state;
+  const driveTrack = liveTrack[drive.id] || {};
+  const isSharing  = driveTrack[cu.id]?.sharing || false;
+  const [watchId, setWatchId] = useState(null);
+
+  // Simulate positions for demo members already on drive
+  const positions = Object.entries(driveTrack).map(([uid, pos]) => {
+    const u = getUser(us, Number(uid) || uid);
+    return { ...pos, user: u, isMe: (Number(uid) || uid) === cu.id };
+  });
+
+  // Generate stable demo positions for confirmed members
+  const confirmed = drive.registrations.filter(r => r.status === "confirmed");
+  const demoPositions = confirmed.filter(r => r.userId !== cu.id).map((r, i) => {
+    const u = getUser(us, r.userId);
+    const angle = (i / confirmed.length) * Math.PI * 2;
+    return { user: u, lat: 23.11 + Math.cos(angle) * 0.008, lng: 53.77 + Math.sin(angle) * 0.008, isMe: false, sharing: true };
+  });
+
+  function startSharing() {
+    if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
+    const id = navigator.geolocation.watchPosition(
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        upd({ liveTrack: { ...liveTrack, [drive.id]: { ...driveTrack, [cu.id]: { lat, lng, ts: Date.now(), sharing: true } } } });
+      },
+      () => {
+        // Fallback to simulated position for demo
+        upd({ liveTrack: { ...liveTrack, [drive.id]: { ...driveTrack, [cu.id]: { lat: 23.1118 + (Math.random()-.5)*.01, lng: 53.7766 + (Math.random()-.5)*.01, ts: Date.now(), sharing: true } } } });
+      },
+      { enableHighAccuracy: true, maximumAge: 5000 }
+    );
+    setWatchId(id);
+    showToast("📡 Live location sharing started");
+  }
+
+  function stopSharing() {
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    setWatchId(null);
+    const updated = { ...driveTrack };
+    if (updated[cu.id]) updated[cu.id] = { ...updated[cu.id], sharing: false };
+    upd({ liveTrack: { ...liveTrack, [drive.id]: updated } });
+    showToast("Location sharing stopped");
+  }
+
+  // Map rendering — place dots proportionally on canvas
+  const allPos = [...demoPositions, ...(driveTrack[cu.id]?.sharing ? [{ ...driveTrack[cu.id], user: cu, isMe: true }] : [])];
+  const sharingCount = demoPositions.length + (isSharing ? 1 : 0);
+
+  return (
+    <div>
+      <div className="map-wrap">
+        <div className="map-frame">
+          <div className="map-grid" />
+          {/* Render member dots */}
+          {allPos.map((p, i) => {
+            const x = 15 + ((i + 1) / (allPos.length + 1)) * 70;
+            const y = 20 + (i % 3) * 25;
+            return (
+              <div key={i} className={`map-car${p.isMe ? " me" : ""}`}
+                style={{ left: `${x}%`, top: `${y}%` }}>
+                <div style={{ width:36, height:36, borderRadius:"50%", background: p.isMe ? "var(--acc2)" : "var(--ink)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, border: p.isMe ? "3px solid var(--acc)" : "3px solid #fff" }}>
+                  🚙
+                </div>
+                <div className="map-car-label">{p.isMe ? "YOU" : (p.user?.name?.split(" ")[0] || "?")}</div>
+              </div>
+            );
+          })}
+          {allPos.length === 0 && (
+            <div style={{ textAlign:"center", zIndex:2, position:"relative" }}>
+              <div style={{ fontSize:48, marginBottom:8 }}>🏜️</div>
+              <div style={{ fontSize:13, color:"var(--mid)", fontWeight:600 }}>Start sharing to appear on map</div>
+            </div>
+          )}
+          <div className="map-legend">
+            <div className="map-legend-row">🚙 {sharingCount} member{sharingCount !== 1 ? "s" : ""} live</div>
+            <div className="map-legend-row">📍 {drive.location}</div>
+          </div>
+        </div>
+        <div className="track-bar">
+          {isSharing
+            ? <div className="track-sharing"><div className="track-dot" /><span>Sharing your location</span></div>
+            : <div style={{ fontSize:13, color:"var(--mid)", fontWeight:500 }}>Your location is private</div>
+          }
+          <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
+            {!isSharing
+              ? <button className="btn gold sm" onClick={startSharing}>📡 Share My Location</button>
+              : <button className="btn out-red sm" onClick={stopSharing}>⏹ Stop Sharing</button>
+            }
+          </div>
+        </div>
+      </div>
+      <div className="ibox" style={{ fontSize:12 }}>
+        📌 Location is only shared with members of this drive. Sharing stops automatically when you close the app.
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   FEATURE 2 — SOS EMERGENCY
+════════════════════════════════════════════════════════ */
+function SOSPanel({ state, upd, showToast, pushNotif }) {
+  const { currentUser:cu, users:us, clubs:cs, sos = [] } = state;
+  const myClub    = cu.clubId ? getClub(cs, cu.clubId) : null;
+  const marshals  = us.filter(u => u.clubId === cu.clubId && ["marshal","admin"].includes(u.role) && u.id !== cu.id);
+  const myActive  = sos.find(s => s.userId === cu.id && !s.resolved);
+  const clubSOS   = sos.filter(s => {
+    const u = getUser(us, s.userId);
+    return u?.clubId === cu.clubId && !s.resolved;
+  });
+
+  function triggerSOS() {
+    if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals and the club admin with your location.")) return;
+    navigator.geolocation?.getCurrentPosition(
+      pos => sendSOS(pos.coords.latitude, pos.coords.longitude),
+      ()  => sendSOS(23.1118 + (Math.random()-.5)*.02, 53.7766 + (Math.random()-.5)*.02)
+    );
+  }
+
+  function sendSOS(lat, lng) {
+    const entry = { id: Date.now(), userId: cu.id, lat, lng, ts: Date.now(), resolved: false };
+    upd({ sos: [...sos, entry] });
+    marshals.forEach(m => pushNotif({ type:"sos", title:"🚨 SOS ALERT", body:`${cu.name} needs help at ${lat.toFixed(4)}°N ${lng.toFixed(4)}°E`, to: m.id }));
+    showToast("🚨 SOS sent to " + marshals.length + " marshal(s)!");
+  }
+
+  function resolveAlert(id) {
+    upd({ sos: sos.map(s => s.id === id ? { ...s, resolved: true } : s) });
+    showToast("✓ SOS marked as resolved");
+  }
+
+  return (
+    <div>
+      {/* Active SOS alerts visible to marshals/admins */}
+      {["marshal","admin","support"].includes(cu.role) && clubSOS.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--red)", marginBottom:12 }}>⚠️ Active SOS Alerts</div>
+          {clubSOS.map(s => {
+            const u = getUser(us, s.userId);
+            return (
+              <div key={s.id} className="sos-list-item">
+                <div className="sos-ping" />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:15, color:"var(--ink)", marginBottom:3 }}>{u?.name || "Unknown"}</div>
+                  <div style={{ fontSize:12, color:"var(--mid)" }}>📍 {s.lat.toFixed(5)}°N, {s.lng.toFixed(5)}°E</div>
+                  <div style={{ fontSize:11, color:"var(--mid3)", marginTop:2 }}>{new Date(s.ts).toLocaleTimeString()}</div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" className="btn out xs">🗺 Open Map</a>
+                  <button className="btn out-grn xs" onClick={() => resolveAlert(s.id)}>✓ Resolved</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* SOS button for members */}
+      {myActive ? (
+        <div className="sos-active">
+          <div style={{ fontWeight:700, fontSize:16, color:"var(--red)", marginBottom:6 }}>🚨 SOS Active</div>
+          <div style={{ fontSize:13, color:"var(--mid)", marginBottom:14 }}>Your distress signal is live. Marshals have been notified and can see your location.</div>
+          <button className="btn out-grn sm" onClick={() => { upd({ sos: sos.map(s => s.id === myActive.id ? {...s, resolved:true} : s) }); showToast("SOS cancelled"); }}>
+            ✓ I'm Safe — Cancel SOS
+          </button>
+        </div>
+      ) : (
+        <div style={{ textAlign:"center", padding:"32px 20px" }}>
+          <div style={{ fontSize:13, color:"var(--mid)", marginBottom:24, lineHeight:1.6 }}>
+            Press only in a genuine emergency. This will immediately alert <strong>{marshals.length} marshal{marshals.length !== 1 ? "s" : ""}</strong> in {myClub?.name || "your club"} with your GPS coordinates.
+          </div>
+          <button className="sos-btn" onClick={triggerSOS}>
+            🚨 SEND SOS
+          </button>
+          <div style={{ fontSize:11, color:"var(--mid3)", marginTop:16 }}>
+            Only use in a real emergency situation
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   FEATURE 3 — PUSH NOTIFICATIONS
+════════════════════════════════════════════════════════ */
+function useNotifications() {
+  const [notifs, setNotifs] = useState([]);
+  function push(n) {
+    const id = Date.now();
+    setNotifs(q => [...q.slice(-4), { ...n, id }]);
+    setTimeout(() => setNotifs(q => q.filter(x => x.id !== id)), 5000);
+  }
+  function dismiss(id) { setNotifs(q => q.filter(x => x.id !== id)); }
+  return { notifs, push, dismiss };
+}
+
+function NotifBanner({ notifs, dismiss }) {
+  if (!notifs.length) return null;
+  return (
+    <>
+      {notifs.map((n, i) => (
+        <div key={n.id} className="notif-banner" style={{ top: 80 + i * 90 }}>
+          <div className={`notif-icon ${n.type}`}>
+            {n.type === "sos" ? "🚨" : n.type === "drive" ? "🚙" : n.type === "reg" ? "✅" : "🔔"}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div className="notif-title">{n.title}</div>
+            <div className="notif-body">{n.body}</div>
+            <div className="notif-time">{new Date().toLocaleTimeString()}</div>
+          </div>
+          <button className="notif-close" onClick={() => dismiss(n.id)}>✕</button>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   FEATURE 4 — CLUB CHAT
+════════════════════════════════════════════════════════ */
+function ClubChat({ state, upd, showToast }) {
+  const { currentUser:cu, users:us, clubs:cs, chat = {} } = state;
+  const clubId   = cu.clubId;
+  const msgs     = chat[clubId] || [];
+  const [text, setText] = useState("");
+  const endRef   = useRef(null);
+  const isAdmin  = ["admin","marshal","support"].includes(cu.role);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs.length]);
+
+  function send() {
+    const t = text.trim();
+    if (!t) return;
+    const msg = { id: Date.now(), userId: cu.id, text: t, ts: Date.now(), pinned: false };
+    upd({ chat: { ...chat, [clubId]: [...msgs, msg] } });
+    setText("");
+  }
+
+  function pin(id) {
+    upd({ chat: { ...chat, [clubId]: msgs.map(m => m.id === id ? { ...m, pinned: !m.pinned } : m) } });
+  }
+
+  function del(id) {
+    upd({ chat: { ...chat, [clubId]: msgs.filter(m => m.id !== id) } });
+  }
+
+  const pinned = msgs.filter(m => m.pinned);
+
+  return (
+    <div>
+      {/* Pinned announcements */}
+      {pinned.length > 0 && (
+        <div style={{ marginBottom:16 }}>
+          {pinned.map(m => {
+            const u = getUser(us, m.userId);
+            return (
+              <div key={m.id} style={{ display:"flex", gap:10, padding:"12px 16px", background:"var(--acc-pale)", border:"1.5px solid var(--acc-pale3)", borderRadius:"var(--r-xl)", marginBottom:8 }}>
+                <span style={{ fontSize:16 }}>📌</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--acc)", letterSpacing:1, textTransform:"uppercase", marginBottom:3 }}>Pinned by {u?.name?.split(" ")[0]}</div>
+                  <div style={{ fontSize:13, color:"var(--ink)", lineHeight:1.55 }}>{m.text}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="chat-wrap">
+        <div className="chat-msgs">
+          {msgs.length === 0 && (
+            <div style={{ textAlign:"center", margin:"auto", color:"var(--mid2)", fontSize:13 }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>💬</div>
+              No messages yet. Say hello to your club!
+            </div>
+          )}
+          {msgs.map(m => {
+            const u   = getUser(us, m.userId);
+            const isMe = m.userId === cu.id;
+            return (
+              <div key={m.id} className={`chat-msg${isMe ? " me" : ""}`}>
+                {!isMe && <div className="ava" style={{ width:32, height:32, fontSize:13, borderRadius:10, flexShrink:0 }}>{(u?.name||"?")[0]}</div>}
+                <div style={{ maxWidth:"72%" }}>
+                  {!isMe && <div className="chat-sender">{u?.name?.split(" ")[0] || "?"}</div>}
+                  {m.pinned && <div className="chat-pin-badge">📌 Pinned</div>}
+                  <div className={`chat-bubble ${isMe ? "me" : "them"}${m.pinned ? " pinned" : ""}`}>{m.text}</div>
+                  <div className={`chat-meta ${isMe ? "me" : ""}`}>
+                    {new Date(m.ts).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" })}
+                    {(isAdmin || isMe) && (
+                      <span style={{ marginLeft:8 }}>
+                        {isAdmin && <button onClick={() => pin(m.id)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:"var(--mid2)", padding:"0 4px" }}>{m.pinned ? "unpin" : "📌 pin"}</button>}
+                        {(isMe || isAdmin) && <button onClick={() => del(m.id)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:"var(--red)", padding:"0 4px" }}>del</button>}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={endRef} />
+        </div>
+        <div className="chat-input-row">
+          <textarea
+            className="chat-input"
+            placeholder="Message your club..."
+            value={text}
+            rows={1}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          />
+          <button className="chat-send" onClick={send}>↑</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   FEATURE 5 — PRE-DRIVE CHECKLIST
+════════════════════════════════════════════════════════ */
+const CHECKLIST_ITEMS = [
+  { id:"fuel",   label:"Fuel tank full",              icon:"⛽" },
+  { id:"tyres",  label:"Tyre pressure checked",       icon:"🔧" },
+  { id:"gear",   label:"Recovery gear loaded",        icon:"⛏️" },
+  { id:"spare",  label:"Spare tyre on board",         icon:"🔩" },
+  { id:"water",  label:"Water supply (min 5L)",       icon:"💧" },
+  { id:"comms",  label:"Radio / phone charged",       icon:"📻" },
+];
+
+function DriveChecklist({ drive, state, upd, showToast }) {
+  const { currentUser:cu, users:us, checklists = {} } = state;
+  const driveChecks = checklists[drive.id] || {};
+  const myCheck     = driveChecks[cu.id] || {};
+  const isAdmin     = ["admin","marshal","support"].includes(cu.role);
+  const confirmed   = drive.registrations.filter(r => r.status === "confirmed");
+  const done        = CHECKLIST_ITEMS.filter(i => myCheck[i.id]).length;
+  const pct         = Math.round(done / CHECKLIST_ITEMS.length * 100);
+  const allDone     = done === CHECKLIST_ITEMS.length;
+
+  function toggle(itemId) {
+    const updated = { ...myCheck, [itemId]: !myCheck[itemId], ts: Date.now() };
+    upd({ checklists: { ...checklists, [drive.id]: { ...driveChecks, [cu.id]: updated } } });
+    if (!myCheck[itemId] && done + 1 === CHECKLIST_ITEMS.length) showToast("✅ All checks done — you're ready!");
+  }
+
+  return (
+    <div>
+      {/* My checklist */}
+      <div style={{ marginBottom:24 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:"var(--ink)" }}>My Vehicle Checklist</div>
+          <span style={{ fontSize:13, fontWeight:700, color: allDone ? "var(--green)" : "var(--mid)" }}>
+            {done}/{CHECKLIST_ITEMS.length} {allDone ? "✅ Ready!" : ""}
+          </span>
+        </div>
+        <div className="checklist-progress"><div className="checklist-fill" style={{ width:`${pct}%` }} /></div>
+        {CHECKLIST_ITEMS.map(item => (
+          <div key={item.id} className={`check-item${myCheck[item.id] ? " done" : ""}`} onClick={() => toggle(item.id)}>
+            <span className="check-icon">{item.icon}</span>
+            <span className="check-label">{item.label}</span>
+            <div className="check-box">{myCheck[item.id] ? "✓" : ""}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Marshal view — see all members status */}
+      {isAdmin && confirmed.length > 0 && (
+        <div>
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginBottom:12 }}>Member Readiness</div>
+          {confirmed.map(reg => {
+            const u      = getUser(us, reg.userId);
+            const uCheck = driveChecks[reg.userId] || {};
+            const uDone  = CHECKLIST_ITEMS.filter(i => uCheck[i.id]).length;
+            const ready  = uDone === CHECKLIST_ITEMS.length;
+            return (
+              <div key={reg.userId} className={`marshal-check-row${ready ? " all-done" : ""}`}>
+                <div className="ava" style={{ width:34, height:34, fontSize:13, borderRadius:10 }}>{(u?.name||"?")[0]}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>{u?.name}</div>
+                  <div style={{ fontSize:11, color:"var(--mid2)", marginTop:2 }}>{uDone}/{CHECKLIST_ITEMS.length} items checked</div>
+                </div>
+                <span className={`bdg ${ready ? "g" : "d"}`}>{ready ? "✅ READY" : `${uDone}/${CHECKLIST_ITEMS.length}`}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   FEATURE 6 — DRIVE RATING
+════════════════════════════════════════════════════════ */
+function DriveRating({ drive, state, upd, showToast }) {
+  const { currentUser:cu, users:us, ratings = {} } = state;
+  const driveRatings = ratings[drive.id] || [];
+  const myRating     = driveRatings.find(r => r.userId === cu.id);
+  const [hover, setHover]     = useState(0);
+  const [stars, setStars]     = useState(myRating?.stars || 0);
+  const [comment, setComment] = useState(myRating?.comment || "");
+  const wasAttendee = drive.registrations.find(r => r.userId === cu.id && r.status === "confirmed");
+
+  const avg = driveRatings.length ? (driveRatings.reduce((s, r) => s + r.stars, 0) / driveRatings.length).toFixed(1) : null;
+
+  function submitRating() {
+    if (!stars) { showToast("Please select a star rating"); return; }
+    const entry = { userId: cu.id, stars, comment: comment.trim(), ts: Date.now() };
+    const updated = myRating
+      ? driveRatings.map(r => r.userId === cu.id ? entry : r)
+      : [...driveRatings, entry];
+    upd({ ratings: { ...ratings, [drive.id]: updated } });
+    showToast("⭐ Rating submitted!");
+  }
+
+  return (
+    <div>
+      {/* Summary */}
+      {driveRatings.length > 0 && (
+        <div style={{ display:"flex", gap:24, alignItems:"center", marginBottom:28, padding:"20px 24px", background:"var(--bg)", border:"1px solid var(--line)", borderRadius:"var(--r-xl)" }}>
+          <div style={{ textAlign:"center" }}>
+            <div className="avg-score">{avg}</div>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginTop:4 }}>Avg Rating</div>
+          </div>
+          <div style={{ flex:1 }}>
+            {[5,4,3,2,1].map(s => {
+              const cnt = driveRatings.filter(r => r.stars === s).length;
+              const pct = driveRatings.length ? cnt / driveRatings.length * 100 : 0;
+              return (
+                <div key={s} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:11, color:"var(--mid2)", width:8 }}>{s}</span>
+                  <div style={{ flex:1, height:6, background:"var(--bg3)", borderRadius:100, overflow:"hidden" }}>
+                    <div style={{ width:`${pct}%`, height:"100%", background:"linear-gradient(90deg,var(--acc3),var(--acc2))", borderRadius:100, transition:"width .4s" }} />
+                  </div>
+                  <span style={{ fontSize:11, color:"var(--mid2)", width:16 }}>{cnt}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Submit rating (attendees only, after drive) */}
+      {drive.attendanceRecorded && wasAttendee && (
+        <div className="card" style={{ marginBottom:24 }}>
+          <div className="card-label">{myRating ? "Update Your Rating" : "Rate This Drive"}</div>
+          <div className="stars-row">
+            {[1,2,3,4,5].map(s => (
+              <span key={s} className={`star${(hover||stars) >= s ? " lit" : ""}`}
+                onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)}
+                onClick={() => setStars(s)}>
+                {(hover||stars) >= s ? "⭐" : "☆"}
+              </span>
+            ))}
+          </div>
+          <div className="fg">
+            <label className="fl">Comments (optional)</label>
+            <textarea className="fi fi-ta" style={{ minHeight:80 }} value={comment}
+              onChange={e => setComment(e.target.value)} placeholder="How was the route, organisation, difficulty..." />
+          </div>
+          <button className="btn gold sm" style={{ marginTop:8 }} onClick={submitRating}>
+            {myRating ? "Update Rating" : "Submit Rating"}
+          </button>
+        </div>
+      )}
+      {drive.attendanceRecorded && !wasAttendee && (
+        <div className="ibox" style={{ marginBottom:20 }}>Only confirmed attendees can rate this drive.</div>
+      )}
+      {!drive.attendanceRecorded && (
+        <div className="ibox" style={{ marginBottom:20 }}>Rating opens once the marshal records attendance.</div>
+      )}
+
+      {/* All ratings */}
+      {driveRatings.length > 0 && (
+        <div>
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginBottom:12 }}>All Reviews ({driveRatings.length})</div>
+          {driveRatings.map((r, i) => {
+            const u = getUser(us, r.userId);
+            return (
+              <div key={i} className="rating-card">
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                  <div className="ava" style={{ width:32, height:32, fontSize:13, borderRadius:10 }}>{(u?.name||"?")[0]}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>{u?.name || "Member"}</div>
+                  </div>
+                  <div className="rating-stars">{"⭐".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</div>
+                </div>
+                {r.comment && <div className="rating-comment">{r.comment}</div>}
+                <div className="rating-meta">{new Date(r.ts).toLocaleDateString()}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   DRIVE DETAIL MODAL — combines tracker, checklist, rating
+════════════════════════════════════════════════════════ */
+function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
+  const [tab, setTab] = useState("info");
+  const { currentUser:cu } = state;
+  const tabs = [
+    { id:"info",      label:"Info" },
+    { id:"tracker",   label:"🗺 Live Map" },
+    { id:"sos",       label:"🚨 SOS" },
+    { id:"checklist", label:"✅ Checklist" },
+    { id:"chat",      label:"💬 Chat" },
+    { id:"rating",    label:"⭐ Rate" },
+  ];
+  return (
+    <Modal title={drive.title} onClose={onClose}>
+      <div className="tabs" style={{ marginBottom:20 }}>
+        {tabs.map(t => (
+          <button key={t.id} className={`tab ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)} style={{ fontSize:12, padding:"7px 12px" }}>{t.label}</button>
+        ))}
+      </div>
+      {tab === "info" && (
+        <div>
+          {drive.description && <p style={{ fontSize:14, color:"var(--mid)", lineHeight:1.65, marginBottom:16 }}>{drive.description}</p>}
+          <div className="dcard-meta" style={{ flexDirection:"column", gap:10 }}>
+            {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
+            {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
+            {drive.date      && <div className="dm">📅 <strong>{drive.date}</strong></div>}
+            {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
+            {drive.mapLink   && <a href={drive.mapLink} target="_blank" rel="noreferrer" className="btn out sm" style={{ marginTop:8 }}>🗺 Open in Google Maps</a>}
+          </div>
+        </div>
+      )}
+      {tab === "tracker"   && <LiveTracker   drive={drive} state={state} upd={upd} showToast={showToast} />}
+      {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={() => {}} />}
+      {tab === "checklist" && <DriveChecklist drive={drive} state={state} upd={upd} showToast={showToast} />}
+      {tab === "chat"      && <ClubChat      state={state} upd={upd} showToast={showToast} />}
+      {tab === "rating"    && <DriveRating   drive={drive} state={state} upd={upd} showToast={showToast} />}
+    </Modal>
+  );
+}
+
 export default function App() {
   const [S, setS]           = useState(INIT);
   const [toast, setToast]   = useState(null);
   const [mobOpen, setMob]   = useState(false);
+  const { notifs, push: pushNotif, dismiss } = useNotifications();
 
   const showToast = msg => setToast(msg);
   const upd  = patch => setS(s => ({...s, ...patch}));
@@ -1837,9 +2512,10 @@ export default function App() {
   const navItems = cu ? [
     {id:"dashboard",  label:"Dashboard"},
     {id:"drives",     label:"Drives",        hide: cu.role === "app_admin"},
+    {id:"chat",       label:"💬 Chat",        hide: !cu.clubId},
     {id:"market",     label:"Marketplace"},
     {id:"club-admin", label:"Club Admin",    hide: cu.role !== "admin"},
-    {id:"marshal",    label:"Marshal Panel", hide: cu.role !== "marshal"},
+    {id:"marshal",    label:"Marshal Panel", hide: !["marshal","support"].includes(cu.role)},
     {id:"app-admin",  label:"App Admin",     hide: cu.role !== "app_admin"},
   ].filter(i => !i.hide) : [];
 
@@ -1892,7 +2568,7 @@ export default function App() {
             {/* Nav items */}
             {cu && <span className="mob-drawer-section">Navigation</span>}
             {navItems.map(i => {
-              const icons = {dashboard:"🏠", drives:"🚙", market:"🛍", "club-admin":"⚙️", marshal:"🏴", "app-admin":"🔐"};
+              const icons = {dashboard:"🏠", drives:"🚙", chat:"💬", market:"🛍", "club-admin":"⚙️", marshal:"🏴", "app-admin":"🔐"};
               return (
                 <button key={i.id} className={`nbtn ${page === i.id ? "on" : ""}`} onClick={() => go(i.id)}>
                   <span className="mob-drawer-icon">{icons[i.id] || "•"}</span>
@@ -1928,12 +2604,20 @@ export default function App() {
         {page === "reg-member" && <Registration type="member" clubs={S.clubs} onReg={f => reg("member", f)} back={() => go("home")} />}
         {page === "reg-club"   && <Registration type="club"   clubs={S.clubs} onReg={f => reg("club",   f)} back={() => go("home")} />}
         {page === "dashboard"  && cu && <Dashboard   state={S} go={go} showToast={showToast} />}
+        {page === "drives"     && cu && <Drives       state={S} upd={upd} showToast={showToast} pushNotif={pushNotif} />}
+        {page === "chat"       && cu && cu.clubId && (
+          <div className="page">
+            <div className="sh"><div className="sh-label">Club</div><div className="sh-title">CLUB CHAT</div><div className="sh-sub">Talk to your club members</div></div>
+            <ClubChat state={S} upd={upd} showToast={showToast} />
+          </div>
+        )}
         {page === "market"     && cu && <Marketplace state={S} go={go} />}
         {page === "club-admin" && cu && cu.role === "admin"     && <ClubAdmin    state={S} upd={upd} showToast={showToast} />}
-        {page === "marshal"    && cu && cu.role === "marshal"   && <MarshalPanel state={S} upd={upd} showToast={showToast} />}
+        {page === "marshal"    && cu && ["marshal","support"].includes(cu.role) && <MarshalPanel state={S} upd={upd} showToast={showToast} />}
         {page === "app-admin"  && cu && cu.role === "app_admin" && <AppAdmin     state={S} upd={upd} showToast={showToast} />}
       </div>
       {toast && <Toast msg={toast} done={() => setToast(null)} />}
+      <NotifBanner notifs={notifs} dismiss={dismiss} />
     </div>
   );
 }
