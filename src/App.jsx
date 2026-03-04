@@ -240,24 +240,28 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 
 /* ── DRIVE CARD ──────────────────────────────────────── */
 .dcard{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);padding:0;margin-bottom:18px;position:relative;overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1);box-shadow:var(--sh-sm)}
-.dcard:hover{box-shadow:var(--sh-lg);transform:translateY(-5px)}
-.dcard-accent{position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));border-radius:5px 0 0 5px;z-index:1}
-.dcard-inner{padding:24px 24px 22px 32px}
-.dcard-img{width:100%;height:220px;object-fit:cover;display:block;border-radius:var(--r-2xl) var(--r-2xl) 0 0}
-.dcard-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.5px;color:var(--ink);line-height:1.15;word-break:break-word;margin-bottom:6px}
-.dcard-desc{font-size:13px;color:var(--mid);line-height:1.6;margin-bottom:16px}
-.dcard-meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 20px;margin-bottom:14px}
-.dm{font-size:13px;font-weight:500;color:var(--mid2);display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
-.dm strong{color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.capbar{height:6px;background:var(--bg3);border-radius:100px;margin:10px 0 12px;overflow:hidden}
+.dcard:hover{box-shadow:var(--sh-lg);transform:translateY(-2px)}
+.dcard-accent{position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));border-radius:5px 0 0 5px;z-index:1;flex-shrink:0}
+.dcard-inner{padding:22px 24px 20px 32px;min-width:0;width:100%}
+.dcard-img{width:100%;height:200px;object-fit:cover;display:block;border-radius:var(--r-2xl) var(--r-2xl) 0 0}
+.dcard-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;letter-spacing:-.4px;color:var(--ink);line-height:1.2;word-break:break-word;margin-bottom:5px;overflow-wrap:break-word}
+.dcard-desc{font-size:13px;color:var(--mid);line-height:1.6;margin-bottom:14px;overflow-wrap:break-word}
+.dcard-meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-bottom:12px;align-items:center}
+.dcard-meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 20px;margin-bottom:12px}
+.dm{font-size:13px;font-weight:500;color:var(--mid2);display:flex;align-items:center;gap:5px;min-width:0}
+.dm strong{color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.capbar{height:5px;background:var(--bg3);border-radius:100px;margin:8px 0 10px;overflow:hidden}
 .capfill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc2));border-radius:100px;transition:width .5s cubic-bezier(.4,0,.2,1)}
 .waitbdg{font-size:11px;font-weight:700;color:var(--orange);background:var(--orange-pale);border:1px solid rgba(234,88,12,.18);padding:3px 11px;border-radius:100px;white-space:nowrap}
 @media(max-width:800px){
-  .dcard-inner{padding:18px 16px 18px 24px}
-  .dcard-img{height:170px}
-  .dcard-title{font-size:17px}
-  .dcard-meta-grid{grid-template-columns:1fr;gap:6px}
+  .dcard-inner{padding:16px 14px 16px 22px}
+  .dcard-img{height:150px}
+  .dcard-title{font-size:16px;letter-spacing:-.3px}
+  .dcard-desc{font-size:12px;margin-bottom:10px}
+  .dcard-meta-grid{grid-template-columns:1fr;gap:5px}
+  .dcard-meta{gap:6px 14px}
   .dm{font-size:12px}
+  .dm strong{max-width:140px}
 }
 
 /* ── VOTE CARD ───────────────────────────────────────── */
@@ -1232,11 +1236,15 @@ function Dashboard({ state, go, showToast }) {
           <div key={d.id} className="dcard">
             <div className="dcard-accent" />
             {d.image && <img src={d.image} alt={d.title} className="dcard-img" />}
-            <div className="dcard-title">{d.title}</div>
-            <div className="dcard-desc">{d.description}</div>
-            <div className="dcard-meta">
-              <div className="dm">📍 <strong>{d.location}</strong></div>
-              <div className="dm">📅 <strong>{fmtDate(d.date)}</strong>{d.startTime && <> · 🕐 <strong>{fmtTime(d.startTime)}</strong></>}</div>
+            <div className="dcard-inner">
+              <div className="dcard-title">{d.title}</div>
+              {d.description && <div className="dcard-desc">{d.description}</div>}
+              <div className="dcard-meta-grid">
+                {d.location  && <div className="dm">📍 <strong>{d.location}</strong></div>}
+                {d.date      && <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>}
+                {d.coordinates && <div className="dm">🗺 <strong>{d.coordinates}</strong></div>}
+                {d.startTime && <div className="dm">🕐 <strong>{fmtTime(d.startTime)}</strong></div>}
+              </div>
               <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={d.clubId} />
             </div>
           </div>
@@ -1246,12 +1254,14 @@ function Dashboard({ state, go, showToast }) {
       {done.length > 0 && <>
         <div className="sh" style={{marginTop:32}}><div className="sh-label">History</div><div className="sh-title">COMPLETED DRIVES</div></div>
         {done.map(d => (
-          <div key={d.id} className="dcard" style={{opacity:.6}}>
+          <div key={d.id} className="dcard" style={{opacity:.7}}>
             <div className="dcard-accent" style={{background:"var(--green)"}} />
-            <div className="dcard-title">{d.title}</div>
-            <div className="dcard-meta">
-              <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>
-              <span className="bdg g">✓ COMPLETED</span>
+            <div className="dcard-inner">
+              <div className="dcard-title">{d.title}</div>
+              <div className="dcard-meta">
+                <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>
+                <span className="bdg g">✓ COMPLETED</span>
+              </div>
             </div>
           </div>
         ))}
@@ -1814,9 +1824,9 @@ function ClubAdmin({ state, upd, showToast }) {
                       </div>
                       {d.cancelled && <span className="bdg r">CANCELLED</span>}
                     </div>
-                    <div className="dcard-meta">
+                    <div className="dcard-meta-grid">
                       {d.date      && <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>}
-                      {d.startTime && <div className="dm">🕐 <strong>{(() => { const [h,m]=d.startTime.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; })()}</strong></div>}
+                      {d.startTime && <div className="dm">🕐 <strong>{fmtTime(d.startTime)}</strong></div>}
                       {d.location  && <div className="dm">📍 <strong>{d.location}</strong></div>}
                       <div className="dm">👥 <strong>{confirmed}/{d.capacity||"∞"}</strong> confirmed</div>
                       {waiting > 0 && <div className="dm">⏳ <strong>{waiting}</strong> waiting</div>}
