@@ -730,29 +730,47 @@ function Toast({ msg, done }) {
 
 function Modal({ title, onClose, children }) {
   const isMob = window.innerWidth <= 768;
-  const moverStyle = isMob
-    ? { padding: 0, alignItems: "flex-end" }
-    : {};
-  const modalStyle = isMob
-    ? {
-        position: "fixed",
-        bottom: 0, left: 0, right: 0, top: 0,
-        borderRadius: 0,
-        maxWidth: "100%", width: "100%",
-        height: "100%", maxHeight: "100%",
-        overflowY: "scroll",
-        WebkitOverflowScrolling: "touch",
-        padding: "20px 16px 140px",
-        margin: 0,
-        border: "none",
-        boxShadow: "none",
-        animation: "none",
-        background: "var(--bg)",
-      }
-    : {};
+
+  if (isMob) {
+    // On mobile: render as a full-screen overlay that sits on top of everything
+    return (
+      <div style={{
+        position:"fixed", top:0, left:0, right:0, bottom:0,
+        zIndex:1000, background:"var(--bg)",
+        display:"flex", flexDirection:"column",
+        overflowY:"scroll", WebkitOverflowScrolling:"touch",
+      }}>
+        {/* sticky header bar */}
+        <div style={{
+          position:"sticky", top:0, zIndex:10,
+          background:"var(--bg)", borderBottom:"1px solid var(--line)",
+          padding:"14px 16px", display:"flex", alignItems:"center", gap:12,
+          boxShadow:"0 2px 12px rgba(0,0,0,.06)", flexShrink:0,
+        }}>
+          <button onClick={onClose} style={{
+            background:"var(--bg3)", border:"1.5px solid var(--line2)",
+            borderRadius:12, width:36, height:36, display:"flex",
+            alignItems:"center", justifyContent:"center",
+            fontSize:16, cursor:"pointer", flexShrink:0, color:"var(--ink)",
+          }}>←</button>
+          <div style={{
+            fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800,
+            letterSpacing:"-.3px", color:"var(--ink)", flex:1,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+          }}>{title}</div>
+        </div>
+        {/* scrollable content */}
+        <div style={{ padding:"20px 16px 120px", flex:1 }}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: centered modal
   return (
-    <div className="mover" style={moverStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={modalStyle}>
+    <div className="mover" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal">
         <div className="modal-title">{title}</div>
         <button className="mclose" onClick={onClose}>✕ CLOSE</button>
         {children}
@@ -2158,34 +2176,78 @@ function AppAdmin({ state, upd, showToast }) {
 /* ─── AD DETAIL MODAL ───────────────────────────────────────── */
 function AdDetail({ ad, onClose }) {
   const isMob = window.innerWidth <= 768;
-  const overlayStyle = isMob ? { padding: 0, alignItems: "flex-end" } : {};
-  const modalStyle = isMob
-    ? {
-        position: "fixed",
-        bottom: 0, left: 0, right: 0, top: 0,
-        borderRadius: 0,
-        maxWidth: "100%", width: "100%",
-        height: "100%", maxHeight: "100%",
-        overflowY: "scroll",
-        WebkitOverflowScrolling: "touch",
-        margin: 0,
-        border: "none",
-        boxShadow: "none",
-        animation: "none",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg)",
-      }
-    : {};
+
+  if (isMob) {
+    return (
+      <div style={{
+        position:"fixed", top:0, left:0, right:0, bottom:0,
+        zIndex:1000, background:"var(--bg)",
+        display:"flex", flexDirection:"column",
+        overflowY:"scroll", WebkitOverflowScrolling:"touch",
+      }}>
+        {/* sticky close bar */}
+        <div style={{
+          position:"sticky", top:0, zIndex:10,
+          background:"var(--bg)", borderBottom:"1px solid var(--line)",
+          padding:"14px 16px", display:"flex", alignItems:"center", gap:12,
+          boxShadow:"0 2px 12px rgba(0,0,0,.06)", flexShrink:0,
+        }}>
+          <button onClick={onClose} style={{
+            background:"var(--bg3)", border:"1.5px solid var(--line2)",
+            borderRadius:12, width:36, height:36, display:"flex",
+            alignItems:"center", justifyContent:"center",
+            fontSize:16, cursor:"pointer", flexShrink:0, color:"var(--ink)",
+          }}>←</button>
+          <div style={{
+            fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800,
+            color:"var(--ink)", flex:1, overflow:"hidden",
+            textOverflow:"ellipsis", whiteSpace:"nowrap",
+          }}>{ad.title}</div>
+        </div>
+        {/* thumbnail */}
+        {ad.thumbnail
+          ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%", height:220, objectFit:"cover", display:"block", flexShrink:0}} />
+          : <div style={{width:"100%", height:180, background:"linear-gradient(135deg,var(--bg3),var(--bg4))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:64, flexShrink:0}}>{ad.icon}</div>
+        }
+        {/* content */}
+        <div style={{padding:"20px 16px 100px"}}>
+          {ad.featured && (
+            <div style={{display:"inline-flex", alignItems:"center", gap:6, background:"var(--acc2)", color:"var(--ink)", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", padding:"3px 10px", marginBottom:14, borderRadius:4}}>
+              ⭐ FEATURED OFFER
+            </div>
+          )}
+          <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--acc)", marginBottom:8, display:"flex", alignItems:"center", gap:8}}>
+            <span style={{width:14, height:2, background:"var(--acc3)", display:"inline-block"}} />
+            {ad.category || "Promotion"}
+          </div>
+          <div style={{fontFamily:"'Syne',sans-serif", fontSize:24, fontWeight:800, letterSpacing:-1, color:"var(--ink)", lineHeight:1.1, marginBottom:12}}>{ad.title}</div>
+          <div style={{fontSize:15, color:"var(--ink3)", lineHeight:1.7, marginBottom:20, paddingBottom:20, borderBottom:"1px solid var(--line)"}}>{ad.desc}</div>
+          {ad.details && (
+            <>
+              <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--acc2)", marginBottom:10}}>Offer Details</div>
+              <div style={{fontSize:13, color:"var(--mid)", lineHeight:1.9, whiteSpace:"pre-line", marginBottom:24, background:"var(--bg2)", padding:16, borderRadius:12, border:"1px solid var(--line)"}}>{ad.details}</div>
+            </>
+          )}
+          <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+            {ad.link
+              ? <a href={ad.link} target="_blank" rel="noreferrer" className="btn gold sm" style={{textDecoration:"none", flex:1, justifyContent:"center"}}>VISIT OFFER PAGE →</a>
+              : <span style={{fontSize:12, color:"var(--mid)"}}>Contact the advertiser for more information.</span>
+            }
+            <button className="btn out sm" onClick={onClose} style={{flex:1, justifyContent:"center"}}>CLOSE</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop
   return (
-    <div className="ad-modal-overlay" style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ad-modal" style={modalStyle}>
+    <div className="ad-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ad-modal">
         <button className="ad-modal-close" onClick={onClose}>✕</button>
         {ad.thumbnail
           ? <img src={ad.thumbnail} alt={ad.title} className="ad-modal-thumb" />
-          : <div className="ad-modal-thumb-ph">
-              <span style={{position:"relative", zIndex:1}}>{ad.icon}</span>
-            </div>
+          : <div className="ad-modal-thumb-ph"><span style={{position:"relative", zIndex:1}}>{ad.icon}</span></div>
         }
         <div className="ad-modal-content">
           {ad.featured && (
