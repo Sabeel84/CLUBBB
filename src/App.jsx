@@ -2526,9 +2526,7 @@ function AppAdmin({ state, upd, showToast }) {
               Reset all app data and wipe localStorage. This cannot be undone. You will need to run the setup wizard again.
             </div>
             <button className="btn out-red sm" onClick={() => {
-              if (window.confirm("⚠️ This will DELETE all users, clubs, drives and all data.
-
-This cannot be undone. Are you absolutely sure?")) {
+              if (window.confirm("⚠️ This will DELETE all users, clubs, drives and all data.\n\nThis cannot be undone. Are you absolutely sure?")) {
                 localStorage.removeItem("clubbb_state_v1");
                 window.location.reload();
               }
