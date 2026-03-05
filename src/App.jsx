@@ -3648,27 +3648,9 @@ export default function App() {
     const emailExists = S.users.find(u => u.email.toLowerCase() === form.email.toLowerCase());
     if (emailExists) { alert("An account with this email already exists. Please sign in instead."); return; }
 
-    // ── If Supabase is configured, send verification email first ──
-    if (SUPA_URL && SUPA_KEY) {
-      showToast("Sending verification email...");
-      const payload = type === "member"
-        ? { name: form.name, email: form.email, phone: form.phone, role: "member", rank_id: 1, club_id: Number(form.clubId), drives: 0 }
-        : {
-            user: { name: form.contactName || form.name, email: form.email, phone: form.phone, role: "admin", rank_id: 5, drives: 0 },
-            club: { name: form.clubName || form.name, email: form.email, phone: form.phone, logo: "", banner: "", description: "", terms: "" },
-          };
-      const result = await sendVerificationEmail(form.email, type, payload);
-      if (result.ok) {
-        showToast("✅ Verification email sent! Check your inbox to activate your account.");
-        go("home");
-        return;
-      } else {
-        // Fall through to local registration if email fails (e.g. Resend sandbox limit)
-        showToast("⚠️ Email service unavailable — account created without verification.");
-      }
-    }
-
-    // ── Fallback: local registration (used when Supabase not configured) ──
+    // ── Always create the account locally first ──
+    // Email is a welcome notification, NOT a verification gate.
+    // Users can sign in immediately after registering.
     if (type === "member") {
       const u = {id:Date.now(), name:form.name, email:form.email, phone:form.phone,
                  role:"member", rankId:1, clubId:Number(form.clubId), drives:0,
@@ -3676,7 +3658,6 @@ export default function App() {
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
     } else {
       const cid = Math.max(0, ...S.clubs.map(c => c.id)) + 1;
-      // For club registration: form.name is the CLUB name, form.contactName is the admin's name
       const adminName = form.contactName || form.name;
       const clubName  = form.clubName  || form.name;
       const u   = {id:Date.now(), name:adminName, email:form.email, phone:form.phone,
@@ -3693,7 +3674,23 @@ export default function App() {
         clubRanks: {...s.clubRanks, [cid]: DEFAULT_RANKS.map(r => ({...r}))},
       }));
     }
-    showToast("Welcome to CLUBBB!");
+    showToast("✅ Welcome to CLUBBB!");
+
+    // ── Fire-and-forget welcome email (non-blocking) ──
+    if (SUPA_URL && SUPA_KEY) {
+      const payload = type === "member"
+        ? { name: form.name, email: form.email, phone: form.phone, role: "member", rank_id: 1, club_id: Number(form.clubId), drives: 0 }
+        : {
+            user: { name: form.contactName || form.name, email: form.email, phone: form.phone, role: "admin", rank_id: 5, drives: 0 },
+            club: { name: form.clubName || form.name, email: form.email, phone: form.phone },
+          };
+      sendVerificationEmail(form.email, type, payload)
+        .then(r => {
+          if (r.ok) showToast("📧 Welcome email sent to " + form.email);
+          else console.warn("[CLUBBB] Welcome email failed (non-blocking):", r);
+        })
+        .catch(e => console.warn("[CLUBBB] Email error (non-blocking):", e));
+    }
   }
 
   const { currentUser:cu, page } = S;
