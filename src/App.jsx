@@ -47,11 +47,18 @@ async function notifyDrivePosted(drive) {
    Passwords are never stored in plain text.
 ═══════════════════════════════════════════════════════════════ */
 async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "clubbb_salt_2026");
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  const str = password + "clubbb_salt_2026";
+  // Use Web Crypto API (requires HTTPS / secure context)
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(str));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  // Fallback for non-secure contexts (HTTP dev, older browsers)
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
+  return "fallback_" + Math.abs(h).toString(16).padStart(8, "0") + "_" + str.length;
 }
 
 async function verifyPassword(password, storedHash) {
@@ -3463,52 +3470,43 @@ function SetupWizard({ onComplete }) {
     if (password !== confirm) { setErr("Passwords do not match."); return; }
 
     setLoading(true);
+
+    // ── Step 1: Hash password ──
+    let passwordHash;
     try {
-      const passwordHash = await hashPassword(password);
-      const adminUser = {
-        id: Date.now(),
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        role: "app_admin",
-        rankId: 5,
-        clubId: null,
-        drives: 0,
-        passwordHash,
-      };
-
-      // ── If Supabase is configured, persist App Admin to DB ──
-      if (SUPA_URL && SUPA_KEY) {
-        const res = await fetch(`${SUPA_URL}/functions/v1/setup-admin`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPA_KEY}`,
-            "apikey": SUPA_KEY,
-          },
-          body: JSON.stringify({
-            name: adminUser.name,
-            email: adminUser.email,
-            phone: adminUser.phone,
-            passwordHash: adminUser.passwordHash,
-          }),
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          // If setup-admin edge function doesn't exist yet, warn but continue
-          if (res.status !== 404) {
-            console.warn("[CLUBBB] setup-admin edge function error:", errData);
-          }
-        }
-      }
-
-      onComplete(adminUser);
+      passwordHash = await hashPassword(password);
     } catch (e) {
-      setErr("An error occurred. Please try again.");
-      console.error("[CLUBBB] SetupWizard error:", e);
-    } finally {
+      setErr("An unexpected error occurred. Please try again.");
+      console.error("[CLUBBB] hashPassword failed:", e);
       setLoading(false);
+      return;
     }
+
+    // ── Step 2: Build admin user object ──
+    const adminUser = {
+      id: Date.now(),
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      role: "app_admin",
+      rankId: 5,
+      clubId: null,
+      drives: 0,
+      passwordHash,
+    };
+
+    // ── Step 3: Fire-and-forget Supabase sync — NEVER blocks or throws ──
+    if (SUPA_URL && SUPA_KEY) {
+      fetch(`${SUPA_URL}/functions/v1/setup-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPA_KEY}`, "apikey": SUPA_KEY },
+        body: JSON.stringify({ name: adminUser.name, email: adminUser.email, phone: adminUser.phone, passwordHash: adminUser.passwordHash }),
+      }).catch(e => console.warn("[CLUBBB] setup-admin sync failed (non-blocking):", e));
+    }
+
+    // ── Step 4: Always complete locally regardless of Supabase result ──
+    setLoading(false);
+    onComplete(adminUser);
   }
 
   return (
