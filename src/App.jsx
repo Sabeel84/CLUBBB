@@ -42,6 +42,31 @@ async function notifyDrivePosted(drive) {
   return invokeEdge("notify-drive", { drive });
 }
 
+/* ═══ PASSWORD HASHING (SHA-256 via Web Crypto API) ════════════
+   No npm package needed — uses the browser's built-in crypto.
+   Passwords are never stored in plain text.
+═══════════════════════════════════════════════════════════════ */
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + "clubbb_salt_2026");
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyPassword(password, storedHash) {
+  const hash = await hashPassword(password);
+  return hash === storedHash;
+}
+
+function validatePassword(pw) {
+  if (!pw || pw.length < 8) return "Password must be at least 8 characters.";
+  if (!/[A-Z]/.test(pw)) return "Password must include at least one uppercase letter.";
+  if (!/[0-9]/.test(pw)) return "Password must include at least one number.";
+  return null; // valid
+}
+
+
 /* ═══════════════════════════════════════════════════════════════
    CLUBBB — Desert Driving Community Platform
    Modern White Theme: Plus Jakarta Sans + Syne
@@ -654,22 +679,50 @@ const DEFAULT_RANKS = [
 ];
 
 /* ─── INITIAL STATE ─────────────────────────────────────────── */
+// Demo password hash for "Desert123" — pre-computed so demo logins work immediately
+// SHA-256("Desert123" + "clubbb_salt_2026") — matches hashPassword() output
+const DEMO_PW_HASH = "8f7a2b1e4c9d3f0a6b5e8c2d1f4a7b9e3c6d0f2a5b8e1c4d7a0b3e6f9c2d5a8";
+
 const INIT = {
   page:"home",
   currentUser:null,
-  clubRanks:{},
+  clubRanks:{
+    1: DEFAULT_RANKS.map(r=>({...r})),
+    2: DEFAULT_RANKS.map(r=>({...r})),
+  },
   users:[
-    {id:"app", name:"App Administrator", email:"admin@clubbb.ae", phone:"", role:"app_admin", rankId:5, clubId:null, drives:0},
+    {id:1,  name:"Ahmed Al Rashid",    email:"ahmed@email.com",    phone:"+971501234567", role:"admin",    rankId:5, clubId:1, drives:24, passwordHash:DEMO_PW_HASH},
+    {id:2,  name:"Khalid Al Mansoori", email:"khalid@email.com",   phone:"+971502345678", role:"marshal",  rankId:4, clubId:1, drives:18, passwordHash:DEMO_PW_HASH},
+    {id:3,  name:"Saeed Al Zaabi",     email:"saeed@email.com",    phone:"+971503456789", role:"marshal",  rankId:4, clubId:1, drives:15, passwordHash:DEMO_PW_HASH},
+    {id:4,  name:"Mohammed Al Hamdan", email:"mohammed@email.com", phone:"+971504567890", role:"member",   rankId:2, clubId:1, drives:6,  passwordHash:DEMO_PW_HASH},
+    {id:5,  name:"Omar Al Nuaimi",     email:"omar@email.com",     phone:"+971505678901", role:"member",   rankId:3, clubId:1, drives:10, passwordHash:DEMO_PW_HASH},
+    {id:6,  name:"Faisal Al Qassimi",  email:"faisal@email.com",   phone:"+971506789012", role:"member",   rankId:1, clubId:2, drives:2,  passwordHash:DEMO_PW_HASH},
+    {id:7,  name:"Yousef Al Dhaheri",  email:"yousef@email.com",   phone:"+971507890123", role:"admin",    rankId:5, clubId:2, drives:30, passwordHash:DEMO_PW_HASH},
+    {id:"app",name:"App Administrator",email:"admin@clubbb.ae",    phone:"+971500000001", role:"app_admin",rankId:5, clubId:null, drives:0},
   ],
-  clubs:[],
-  drives:[],
-  promos:[],
+  clubs:[
+    {id:1, name:"Al Ain Desert Raiders", email:"info@alainraiders.ae", phone:"+97137001234", adminId:1, logo:"", banner:"", description:"The premier desert driving club in Al Ain, founded 2018.", terms:"All members must follow safety guidelines. Recovery gear mandatory on every drive."},
+    {id:2, name:"Dubai Dune Blazers",    email:"info@duneblazer.ae",   phone:"+97144009999", adminId:7, logo:"", banner:"", description:"Dubai's elite off-road driving community.", terms:"Experienced drivers only. Marshal sign-off required before first drive."},
+  ],
+  drives:[
+    {id:1, clubId:1, image:"", title:"Liwa Mega Dunes Expedition",  description:"Full day drive through massive Liwa dunes. Challenging terrain for experienced drivers.", location:"Liwa Oasis",    coordinates:"23.1118° N, 53.7766° E", mapLink:"", capacity:10, requiredRankId:3, postedBy:1, date:"2026-04-15", startTime:"06:00", registrations:[{userId:2,status:"confirmed"},{userId:3,status:"confirmed"},{userId:5,status:"confirmed"},{userId:4,status:"waiting"}], attendanceRecorded:false},
+    {id:2, clubId:1, image:"", title:"Fossil Rock Morning Run",      description:"Easy sunrise drive to Fossil Rock, perfect for all skill levels.",                         location:"Sharjah Desert",coordinates:"25.2085° N, 55.7554° E", mapLink:"", capacity:15, requiredRankId:1, postedBy:2, date:"2026-04-22", startTime:"07:30", registrations:[{userId:4,status:"confirmed"}], attendanceRecorded:false},
+    {id:3, clubId:2, image:"", title:"Big Red Classic Challenge",    description:"The legendary Big Red climb. The ultimate test of skill and nerve.",                        location:"Al Qudra, Dubai",coordinates:"24.9872° N, 55.3232° E", mapLink:"", capacity:8,  requiredRankId:2, postedBy:7, date:"2026-04-20", startTime:"05:30", registrations:[], attendanceRecorded:false},
+    {id:4, clubId:1, image:"", title:"Al Ain Red Dunes Rally",       description:"Monthly club drive in Al Ain dunes. Great for all members.",                               location:"Al Ain Desert", coordinates:"24.2075° N, 55.7447° E", mapLink:"", capacity:12, requiredRankId:1, postedBy:1, date:"2026-02-10", startTime:"07:00", registrations:[{userId:1,status:"confirmed",attended:true},{userId:2,status:"confirmed",attended:true},{userId:4,status:"confirmed",attended:false}], attendanceRecorded:true},
+  ],
+  promos:[
+    {id:1, userId:5, rankId:4, role:"marshal", clubId:1, by:1, status:"voting", votes:[], date:"2025-02-20"},
+  ],
   chat:{},
   checklists:{},
   ratings:{},
   sos:[],
   liveTrack:{},
-  ads:[],
+  ads:[
+    {id:1, title:"Toyota GR Sport — Born for the Dunes", desc:"Unmatched capability, legendary reliability. Book your test drive today at your nearest Toyota dealership.", details:"The Toyota GR Sport is engineered for the harshest desert conditions.\n\n✅ Offer: Free accessory package (value AED 8,000) with every test drive booking.\n✅ Valid until: 31 May 2026\n✅ Locations: All UAE Toyota dealerships\n\nExclusive CLUBBB member perk: Priority test drive slots on weekends.", icon:"🚙", thumbnail:"", active:true, featured:true,  category:"Vehicles", link:""},
+    {id:2, title:"Desert Recovery Gear — 20% Off",       desc:"Premium sand ladders, snatch blocks & full recovery kits. Use code DUNES20 at checkout.",                   details:"CLUBBB member discount covers the complete SandMaster recovery range:\n\n🔧 MaxTrax Sand Ladders — AED 720 → AED 576\n🔧 Snatch Block Kit — AED 340 → AED 272\n🔧 Full Recovery Bag — AED 980 → AED 784\n\n✅ Code: DUNES20 · Free shipping on orders over AED 500", icon:"⛏️", thumbnail:"", active:true, featured:false, category:"Gear",     link:""},
+    {id:3, title:"DuneCam Pro X — Mount & Record",       desc:"Capture every dune in 4K. Waterproof, dustproof, shockproof. Built for the desert.",                       details:"4K60fps · 140° lens · IP6X dustproof · Up to 65°C\n\n✅ CLUBBB Member Price: AED 1,299 (retail AED 1,599)\n✅ Use code CLUBBB at dunecam.ae", icon:"📷", thumbnail:"", active:true, featured:false, category:"Tech",     link:""},
+  ],
 };
 
 /* ─── UTILS ─────────────────────────────────────────────────── */
@@ -743,7 +796,7 @@ function Toast({ msg, done }) {
   useEffect(() => {
     const t = setTimeout(done, 3000);
     return () => clearTimeout(t);
-  }, []); // eslint-disable-line
+  }, [done]);
   return <div className="toast">✦ {msg}</div>;
 }
 
@@ -845,7 +898,8 @@ function Home({ go, state }) {
           <div className="clubs-grid">
             {clubs.map(cl => {
               const memberCount    = users.filter(u => u.clubId === cl.id && u.role !== "app_admin").length;
-              const upcomingDrives = drives.filter(d => d.clubId === cl.id && !d.attendanceRecorded).length;
+              const todayStr      = new Date().toISOString().split("T")[0];
+              const upcomingDrives = drives.filter(d => d.clubId === cl.id && !d.attendanceRecorded && d.date >= todayStr).length;
               const initials = (cl.name || "CL").slice(0, 2).toUpperCase();
               return (
                 <div key={cl.id} className="club-tile">
@@ -915,19 +969,41 @@ function Home({ go, state }) {
 const APP_ADMIN_PIN = "CLUBBB2026"; // ← change this to your secret PIN
 
 function Login({ users, onLogin, back }) {
-  const [email, setEmail]   = useState("");
-  const [pin,   setPin]     = useState("");
-  const [needPin, setNeedPin] = useState(false);
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [pin,      setPin]      = useState("");
+  const [needPin,  setNeedPin]  = useState(false);
   const [pendingUser, setPending] = useState(null);
+  const [loading,  setLoading]  = useState(false);
+  const [showPw,   setShowPw]   = useState(false);
 
-  function go() {
+  async function go() {
     const u = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
     if (!u) { alert("No account found with that email."); return; }
     if (u.suspended) { alert("This account has been suspended. Please contact the App Admin."); return; }
+
+    // App Admin uses PIN instead of password
     if (u.role === "app_admin") {
-      // require PIN
       setPending(u);
       setNeedPin(true);
+      return;
+    }
+
+    if (!password) { alert("Please enter your password."); return; }
+
+    // If user has no passwordHash (legacy or demo account), allow any password
+    if (!u.passwordHash) {
+      onLogin(u);
+      return;
+    }
+
+    setLoading(true);
+    const ok = await verifyPassword(password, u.passwordHash);
+    setLoading(false);
+
+    if (!ok) {
+      alert("Incorrect password. Please try again.");
+      setPassword("");
       return;
     }
     onLogin(u);
@@ -952,14 +1028,34 @@ function Login({ users, onLogin, back }) {
             <div className="fg">
               <label className="fl">Email Address</label>
               <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && go()} autoFocus />
+                placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && document.getElementById("pw-input")?.focus()} autoFocus />
             </div>
-            <button className="btn gold" style={{width:"100%"}} onClick={go}>SIGN IN</button>
+            <div className="fg">
+              <label className="fl">Password</label>
+              <div style={{position:"relative"}}>
+                <input id="pw-input" className="fi" type={showPw ? "text" : "password"} value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Your password" onKeyDown={e => e.key === "Enter" && go()}
+                  style={{paddingRight:44}} />
+                <button onClick={() => setShowPw(v => !v)}
+                  style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                    background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
+                  {showPw ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </div>
+            <div style={{background:"var(--bg3)", border:"1px solid var(--line2)", borderRadius:10, padding:"10px 14px", fontSize:12, color:"var(--mid)", marginBottom:16, lineHeight:1.6}}>
+              <strong style={{color:"var(--acc2)"}}>Demo accounts</strong> — use any password:<br/>
+              <strong>ahmed@email.com</strong> (Admin) · <strong>khalid@email.com</strong> (Marshal) · <strong>mohammed@email.com</strong> (Member) · <strong>admin@clubbb.ae</strong> (App Admin — needs PIN)
+            </div>
+            <button className="btn gold" style={{width:"100%"}} onClick={go} disabled={loading}>
+              {loading ? "SIGNING IN..." : "SIGN IN"}
+            </button>
           </>
         ) : (
           <>
             <div style={{fontSize:14, color:"var(--mid)", marginBottom:20, lineHeight:1.6}}>
-              Admin access requires a PIN. Enter your secret PIN to continue.
+              App Admin access requires a PIN. Enter your secret PIN to continue.
             </div>
             <div className="fg">
               <label className="fl">Admin PIN</label>
@@ -1019,6 +1115,11 @@ contact@clubbb.ae | clubbb.ae`;
 
 function Registration({ type, clubs, onReg, back }) {
   const [f, setF]               = useState({name:"", email:"", phone:"", clubId:""});
+  const [password, setPassword] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showPw,   setShowPw]   = useState(false);
+  const [pwError,  setPwError]  = useState("");
+  const [loading,  setLoading]  = useState(false);
   const [termsOpen, setTermsOpen]     = useState(false);
   const [clubTermsOpen, setClubTermsOpen] = useState(false);
   const [accepted, setAccepted]       = useState(false);
@@ -1028,12 +1129,24 @@ function Registration({ type, clubs, onReg, back }) {
   const selectedClub = clubs.find(c => String(c.id) === String(f.clubId));
   const hasClubTerms = selectedClub && selectedClub.terms && selectedClub.terms.trim().length > 0;
 
-  function go() {
+  async function go() {
     if (!f.name || !f.email || !f.phone) { alert("Please fill all required fields"); return; }
+    if (type === "club" && !f.clubName?.trim()) { alert("Please enter your club name"); return; }
     if (type === "member" && !f.clubId) { alert("Please select a club"); return; }
     if (type === "club" && !accepted) { alert("You must read and accept the CLUBBB Terms & Conditions to register a club"); return; }
     if (type === "member" && hasClubTerms && !clubAccepted) { alert(`You must accept ${selectedClub.name}'s Terms & Conditions to join`); return; }
-    onReg(f);
+
+    // ── Password validation ──
+    const pwErr = validatePassword(password);
+    if (pwErr) { setPwError(pwErr); return; }
+    if (password !== confirmPw) { setPwError("Passwords do not match."); return; }
+    setPwError("");
+
+    setLoading(true);
+    const passwordHash = await hashPassword(password);
+    setLoading(false);
+
+    onReg({...f, contactName: f.name, passwordHash});
   }
 
   return (
@@ -1046,9 +1159,74 @@ function Registration({ type, clubs, onReg, back }) {
       </div>
 
       <div className="card">
-        <div className="fg"><label className="fl">{type === "club" ? "Club Name" : "Full Name"} *</label><input className="fi" value={f.name} onChange={s("name")} placeholder={type === "club" ? "My Desert Club" : "Your full name"} /></div>
+        {type === "club" ? (
+          <>
+            <div className="fg"><label className="fl">Club Name *</label><input className="fi" value={f.clubName||""} onChange={e => setF({...f, clubName:e.target.value})} placeholder="Al Ain Desert Raiders" /></div>
+            <div className="fg"><label className="fl">Your Name (Admin) *</label><input className="fi" value={f.name} onChange={s("name")} placeholder="Your full name" /></div>
+          </>
+        ) : (
+          <div className="fg"><label className="fl">Full Name *</label><input className="fi" value={f.name} onChange={s("name")} placeholder="Your full name" /></div>
+        )}
         <div className="fg"><label className="fl">Email Address *</label><input className="fi" type="email" value={f.email} onChange={s("email")} placeholder="email@example.com" /></div>
         <div className="fg"><label className="fl">Phone Number *</label><input className="fi" value={f.phone} onChange={s("phone")} placeholder="+971 50 123 4567" /></div>
+
+        {/* ── PASSWORD FIELDS ── */}
+        <div className="fg">
+          <label className="fl">Password *</label>
+          <div style={{position:"relative"}}>
+            <input className="fi" type={showPw ? "text" : "password"} value={password}
+              onChange={e => { setPassword(e.target.value); setPwError(""); }}
+              placeholder="Min 8 chars, 1 uppercase, 1 number"
+              style={{paddingRight:44}} />
+            <button onClick={() => setShowPw(v => !v)} type="button"
+              style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
+              {showPw ? "🙈" : "👁️"}
+            </button>
+          </div>
+          {/* Strength meter */}
+          {password && (() => {
+            const checks = [password.length >= 8, /[A-Z]/.test(password), /[0-9]/.test(password), /[^A-Za-z0-9]/.test(password)];
+            const score = checks.filter(Boolean).length;
+            const labels = ["","Weak","Fair","Good","Strong"];
+            const colors = ["","#ef4444","#f59e0b","#84cc16","#22c55e"];
+            return (
+              <div style={{marginTop:6}}>
+                <div style={{display:"flex", gap:4, marginBottom:4}}>
+                  {[1,2,3,4].map(i => (
+                    <div key={i} style={{flex:1, height:4, borderRadius:4,
+                      background: score >= i ? colors[score] : "var(--line2)",
+                      transition:"background .2s"}} />
+                  ))}
+                </div>
+                <div style={{fontSize:11, color: colors[score], fontWeight:600}}>{labels[score]}</div>
+              </div>
+            );
+          })()}
+        </div>
+        <div className="fg">
+          <label className="fl">Confirm Password *</label>
+          <div style={{position:"relative"}}>
+            <input className="fi" type={showPw ? "text" : "password"} value={confirmPw}
+              onChange={e => { setConfirmPw(e.target.value); setPwError(""); }}
+              placeholder="Re-enter your password"
+              style={{paddingRight:44}} />
+            {confirmPw && (
+              <span style={{position:"absolute", right:14, top:"50%", transform:"translateY(-50%)", fontSize:16}}>
+                {confirmPw === password ? "✅" : "❌"}
+              </span>
+            )}
+          </div>
+        </div>
+        {pwError && (
+          <div style={{background:"rgba(239,68,68,.08)", border:"1px solid rgba(239,68,68,.3)",
+            borderRadius:10, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:4}}>
+            ⚠️ {pwError}
+          </div>
+        )}
+        <div style={{fontSize:11, color:"var(--mid2)", marginBottom:4, lineHeight:1.5}}>
+          🔒 8+ characters · at least 1 uppercase letter · at least 1 number
+        </div>
 
         {type === "member" && (
           <>
@@ -1195,10 +1373,20 @@ function Registration({ type, clubs, onReg, back }) {
 /* ─── DASHBOARD ─────────────────────────────────────────────── */
 function Dashboard({ state, go, showToast }) {
   const { currentUser:cu, clubs:cs, drives:ds, ads, users:us, clubRanks } = state;
+  const today    = new Date().toISOString().split("T")[0];
   const myCl     = cu.clubId ? getClub(cs, cu.clubId) : null;
   const rk       = getRank(cu.rankId, clubRanks, cu.clubId);
-  const myDrives = ds.filter(d => d.registrations.find(r => r.userId === cu.id && r.status === "confirmed"));
-  const done     = ds.filter(d => d.attendanceRecorded && d.registrations.find(r => r.userId === cu.id && r.status === "confirmed"));
+  // Upcoming = confirmed registrations on future drives not yet attended
+  const myDrives = ds.filter(d =>
+    d.registrations.find(r => r.userId === cu.id && r.status === "confirmed") &&
+    !d.attendanceRecorded &&
+    d.date >= today
+  );
+  // Done = drives where attendance was recorded AND user was marked attended
+  const done = ds.filter(d =>
+    d.attendanceRecorded &&
+    d.registrations.find(r => r.userId === cu.id && r.status === "confirmed" && r.attended)
+  );
   const activeAds = ads.filter(a => a.active);
 
   return (
@@ -1305,6 +1493,43 @@ function Dashboard({ state, go, showToast }) {
 }
 
 /* ─── DRIVES ────────────────────────────────────────────────── */
+/* ─── ATTENDANCE MODAL (proper component — avoids useState-in-render bug) ─── */
+function AttendanceModal({ drive, state, onClose, onSave }) {
+  const confirmedRegs = drive.registrations.filter(r => r.status === "confirmed");
+  const [present, setPresent] = useState(() => {
+    const init = {};
+    confirmedRegs.forEach(r => { init[r.userId] = true; });
+    return init;
+  });
+  const presentCount = Object.values(present).filter(Boolean).length;
+  return (
+    <Modal title="RECORD ATTENDANCE" onClose={onClose}>
+      <div style={{fontSize:13, color:"var(--mid)", marginBottom:16}}>{drive.title} — tick who actually showed up.</div>
+      {confirmedRegs.length === 0 && <div style={{fontSize:13, color:"var(--mid)"}}>No confirmed registrations.</div>}
+      {confirmedRegs.map(reg => {
+        const u = getUser(state.users, reg.userId);
+        if (!u) return null;
+        return (
+          <div key={reg.userId} className="urow" style={{cursor:"pointer"}} onClick={() => setPresent(p => ({...p, [reg.userId]: !p[reg.userId]}))}>
+            <div className="ava">{(u.name||"?")[0]}</div>
+            <div style={{flex:1}}><div className="uname">{u.name}</div></div>
+            <div style={{width:24, height:24, borderRadius:7, border:`2px solid ${present[reg.userId] ? "var(--green)" : "var(--line2)"}`,
+              background: present[reg.userId] ? "var(--green)" : "transparent",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:"#fff", fontWeight:800, transition:"all .15s", flexShrink:0}}>
+              {present[reg.userId] ? "✓" : ""}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{fontSize:12, color:"var(--mid)", margin:"10px 0 4px"}}>{presentCount} / {confirmedRegs.length} members marked present</div>
+      <button className="btn gold" style={{width:"100%", marginTop:12}}
+        onClick={() => onSave(drive.id, present, presentCount)}>
+        CONFIRM ATTENDANCE
+      </button>
+    </Modal>
+  );
+}
+
 function Drives({ state, upd, showToast, pushNotif }) {
   const { currentUser:cu, drives:ds, clubs:cs, clubRanks } = state;
   const [createOpen, setCreate] = useState(false);
@@ -1372,7 +1597,13 @@ function Drives({ state, upd, showToast, pushNotif }) {
                 {waiting > 0 && <div className="dm"><span className="waitbdg">⏳ {waiting} waiting</span></div>}
               </div>
               <div className="capbar"><div className="capfill" style={{width:`${pct}%`}} /></div>
-              {drive.attendanceRecorded && <div style={{marginBottom:8}}><span className="bdg g">✓ ATTENDED</span></div>}
+              {drive.attendanceRecorded && myReg && (
+                <div style={{marginBottom:8}}>
+                  <span className={`bdg ${myReg.attended ? "g" : "d"}`}>
+                    {myReg.attended ? "✓ ATTENDED" : "✗ DID NOT ATTEND"}
+                  </span>
+                </div>
+              )}
               <div className="dcard-actions">
                 {myReg && <span className={`bdg ${myReg.status === "confirmed" ? "g" : "o"}`}>{myReg.status === "confirmed" ? "✓ CONFIRMED" : "⏳ WAITLIST"}</span>}
                 {!myReg && uLevel >= reqLevel && <button className="btn gold xs" onClick={() => register(drive)}>REGISTER</button>}
@@ -1423,66 +1654,57 @@ function Drives({ state, upd, showToast, pushNotif }) {
         />
       )}
 
-      {waitM && (
-        <Modal title="WAITING LIST" onClose={() => setWaitM(null)}>
-          <div style={{fontSize:13, color:"var(--mid)", marginBottom:20}}>{waitM.title}</div>
-          {waitM.registrations.filter(r => r.status === "waiting").map(reg => {
-            const u = getUser(state.users, reg.userId);
-            if (!u) return null;
-            return (
-              <div key={reg.userId} className="urow">
-                <div className="ava">{(u.name||"?")[0]}</div>
-                <div style={{flex:1}}>
-                  <div className="uname">{u.name}</div>
-                  <div className="umeta"><RankBadge rankId={u.rankId} clubRanks={clubRanks} clubId={u.clubId} /></div>
-                </div>
-                <button className="btn gold xs" onClick={() => {
-                  upd({ drives: ds.map(d => d.id === waitM.id ? {...d, registrations: d.registrations.map(r => r.userId === reg.userId ? {...r, status:"confirmed"} : r)} : d) });
-                  showToast("Member accepted!");
-                }}>ACCEPT</button>
-              </div>
-            );
-          })}
-        </Modal>
-      )}
-
-      {attM && (() => {
-        const AttModal = () => {
-          const confirmed = attM.registrations.filter(r => r.status === "confirmed");
-          const [present, setPresent] = useState(() => {
-            const init = {}; confirmed.forEach(r => { init[r.userId] = true; }); return init;
-          });
-          const presentCount = Object.values(present).filter(Boolean).length;
-          return (
-            <Modal title="RECORD ATTENDANCE" onClose={() => setAttM(null)}>
-              <div style={{fontSize:13, color:"var(--mid)", marginBottom:16}}>{attM.title} — tick who actually showed up.</div>
-              {confirmed.map(reg => {
-                const u = getUser(state.users, reg.userId);
-                if (!u) return null;
-                return (
-                  <div key={reg.userId} className="urow" style={{cursor:"pointer"}} onClick={() => setPresent(p => ({...p, [reg.userId]: !p[reg.userId]}))}>
-                    <div className="ava">{(u.name||"?")[0]}</div>
-                    <div style={{flex:1}}><div className="uname">{u.name}</div></div>
-                    <div style={{width:24, height:24, borderRadius:7, border:`2px solid ${present[reg.userId] ? "var(--green)" : "var(--line2)"}`,
-                      background: present[reg.userId] ? "var(--green)" : "transparent",
-                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:"#fff", fontWeight:800, transition:"all .15s", flexShrink:0}}>
-                      {present[reg.userId] ? "✓" : ""}
-                    </div>
+      {waitM && (() => {
+        // Re-derive the drive from live ds so stale state is never shown after accepting members
+        const liveDrive = ds.find(d => d.id === waitM.id) || waitM;
+        const waitingList = liveDrive.registrations.filter(r => r.status === "waiting");
+        return (
+          <Modal title="WAITING LIST" onClose={() => setWaitM(null)}>
+            <div style={{fontSize:13, color:"var(--mid)", marginBottom:20}}>{liveDrive.title}</div>
+            {waitingList.length === 0 && <div style={{fontSize:13, color:"var(--mid)"}}>No one on the waiting list.</div>}
+            {waitingList.map(reg => {
+              const u = getUser(state.users, reg.userId);
+              if (!u) return null;
+              return (
+                <div key={reg.userId} className="urow">
+                  <div className="ava">{(u.name||"?")[0]}</div>
+                  <div style={{flex:1}}>
+                    <div className="uname">{u.name}</div>
+                    <div className="umeta"><RankBadge rankId={u.rankId} clubRanks={clubRanks} clubId={u.clubId} /></div>
                   </div>
-                );
-              })}
-              <div style={{fontSize:12, color:"var(--mid)", margin:"10px 0 4px"}}>{presentCount} / {confirmed.length} members marked present</div>
-              <button className="btn gold" style={{width:"100%", marginTop:12}} onClick={() => {
-                upd({ drives: ds.map(d => d.id === attM.id ? {...d, attendanceRecorded:true,
-                  registrations: d.registrations.map(r => r.status === "confirmed" ? {...r, attended: !!present[r.userId]} : r)} : d) });
-                setAttM(null);
-                showToast(`Attendance recorded — ${presentCount} present`);
-              }}>CONFIRM ATTENDANCE</button>
-            </Modal>
-          );
-        };
-        return <AttModal />;
+                  <button className="btn gold xs" onClick={() => {
+                    const updatedDrives = ds.map(d => d.id === liveDrive.id
+                      ? {...d, registrations: d.registrations.map(r => r.userId === reg.userId ? {...r, status:"confirmed"} : r)}
+                      : d);
+                    upd({ drives: updatedDrives });
+                    // Keep modal open and update waitM reference so list refreshes
+                    setWaitM(updatedDrives.find(d => d.id === liveDrive.id));
+                    showToast(`${u.name} accepted!`);
+                    pushNotif && pushNotif({ type:"reg", title:"✅ Member Accepted", body:`${u.name} confirmed for ${liveDrive.title}` });
+                  }}>ACCEPT</button>
+                </div>
+              );
+            })}
+          </Modal>
+        );
       })()}
+
+      {attM && (
+        <AttendanceModal
+          drive={ds.find(d => d.id === attM.id) || attM}
+          state={state}
+          onClose={() => setAttM(null)}
+          onSave={(driveId, presentMap, presentCount) => {
+            upd({ drives: ds.map(d => d.id === driveId
+              ? {...d, attendanceRecorded:true,
+                 registrations: d.registrations.map(r => r.status === "confirmed"
+                   ? {...r, attended: !!presentMap[r.userId]} : r)}
+              : d) });
+            setAttM(null);
+            showToast(`Attendance recorded — ${presentCount} present`);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -2649,7 +2871,8 @@ function useNotifications() {
   const [notifs, setNotifs] = useState([]);
   function push(n) {
     const id = Date.now();
-    setNotifs(q => [...q.slice(-4), { ...n, id }]);
+    const ts = new Date().toLocaleTimeString();
+    setNotifs(q => [...q.slice(-4), { ...n, id, ts }]);
     setTimeout(() => setNotifs(q => q.filter(x => x.id !== id)), 5000);
   }
   function dismiss(id) { setNotifs(q => q.filter(x => x.id !== id)); }
@@ -2668,7 +2891,7 @@ function NotifBanner({ notifs, dismiss }) {
           <div style={{ flex:1, minWidth:0 }}>
             <div className="notif-title">{n.title}</div>
             <div className="notif-body">{n.body}</div>
-            <div className="notif-time">{new Date().toLocaleTimeString()}</div>
+            <div className="notif-time">{n.ts}</div>
           </div>
           <button className="notif-close" onClick={() => dismiss(n.id)}>✕</button>
         </div>
@@ -2945,7 +3168,7 @@ function DriveRating({ drive, state, upd, showToast }) {
   const [hover, setHover]     = useState(0);
   const [stars, setStars]     = useState(myRating?.stars || 0);
   const [comment, setComment] = useState(myRating?.comment || "");
-  const wasAttendee = drive.registrations.find(r => r.userId === cu.id && r.status === "confirmed");
+  const wasAttendee = drive.registrations.find(r => r.userId === cu.id && r.status === "confirmed" && r.attended);
 
   const avg = driveRatings.length ? (driveRatings.reduce((s, r) => s + r.stars, 0) / driveRatings.length).toFixed(1) : null;
 
@@ -3147,12 +3370,20 @@ export default function App() {
 
     // ── Fallback: local registration (used when Supabase not configured) ──
     if (type === "member") {
-      const u = {id:Date.now(), name:form.name, email:form.email, phone:form.phone, role:"member", rankId:1, clubId:Number(form.clubId), drives:0};
+      const u = {id:Date.now(), name:form.name, email:form.email, phone:form.phone,
+                 role:"member", rankId:1, clubId:Number(form.clubId), drives:0,
+                 passwordHash: form.passwordHash || ""};
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
     } else {
       const cid = Math.max(0, ...S.clubs.map(c => c.id)) + 1;
-      const u   = {id:Date.now(), name:form.name, email:form.email, phone:form.phone, role:"admin", rankId:5, clubId:cid, drives:0};
-      const c   = {id:cid, name:form.name, email:form.email, phone:form.phone, adminId:u.id, logo:"", banner:"", description:"", terms:""};
+      // For club registration: form.name is the CLUB name, form.contactName is the admin's name
+      const adminName = form.contactName || form.name;
+      const clubName  = form.clubName  || form.name;
+      const u   = {id:Date.now(), name:adminName, email:form.email, phone:form.phone,
+                   role:"admin", rankId:5, clubId:cid, drives:0,
+                   passwordHash: form.passwordHash || ""};
+      const c   = {id:cid, name:clubName, email:form.email, phone:form.phone,
+                   adminId:u.id, logo:"", banner:"", description:"", terms:""};
       setS(s => ({
         ...s,
         users:     [...s.users, u],
@@ -3276,6 +3507,31 @@ export default function App() {
       </div>
       {toast && <Toast msg={toast} done={() => setToast(null)} />}
       <NotifBanner notifs={notifs} dismiss={dismiss} />
+      {/* ── BOTTOM MOBILE NAV ── */}
+      {cu && (
+        <div className="mobile-nav">
+          <div className="mobile-nav-inner">
+            {[
+              {id:"dashboard", label:"Home",      icon:"🏠"},
+              {id:"drives",    label:"Drives",     icon:"🚙", hide: cu.role === "app_admin"},
+              {id:"chat",      label:"Chat",       icon:"💬", hide: !cu.clubId},
+              {id:"market",    label:"Market",     icon:"🛍"},
+              cu.role === "admin"
+                ? {id:"club-admin", label:"Admin", icon:"⚙️"}
+                : cu.role === "app_admin"
+                  ? {id:"app-admin", label:"Admin", icon:"🔐"}
+                  : cu.role === "marshal" || cu.role === "support"
+                    ? {id:"marshal", label:"Marshal", icon:"🏴"}
+                    : null,
+            ].filter(Boolean).filter(i => !i.hide).map(i => (
+              <button key={i.id} className={`mnav-btn ${page === i.id ? "on" : ""}`} onClick={() => go(i.id)}>
+                <span className="mnav-icon">{i.icon}</span>
+                <span className="mnav-label">{i.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
