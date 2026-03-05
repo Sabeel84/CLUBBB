@@ -138,7 +138,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .hero-eyebrow{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--acc);margin-bottom:26px;position:relative;display:flex;align-items:center;justify-content:center;gap:12px;animation:fadeIn .9s ease both}
 .hero-eyebrow::before,.hero-eyebrow::after{content:'';flex:0 0 28px;height:1.5px;background:linear-gradient(90deg,transparent,var(--acc2));border-radius:2px}
 .hero-eyebrow::after{background:linear-gradient(90deg,var(--acc2),transparent)}
-.hero-title{font-family:'Syne',sans-serif;font-size:clamp(42px,11vw,176px);font-weight:800;line-height:.88;color:var(--ink);position:relative;margin-bottom:8px;letter-spacing:-4px;animation:fadeUp .8s .08s ease both;text-align:center}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(42px,11vw,176px);font-weight:800;line-height:.88;color:var(--ink);position:relative;margin-bottom:8px;letter-spacing:-4px;animation:fadeUp .8s .08s ease both;text-align:center;white-space:normal;word-break:break-word}
 .hero-title span{background:linear-gradient(135deg,var(--acc3),var(--acc2) 45%,var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
 .hero-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(14px,2vw,20px);font-weight:400;color:var(--mid);margin-bottom:48px;animation:fadeUp .8s .18s ease both;line-height:1.5}
 .hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s .28s ease both}
@@ -147,9 +147,9 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .hero-scroll-dot{width:6px;height:6px;background:var(--mid2);border-radius:50%;animation:dotDance 2s 1s ease-in-out infinite}
 .hero-slash{display:none}
 @media(max-width:600px){
-  .hero{padding:56px 20px 64px;text-align:center}
+  .hero{padding:48px 16px 56px;text-align:center}
   .hero-blob1,.hero-blob2{display:none}
-  .hero-title{font-size:clamp(52px,18vw,72px);letter-spacing:-2px;line-height:.95;white-space:normal;text-align:center;width:100%;overflow:hidden}
+  .hero-title{font-size:clamp(36px,12vw,56px)!important;letter-spacing:-1.5px!important;line-height:1!important;white-space:normal!important;text-align:center!important;width:100%!important;word-break:break-word!important;overflow-wrap:anywhere!important}
   .hero-eyebrow{font-size:10px;letter-spacing:3.5px;margin-bottom:18px;justify-content:center}
   .hero-sub{font-size:14px;margin-bottom:36px;text-align:center;padding:0 4px}
   .hero-ctas{flex-direction:row;flex-wrap:nowrap;justify-content:center;gap:10px;padding:0 4px}
@@ -157,7 +157,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
   .hero-scroll-hint{display:none}
 }
 @media(max-width:400px){
-  .hero-title{font-size:clamp(44px,16vw,60px);letter-spacing:-1.5px;text-align:center;white-space:normal}
+  .hero-title{font-size:clamp(30px,10vw,44px)!important;letter-spacing:-1px!important}
 }
 
 /* ── BUTTONS ─────────────────────────────────────────── */
@@ -729,9 +729,18 @@ function Toast({ msg, done }) {
 }
 
 function Modal({ title, onClose, children }) {
+  const isMob = typeof window !== "undefined" && window.innerWidth <= 600;
+  const moverStyle = isMob ? {padding:0, alignItems:"flex-end"} : {};
+  const modalStyle = isMob ? {
+    position:"fixed", bottom:0, left:0, right:0, top:"auto",
+    borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
+    height:"92vh", maxHeight:"92vh", overflowY:"scroll",
+    WebkitOverflowScrolling:"touch",
+    padding:"20px 16px 120px", margin:0, borderBottom:"none"
+  } : {};
   return (
-    <div className="mover" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal">
+    <div className="mover" style={moverStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" style={modalStyle}>
         <div className="modal-title">{title}</div>
         <button className="mclose" onClick={onClose}>✕ CLOSE</button>
         {children}
@@ -754,7 +763,7 @@ function Home({ go, state }) {
         <div className="hero-blob1" />
         <div className="hero-blob2" />
         <div className="hero-eyebrow">Desert Driving Community Platform</div>
-        <div className="hero-title">CLUB<span>BB</span></div>
+        <div className="hero-title">CLUB<wbr /><span>BB</span></div>
         <div className="hero-sub">Join the Pack. Master the Dunes.</div>
         <div className="hero-ctas">
           <button className="btn gold"  onClick={() => go("reg-member")}>Join a Club</button>
@@ -2136,9 +2145,17 @@ function AppAdmin({ state, upd, showToast }) {
 
 /* ─── AD DETAIL MODAL ───────────────────────────────────────── */
 function AdDetail({ ad, onClose }) {
+  const isMob = typeof window !== "undefined" && window.innerWidth <= 600;
+  const overlayStyle = isMob ? {padding:0, alignItems:"flex-end"} : {};
+  const modalStyle = isMob ? {
+    position:"fixed", bottom:0, left:0, right:0, top:"auto",
+    borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
+    height:"92vh", maxHeight:"92vh", overflowY:"scroll",
+    WebkitOverflowScrolling:"touch", margin:0, borderBottom:"none"
+  } : {};
   return (
-    <div className="ad-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ad-modal">
+    <div className="ad-modal-overlay" style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ad-modal" style={modalStyle}>
         <button className="ad-modal-close" onClick={onClose}>✕</button>
 
         {/* Thumbnail / hero */}
@@ -2214,9 +2231,7 @@ function Marketplace({ state }) {
           </div>
           <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, marginBottom:40}}>
             {featured.map(ad => (
-              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--bg3),var(--bg4))", border:"1px solid var(--acc3)", position:"relative", overflow:"hidden", cursor:"pointer", transition:"transform .15s,box-shadow .2s"}}
-                onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 12px 36px rgba(0,0,0,.45)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=""; }}>
+              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--bg3),var(--bg4))", border:"1px solid var(--acc3)", position:"relative", overflow:"hidden", cursor:"pointer", transition:"transform .15s,box-shadow .2s", borderRadius:16}}>
                 <div style={{position:"absolute", top:0, left:0, right:0, height:3, background:"linear-gradient(90deg,var(--acc2),var(--acc3))"}} />
                 {ad.thumbnail
                   ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%", height:130, objectFit:"cover", display:"block"}} />
