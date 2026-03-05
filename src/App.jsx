@@ -288,13 +288,13 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 
 /* ── MODAL ───────────────────────────────────────────── */
 .mover{position:fixed;inset:0;background:rgba(9,9,11,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:fadeIn .18s ease both}
-.modal{background:var(--bg);border:1px solid var(--line);border-radius:24px;max-width:580px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:36px 32px 32px;position:relative;box-shadow:var(--sh-xl);animation:scaleIn .22s ease both;margin:auto}
+.modal{background:var(--bg);border:1px solid var(--line);border-radius:24px;max-width:580px;width:100%;max-height:calc(100vh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:36px 32px 32px;position:relative;box-shadow:var(--sh-xl);margin:auto}
 .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.6px;color:var(--ink);margin-bottom:22px;padding-right:44px;line-height:1.2;word-break:break-word}
 .mclose{position:absolute;top:12px;right:12px;background:var(--bg2);border:1.5px solid var(--line2);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--mid);cursor:pointer;font-weight:800;transition:all .18s;z-index:10}
 .mclose:hover{background:var(--red-pale);color:var(--red)}
 @media(max-width:600px){
-  .mover{padding:0;align-items:flex-end}
-  .modal{position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:auto!important;border-radius:20px 20px 0 0!important;max-width:100%!important;width:100%!important;max-height:92dvh!important;height:92dvh!important;min-height:60vh!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch;padding:20px 16px calc(100px + env(safe-area-inset-bottom,20px))!important;margin:0!important;border-bottom:none!important;animation:slideUp .28s cubic-bezier(.32,1.16,.64,1) both}
+  .mover{padding:0!important;align-items:flex-end!important}
+  .modal{position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:0!important;border-radius:0!important;max-width:100%!important;width:100%!important;height:100%!important;max-height:100%!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch!important;padding:20px 16px 140px!important;margin:0!important;border:none!important;box-shadow:none!important;animation:none!important}
   .modal-title{font-size:17px;margin-bottom:16px;padding-right:38px;letter-spacing:0}
   .mclose{top:10px;right:10px;width:30px;height:30px;font-size:10px}
 }
@@ -434,7 +434,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 
 /* ── AD DETAIL MODAL ─────────────────────────────────── */
 .ad-modal-overlay{position:fixed;inset:0;background:rgba(9,9,11,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(16px);animation:fadeIn .2s ease both}
-.ad-modal{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);width:100%;max-width:660px;max-height:90vh;overflow-y:auto;position:relative;display:flex;flex-direction:column;box-shadow:var(--sh-xl);animation:scaleIn .25s ease both}
+.ad-modal{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-2xl);width:100%;max-width:660px;max-height:90vh;overflow-y:auto;position:relative;display:flex;flex-direction:column;box-shadow:var(--sh-xl)}
 .ad-modal-thumb{width:100%;height:240px;object-fit:cover;display:block;flex-shrink:0;border-radius:var(--r-2xl) var(--r-2xl) 0 0}
 .ad-modal-thumb-ph{width:100%;height:240px;flex-shrink:0;background:linear-gradient(135deg,var(--bg3),var(--bg4));display:flex;align-items:center;justify-content:center;font-size:80px;border-radius:var(--r-2xl) var(--r-2xl) 0 0;position:relative;overflow:hidden}
 .ad-modal-thumb-ph::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(255,255,255,.6) 100%)}
@@ -468,7 +468,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .rank-arr-btn:hover:not(:disabled){background:var(--acc-pale2);color:var(--acc);border-color:var(--acc-pale3)}
 .rank-arr-btn:disabled{opacity:.3;cursor:not-allowed}
 
-@media(max-width:640px){.mkt-grid{grid-template-columns:1fr}.ad-modal{max-height:92dvh!important;height:92dvh!important;border-radius:20px 20px 0 0!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:auto!important;max-width:100%!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch}.ad-modal-overlay{padding:0!important;align-items:flex-end!important}.ad-modal-content{padding:20px 16px 80px}.ad-modal-thumb{height:180px}.ad-modal-thumb-ph{height:180px}}
+@media(max-width:640px){.mkt-grid{grid-template-columns:1fr}.ad-modal-overlay{padding:0!important;align-items:flex-end!important}.ad-modal{position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:0!important;border-radius:0!important;max-width:100%!important;width:100%!important;height:100%!important;max-height:100%!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch!important;margin:0!important;border:none!important;box-shadow:none!important;animation:none!important;display:flex!important;flex-direction:column!important}.ad-modal-content{padding:20px 16px 80px}.ad-modal-thumb{height:200px!important;flex-shrink:0!important}.ad-modal-thumb-ph{height:200px!important;flex-shrink:0!important}}
 
 /* ── LIVE TRACKER ───────────────────────────────────────── */
 .map-wrap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);margin-bottom:18px;position:relative}
@@ -729,33 +729,30 @@ function Toast({ msg, done }) {
 }
 
 function Modal({ title, onClose, children }) {
-  const boxRef = useRef(null);
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return;
-    function apply() {
-      const mob = window.innerWidth <= 768;
-      const vh  = window.innerHeight;
-      if (mob) {
-        Object.assign(el.style, {
-          position:"fixed", bottom:"0px", left:"0px", right:"0px", top:"auto",
-          borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
-          height: Math.round(vh * 0.92) + "px",
-          maxHeight: Math.round(vh * 0.92) + "px",
-          overflowY:"scroll", WebkitOverflowScrolling:"touch",
-          padding:"20px 16px 120px", margin:"0", borderBottom:"none",
-        });
-        const mover = el.parentElement;
-        if (mover) Object.assign(mover.style, { padding:"0", alignItems:"flex-end" });
+  const isMob = window.innerWidth <= 768;
+  const moverStyle = isMob
+    ? { padding: 0, alignItems: "flex-end" }
+    : {};
+  const modalStyle = isMob
+    ? {
+        position: "fixed",
+        bottom: 0, left: 0, right: 0, top: 0,
+        borderRadius: 0,
+        maxWidth: "100%", width: "100%",
+        height: "100%", maxHeight: "100%",
+        overflowY: "scroll",
+        WebkitOverflowScrolling: "touch",
+        padding: "20px 16px 140px",
+        margin: 0,
+        border: "none",
+        boxShadow: "none",
+        animation: "none",
+        background: "var(--bg)",
       }
-    }
-    apply();
-    window.addEventListener("resize", apply);
-    return () => window.removeEventListener("resize", apply);
-  }, []);
+    : {};
   return (
-    <div className="mover" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" ref={boxRef}>
+    <div className="mover" style={moverStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" style={modalStyle}>
         <div className="modal-title">{title}</div>
         <button className="mclose" onClick={onClose}>✕ CLOSE</button>
         {children}
@@ -2160,43 +2157,36 @@ function AppAdmin({ state, upd, showToast }) {
 
 /* ─── AD DETAIL MODAL ───────────────────────────────────────── */
 function AdDetail({ ad, onClose }) {
-  const boxRef = useRef(null);
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return;
-    function apply() {
-      const mob = window.innerWidth <= 768;
-      const vh  = window.innerHeight;
-      if (mob) {
-        Object.assign(el.style, {
-          position:"fixed", bottom:"0px", left:"0px", right:"0px", top:"auto",
-          borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
-          height: Math.round(vh * 0.92) + "px",
-          maxHeight: Math.round(vh * 0.92) + "px",
-          overflowY:"scroll", WebkitOverflowScrolling:"touch",
-          margin:"0", borderBottom:"none",
-        });
-        const overlay = el.parentElement;
-        if (overlay) Object.assign(overlay.style, { padding:"0", alignItems:"flex-end" });
+  const isMob = window.innerWidth <= 768;
+  const overlayStyle = isMob ? { padding: 0, alignItems: "flex-end" } : {};
+  const modalStyle = isMob
+    ? {
+        position: "fixed",
+        bottom: 0, left: 0, right: 0, top: 0,
+        borderRadius: 0,
+        maxWidth: "100%", width: "100%",
+        height: "100%", maxHeight: "100%",
+        overflowY: "scroll",
+        WebkitOverflowScrolling: "touch",
+        margin: 0,
+        border: "none",
+        boxShadow: "none",
+        animation: "none",
+        display: "flex",
+        flexDirection: "column",
+        background: "var(--bg)",
       }
-    }
-    apply();
-    window.addEventListener("resize", apply);
-    return () => window.removeEventListener("resize", apply);
-  }, []);
+    : {};
   return (
-    <div className="ad-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ad-modal" ref={boxRef}>
+    <div className="ad-modal-overlay" style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ad-modal" style={modalStyle}>
         <button className="ad-modal-close" onClick={onClose}>✕</button>
-
-        {/* Thumbnail / hero */}
         {ad.thumbnail
           ? <img src={ad.thumbnail} alt={ad.title} className="ad-modal-thumb" />
           : <div className="ad-modal-thumb-ph">
               <span style={{position:"relative", zIndex:1}}>{ad.icon}</span>
             </div>
         }
-
         <div className="ad-modal-content">
           {ad.featured && (
             <div style={{display:"inline-flex", alignItems:"center", gap:6, background:"var(--acc2)", color:"var(--ink)", fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", padding:"3px 10px", marginBottom:14}}>
@@ -2209,7 +2199,6 @@ function AdDetail({ ad, onClose }) {
           </div>
           <div className="ad-modal-title">{ad.title}</div>
           <div className="ad-modal-desc">{ad.desc}</div>
-
           {ad.details && (
             <>
               <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--acc2)", marginBottom:12, display:"flex", alignItems:"center", gap:8}}>
@@ -2219,7 +2208,6 @@ function AdDetail({ ad, onClose }) {
               <div className="ad-modal-details">{ad.details}</div>
             </>
           )}
-
           <div className="ad-modal-actions">
             {ad.link
               ? <a href={ad.link} target="_blank" rel="noreferrer" className="btn gold sm" style={{textDecoration:"none"}}>VISIT OFFER PAGE →</a>
@@ -2262,7 +2250,7 @@ function Marketplace({ state }) {
           </div>
           <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, marginBottom:40}}>
             {featured.map(ad => (
-              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--bg3),var(--bg4))", border:"1px solid var(--acc3)", position:"relative", overflow:"hidden", cursor:"pointer", transition:"transform .15s,box-shadow .2s", borderRadius:16}}>
+              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--bg3),var(--bg4))", border:"1px solid var(--acc3)", position:"relative", overflow:"hidden", cursor:"pointer", borderRadius:16, WebkitTapHighlightColor:"transparent"}}>
                 <div style={{position:"absolute", top:0, left:0, right:0, height:3, background:"linear-gradient(90deg,var(--acc2),var(--acc3))"}} />
                 {ad.thumbnail
                   ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%", height:130, objectFit:"cover", display:"block"}} />
