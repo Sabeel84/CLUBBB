@@ -678,8 +678,36 @@ const DEFAULT_RANKS = [
   {id:5,name:"Desert Legend",color:"#a060d0",level:5},
 ];
 
+/* ─── PERSISTENCE — localStorage so state survives page refresh ─
+   State is saved to localStorage on every change.
+   Supabase is the eventual cloud backend; localStorage is the
+   offline/fallback layer that always works without config.
+────────────────────────────────────────────────────────────── */
+const STORAGE_KEY = "clubbb_state_v1";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn("[CLUBBB] Failed to load state from localStorage:", e);
+    return null;
+  }
+}
+
+function saveState(state) {
+  try {
+    // Don't persist liveTrack (GPS positions are ephemeral)
+    const { liveTrack, ...rest } = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+  } catch (e) {
+    console.warn("[CLUBBB] Failed to save state to localStorage:", e);
+  }
+}
+
 /* ─── INITIAL STATE — production clean, no demo data ────────── */
-const INIT = {
+const BLANK_STATE = {
   page:"home",
   currentUser:null,
   clubRanks:{},
@@ -694,6 +722,9 @@ const INIT = {
   liveTrack:{},
   ads:[],
 };
+
+// Merge saved state with blank — so new fields added in future versions are present
+const INIT = { ...BLANK_STATE, ...(loadState() || {}), liveTrack:{} };
 
 
 /* ─── UTILS ─────────────────────────────────────────────────── */
@@ -961,48 +992,28 @@ function Login({ users, onLogin, back }) {
       <button className="btn out sm" onClick={back} style={{marginBottom:32}}>← BACK</button>
       <div className="sh"><div className="sh-label">Access</div><div className="sh-title">SIGN IN</div></div>
       <div className="card">
-        {!needPin ? (
-          <>
-            <div className="fg">
-              <label className="fl">Email Address</label>
-              <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && document.getElementById("pw-input")?.focus()} autoFocus />
-            </div>
-            <div className="fg">
-              <label className="fl">Password</label>
-              <div style={{position:"relative"}}>
-                <input id="pw-input" className="fi" type={showPw ? "text" : "password"} value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Your password" onKeyDown={e => e.key === "Enter" && go()}
-                  style={{paddingRight:44}} />
-                <button onClick={() => setShowPw(v => !v)}
-                  style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
-                    background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
-                  {showPw ? "🙈" : "👁️"}
-                </button>
-              </div>
-            </div>
-
-            <button className="btn gold" style={{width:"100%"}} onClick={go} disabled={loading}>
-              {loading ? "SIGNING IN..." : "SIGN IN"}
+        <div className="fg">
+          <label className="fl">Email Address</label>
+          <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && document.getElementById("pw-input")?.focus()} autoFocus />
+        </div>
+        <div className="fg">
+          <label className="fl">Password</label>
+          <div style={{position:"relative"}}>
+            <input id="pw-input" className="fi" type={showPw ? "text" : "password"} value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Your password" onKeyDown={e => e.key === "Enter" && go()}
+              style={{paddingRight:44}} />
+            <button type="button" onClick={() => setShowPw(v => !v)}
+              style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
+              {showPw ? "🙈" : "👁️"}
             </button>
-          </>
-        ) : (
-          <>
-            <div style={{fontSize:14, color:"var(--mid)", marginBottom:20, lineHeight:1.6}}>
-              App Admin access requires a PIN. Enter your secret PIN to continue.
-            </div>
-            <div className="fg">
-              <label className="fl">Admin PIN</label>
-              <input className="fi" type="password" value={pin} onChange={e => setPin(e.target.value)}
-                placeholder="Enter PIN..." onKeyDown={e => e.key === "Enter" && checkPin()} autoFocus />
-            </div>
-            <div style={{display:"flex", gap:10}}>
-              <button className="btn out sm" style={{flex:1}} onClick={() => { setNeedPin(false); setPin(""); }}>← Back</button>
-              <button className="btn gold sm" style={{flex:2}} onClick={checkPin}>VERIFY PIN</button>
-            </div>
-          </>
-        )}
+          </div>
+        </div>
+        <button className="btn gold" style={{width:"100%"}} onClick={go} disabled={loading}>
+          {loading ? "SIGNING IN..." : "SIGN IN"}
+        </button>
       </div>
     </div>
   );
@@ -1569,11 +1580,12 @@ function Drives({ state, upd, showToast, pushNotif }) {
               title:            newDrive.title,
               location:         newDrive.location,
               date:             newDrive.date,
-              start_time:       newDrive.startTime || newDrive.start_time || "",
+              start_time:       newDrive.startTime || "",
               description:      newDrive.description || "",
-              required_rank_id: newDrive.minRank || newDrive.required_rank_id || 1,
+              required_rank_id: newDrive.requiredRankId || 1,
             }).then(r => {
-              if (r.ok) console.log(`[CLUBBB] Drive notification sent to ${r.data?.sent ?? "?"} members`);
+              if (r.ok) console.log("[CLUBBB] Drive notification sent to", r.data?.sent ?? "?", "members");
+              else if (r.reason !== "not_configured") console.warn("[CLUBBB] notify-drive failed:", r);
             });
           }}
         />
@@ -2189,6 +2201,125 @@ function MarshalPanel({ state, upd, showToast }) {
 }
 
 /* ─── APP ADMIN ─────────────────────────────────────────────── */
+/* ─── EMAIL TESTER — used in App Admin settings tab ─────────── */
+function EmailTester() {
+  const [to,      setTo]      = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null);
+
+  async function test() {
+    if (!to.trim()) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch(`${SUPA_URL}/functions/v1/send-verification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "apikey": SUPA_KEY,
+        },
+        body: JSON.stringify({ email: to.trim(), type: "test", payload: {} }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setResult(res.ok
+        ? { ok: true,  msg: "✅ Email sent successfully — check your inbox." }
+        : { ok: false, msg: `❌ Error: ${data?.error || data?.message || res.status}` }
+      );
+    } catch (e) {
+      setResult({ ok: false, msg: `❌ Network error: ${e.message}` });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{fontSize:13, color:"var(--mid)", marginBottom:14, lineHeight:1.6}}>
+        Send a test email via the <strong>send-verification</strong> Edge Function to verify Resend is working correctly.
+      </div>
+      <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"flex-end"}}>
+        <div className="fg" style={{flex:1, marginBottom:0}}>
+          <label className="fl">Test Recipient Email</label>
+          <input className="fi" type="email" value={to} onChange={e => setTo(e.target.value)}
+            placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && test()} />
+        </div>
+        <button className="btn gold sm" onClick={test} disabled={loading || !to.trim()} style={{flexShrink:0, marginBottom:0}}>
+          {loading ? "SENDING..." : "SEND TEST"}
+        </button>
+      </div>
+      {result && (
+        <div style={{marginTop:12, padding:"10px 14px", background: result.ok ? "rgba(22,163,74,.08)" : "rgba(220,38,38,.08)",
+          border:`1px solid ${result.ok ? "rgba(22,163,74,.25)" : "rgba(220,38,38,.25)"}`, borderRadius:10,
+          fontSize:13, color: result.ok ? "var(--green)" : "var(--red)", fontWeight:600}}>
+          {result.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── CHANGE PASSWORD — used in App Admin settings tab ──────── */
+function ChangePassword({ state, upd, showToast }) {
+  const { currentUser:cu, users:us } = state;
+  const [current,  setCurrent]  = useState("");
+  const [next,     setNext]     = useState("");
+  const [confirm2, setConfirm2] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [showPw,   setShowPw]   = useState(false);
+  const [err,      setErr]      = useState("");
+
+  async function save() {
+    setErr("");
+    if (!current || !next || !confirm2) { setErr("All fields are required."); return; }
+    const pwErr = validatePassword(next);
+    if (pwErr) { setErr(pwErr); return; }
+    if (next !== confirm2) { setErr("New passwords do not match."); return; }
+    setLoading(true);
+    const currentOk = await verifyPassword(current, cu.passwordHash);
+    if (!currentOk) { setErr("Current password is incorrect."); setLoading(false); return; }
+    const passwordHash = await hashPassword(next);
+    setLoading(false);
+    upd({ users: us.map(u => u.id === cu.id ? { ...u, passwordHash } : u),
+          currentUser: { ...cu, passwordHash } });
+    showToast("✅ Password changed successfully");
+    setCurrent(""); setNext(""); setConfirm2("");
+  }
+
+  return (
+    <div>
+      {["Current Password","New Password","Confirm New Password"].map((label, i) => {
+        const val     = [current, next, confirm2][i];
+        const setter  = [setCurrent, setNext, setConfirm2][i];
+        return (
+          <div key={label} className="fg">
+            <label className="fl">{label} *</label>
+            <div style={{position:"relative"}}>
+              <input className="fi" type={showPw ? "text" : "password"} value={val}
+                onChange={e => { setter(e.target.value); setErr(""); }}
+                placeholder={label} style={{paddingRight:44}} />
+              {i === 0 && (
+                <button type="button" onClick={() => setShowPw(v => !v)}
+                  style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                    background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
+                  {showPw ? "🙈" : "👁️"}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      {err && (
+        <div style={{background:"rgba(220,38,38,.08)", border:"1px solid rgba(220,38,38,.25)", borderRadius:10,
+          padding:"10px 14px", fontSize:13, color:"var(--red)", marginBottom:12}}>⚠️ {err}</div>
+      )}
+      <button className="btn gold sm" onClick={save} disabled={loading}>
+        {loading ? "SAVING..." : "CHANGE PASSWORD"}
+      </button>
+    </div>
+  );
+}
+
 function AppAdmin({ state, upd, showToast }) {
   const { ads, clubs:cs, users:us, clubRanks } = state;
   const [tab, setTab]   = useState("ads");
@@ -2203,7 +2334,7 @@ function AppAdmin({ state, upd, showToast }) {
         <div className="sh-sub">Global platform management</div>
       </div>
       <div className="tabs">
-        {[["ads","Marketplace Ads"],["clubs","All Clubs"],["users","All Users"]].map(([id, l]) => (
+        {[["ads","Marketplace Ads"],["clubs","All Clubs"],["users","All Users"],["settings","⚙️ Settings"]].map(([id, l]) => (
           <button key={id} className={`tab ${tab === id ? "on" : ""}`} onClick={() => setTab(id)}>{l}</button>
         ))}
       </div>
@@ -2329,6 +2460,80 @@ function AppAdmin({ state, upd, showToast }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === "settings" && (
+        <div>
+          {/* ── Supabase / Resend connection status ── */}
+          <div className="card">
+            <div className="card-label">🔌 Integration Status</div>
+            <div style={{display:"flex", flexDirection:"column", gap:12}}>
+              {[
+                {
+                  name: "Supabase",
+                  desc: "Database & Edge Functions",
+                  env: "VITE_SUPABASE_URL",
+                  ok: !!SUPA_URL,
+                  value: SUPA_URL ? SUPA_URL.replace(/https?:\/\//, "").split(".")[0] + ".supabase.co" : "Not set",
+                },
+                {
+                  name: "Supabase Anon Key",
+                  desc: "API authentication",
+                  env: "VITE_SUPABASE_ANON_KEY",
+                  ok: !!SUPA_KEY,
+                  value: SUPA_KEY ? SUPA_KEY.slice(0,12) + "..." : "Not set",
+                },
+              ].map(item => (
+                <div key={item.name} style={{display:"flex", alignItems:"center", gap:14, padding:"14px 18px", background: item.ok ? "rgba(22,163,74,.04)" : "rgba(220,38,38,.04)", border:`1px solid ${item.ok ? "rgba(22,163,74,.2)" : "rgba(220,38,38,.18)"}`, borderRadius:"var(--r-xl)"}}>
+                  <div style={{fontSize:22, flexShrink:0}}>{item.ok ? "✅" : "❌"}</div>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{fontSize:14, fontWeight:700, color:"var(--ink)"}}>{item.name}</div>
+                    <div style={{fontSize:12, color:"var(--mid)", marginTop:2}}>{item.desc}</div>
+                    <div style={{fontSize:11, color: item.ok ? "var(--green)" : "var(--red)", marginTop:3, fontFamily:"monospace"}}>{item.value}</div>
+                  </div>
+                  <span className={`bdg ${item.ok ? "g" : "r"}`}>{item.ok ? "CONNECTED" : "NOT SET"}</span>
+                </div>
+              ))}
+            </div>
+            {(!SUPA_URL || !SUPA_KEY) && (
+              <div className="ibox" style={{marginTop:16}}>
+                <strong>To connect Supabase:</strong> Go to Vercel → Your Project → Settings → Environment Variables and add:<br/>
+                <code style={{fontSize:11, background:"var(--bg3)", padding:"2px 6px", borderRadius:4, display:"inline-block", marginTop:4}}>VITE_SUPABASE_URL</code> and <code style={{fontSize:11, background:"var(--bg3)", padding:"2px 6px", borderRadius:4}}>VITE_SUPABASE_ANON_KEY</code><br/>
+                Then redeploy. Without these, email verification and notifications are disabled — all other features work normally.
+              </div>
+            )}
+          </div>
+
+          {/* ── Email test ── */}
+          {SUPA_URL && SUPA_KEY && (
+            <div className="card">
+              <div className="card-label">📧 Test Email (Resend via Edge Function)</div>
+              <EmailTester />
+            </div>
+          )}
+
+          {/* ── App Admin change password ── */}
+          <div className="card">
+            <div className="card-label">🔑 Change App Admin Password</div>
+            <ChangePassword state={state} upd={upd} showToast={showToast} />
+          </div>
+
+          {/* ── Danger zone ── */}
+          <div className="card" style={{border:"1px solid rgba(220,38,38,.25)"}}>
+            <div className="card-label" style={{color:"var(--red)"}}>⚠️ Danger Zone</div>
+            <div style={{fontSize:13, color:"var(--mid)", marginBottom:14, lineHeight:1.6}}>
+              Reset all app data and wipe localStorage. This cannot be undone. You will need to run the setup wizard again.
+            </div>
+            <button className="btn out-red sm" onClick={() => {
+              if (window.confirm("⚠️ This will DELETE all users, clubs, drives and all data.
+
+This cannot be undone. Are you absolutely sure?")) {
+                localStorage.removeItem("clubbb_state_v1");
+                window.location.reload();
+              }
+            }}>🗑️ RESET ALL DATA</button>
+          </div>
         </div>
       )}
 
@@ -3258,21 +3463,54 @@ function SetupWizard({ onComplete }) {
     const pwErr = validatePassword(password);
     if (pwErr) { setErr(pwErr); return; }
     if (password !== confirm) { setErr("Passwords do not match."); return; }
+
     setLoading(true);
-    const passwordHash = await hashPassword(password);
-    setLoading(false);
-    const adminUser = {
-      id: Date.now(),
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      role: "app_admin",
-      rankId: 5,
-      clubId: null,
-      drives: 0,
-      passwordHash,
-    };
-    onComplete(adminUser);
+    try {
+      const passwordHash = await hashPassword(password);
+      const adminUser = {
+        id: Date.now(),
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        role: "app_admin",
+        rankId: 5,
+        clubId: null,
+        drives: 0,
+        passwordHash,
+      };
+
+      // ── If Supabase is configured, persist App Admin to DB ──
+      if (SUPA_URL && SUPA_KEY) {
+        const res = await fetch(`${SUPA_URL}/functions/v1/setup-admin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPA_KEY}`,
+            "apikey": SUPA_KEY,
+          },
+          body: JSON.stringify({
+            name: adminUser.name,
+            email: adminUser.email,
+            phone: adminUser.phone,
+            passwordHash: adminUser.passwordHash,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          // If setup-admin edge function doesn't exist yet, warn but continue
+          if (res.status !== 404) {
+            console.warn("[CLUBBB] setup-admin edge function error:", errData);
+          }
+        }
+      }
+
+      onComplete(adminUser);
+    } catch (e) {
+      setErr("An error occurred. Please try again.");
+      console.error("[CLUBBB] SetupWizard error:", e);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -3375,7 +3613,23 @@ export default function App() {
   const [mobOpen, setMob]   = useState(false);
   const { notifs, push: pushNotif, dismiss } = useNotifications();
 
-  // ── First-time setup: no users at all means platform is brand new ──
+  // ALL hooks must come before any conditional returns (Rules of Hooks)
+  useEffect(() => {
+    let vp = document.querySelector('meta[name="viewport"]');
+    if (!vp) { vp = document.createElement('meta'); vp.name = 'viewport'; document.head.prepend(vp); }
+    vp.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
+    let tc = document.querySelector('meta[name="theme-color"]');
+    if (!tc) { tc = document.createElement('meta'); tc.name='theme-color'; document.head.appendChild(tc); }
+    tc.content = '#ffffff';
+    document.title = 'CLUBBB — Desert Driving Club';
+    Object.assign(document.body.style, { margin:'0', padding:'0', overflowX:'hidden', background:'#f7f7f8' });
+  }, []);
+
+  // Persist state to localStorage on every change (survives refresh)
+  useEffect(() => { saveState(S); }, [S]);
+
+  // ── First-time setup: show wizard when no users exist ──
+  // This is AFTER all hooks so it doesn't violate Rules of Hooks
   if (S.users.length === 0) {
     return (
       <>
@@ -3387,31 +3641,6 @@ export default function App() {
       </>
     );
   }
-
-  // Inject essential mobile meta tags on mount
-  useEffect(() => {
-    // Viewport — MUST exist for mobile to not zoom out and show code
-    let vp = document.querySelector('meta[name="viewport"]');
-    if (!vp) {
-      vp = document.createElement('meta');
-      vp.name = 'viewport';
-      document.head.prepend(vp);
-    }
-    vp.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
-
-    // Theme color
-    let tc = document.querySelector('meta[name="theme-color"]');
-    if (!tc) { tc = document.createElement('meta'); tc.name='theme-color'; document.head.appendChild(tc); }
-    tc.content = '#ffffff';
-
-    // Page title
-    document.title = 'CLUBBB — Desert Driving Club';
-
-    // Body styles
-    Object.assign(document.body.style, {
-      margin:'0', padding:'0', overflowX:'hidden', background:'#f7f7f8'
-    });
-  }, []);
 
   const showToast = msg => setToast(msg);
   const upd  = patch => setS(s => ({...s, ...patch}));
@@ -3429,8 +3658,8 @@ export default function App() {
       const payload = type === "member"
         ? { name: form.name, email: form.email, phone: form.phone, role: "member", rank_id: 1, club_id: Number(form.clubId), drives: 0 }
         : {
-            user: { name: form.name, email: form.email, phone: form.phone, role: "admin", rank_id: 5, drives: 0 },
-            club: { name: form.name, email: form.email, phone: form.phone, logo: "", banner: "", description: "", terms: "" },
+            user: { name: form.contactName || form.name, email: form.email, phone: form.phone, role: "admin", rank_id: 5, drives: 0 },
+            club: { name: form.clubName || form.name, email: form.email, phone: form.phone, logo: "", banner: "", description: "", terms: "" },
           };
       const result = await sendVerificationEmail(form.email, type, payload);
       if (result.ok) {
