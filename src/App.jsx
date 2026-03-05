@@ -1,5 +1,47 @@
 import { useState, useEffect, useRef } from "react";
 
+/* ═══ SUPABASE EDGE FUNCTION HELPERS ═══════════════════════════════
+   Calls Supabase Edge Functions for email verification & notifications.
+   Reads VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from .env
+   Set these in Vercel → Project → Settings → Environment Variables.
+═══════════════════════════════════════════════════════════════════ */
+const SUPA_URL  = import.meta.env.VITE_SUPABASE_URL  || "";
+const SUPA_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+async function invokeEdge(fnName, body) {
+  if (!SUPA_URL || !SUPA_KEY) {
+    console.warn(`[CLUBBB] Supabase not configured — skipping ${fnName}`);
+    return { ok: false, reason: "not_configured" };
+  }
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/${fnName}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPA_KEY}`,
+        "apikey": SUPA_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) console.error(`[CLUBBB] ${fnName} error:`, data);
+    return { ok: res.ok, data };
+  } catch (err) {
+    console.error(`[CLUBBB] ${fnName} fetch error:`, err);
+    return { ok: false, reason: "network_error" };
+  }
+}
+
+/** Send email verification for member or club registration */
+async function sendVerificationEmail(email, type, payload) {
+  return invokeEdge("send-verification", { email, type, payload });
+}
+
+/** Notify eligible members when a drive is posted */
+async function notifyDrivePosted(drive) {
+  return invokeEdge("notify-drive", { drive });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    CLUBBB — Desert Driving Community Platform
    Modern White Theme: Plus Jakarta Sans + Syne
@@ -1355,7 +1397,18 @@ function Drives({ state, upd, showToast, pushNotif }) {
             setCreate(false);
             showToast("Drive posted! Members are being notified.");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
-            if (window.__clubbb_hooks?.onDrivePosted) window.__clubbb_hooks.onDrivePosted(newDrive);
+            // ── Notify eligible members via email ──
+            notifyDrivePosted({
+              club_id:          cu.clubId,
+              title:            newDrive.title,
+              location:         newDrive.location,
+              date:             newDrive.date,
+              start_time:       newDrive.startTime || newDrive.start_time || "",
+              description:      newDrive.description || "",
+              required_rank_id: newDrive.minRank || newDrive.required_rank_id || 1,
+            }).then(r => {
+              if (r.ok) console.log(`[CLUBBB] Drive notification sent to ${r.data?.sent ?? "?"} members`);
+            });
           }}
         />
       )}
@@ -3068,9 +3121,31 @@ export default function App() {
   const login  = u   => { setS(s => ({...s, currentUser:u, page:"dashboard"})); setMob(false); };
   const logout = ()  => { setS(s => ({...s, currentUser:null, page:"home"})); setMob(false); };
 
-  function reg(type, form) {
+  async function reg(type, form) {
     const emailExists = S.users.find(u => u.email.toLowerCase() === form.email.toLowerCase());
     if (emailExists) { alert("An account with this email already exists. Please sign in instead."); return; }
+
+    // ── If Supabase is configured, send verification email first ──
+    if (SUPA_URL && SUPA_KEY) {
+      showToast("Sending verification email...");
+      const payload = type === "member"
+        ? { name: form.name, email: form.email, phone: form.phone, role: "member", rank_id: 1, club_id: Number(form.clubId), drives: 0 }
+        : {
+            user: { name: form.name, email: form.email, phone: form.phone, role: "admin", rank_id: 5, drives: 0 },
+            club: { name: form.name, email: form.email, phone: form.phone, logo: "", banner: "", description: "", terms: "" },
+          };
+      const result = await sendVerificationEmail(form.email, type, payload);
+      if (result.ok) {
+        showToast("✅ Verification email sent! Check your inbox to activate your account.");
+        go("home");
+        return;
+      } else {
+        // Fall through to local registration if email fails (e.g. Resend sandbox limit)
+        showToast("⚠️ Email service unavailable — account created without verification.");
+      }
+    }
+
+    // ── Fallback: local registration (used when Supabase not configured) ──
     if (type === "member") {
       const u = {id:Date.now(), name:form.name, email:form.email, phone:form.phone, role:"member", rankId:1, clubId:Number(form.clubId), drives:0};
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
