@@ -729,18 +729,33 @@ function Toast({ msg, done }) {
 }
 
 function Modal({ title, onClose, children }) {
-  const isMob = typeof window !== "undefined" && window.innerWidth <= 600;
-  const moverStyle = isMob ? {padding:0, alignItems:"flex-end"} : {};
-  const modalStyle = isMob ? {
-    position:"fixed", bottom:0, left:0, right:0, top:"auto",
-    borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
-    height:"92vh", maxHeight:"92vh", overflowY:"scroll",
-    WebkitOverflowScrolling:"touch",
-    padding:"20px 16px 120px", margin:0, borderBottom:"none"
-  } : {};
+  const boxRef = useRef(null);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    function apply() {
+      const mob = window.innerWidth <= 768;
+      const vh  = window.innerHeight;
+      if (mob) {
+        Object.assign(el.style, {
+          position:"fixed", bottom:"0px", left:"0px", right:"0px", top:"auto",
+          borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
+          height: Math.round(vh * 0.92) + "px",
+          maxHeight: Math.round(vh * 0.92) + "px",
+          overflowY:"scroll", WebkitOverflowScrolling:"touch",
+          padding:"20px 16px 120px", margin:"0", borderBottom:"none",
+        });
+        const mover = el.parentElement;
+        if (mover) Object.assign(mover.style, { padding:"0", alignItems:"flex-end" });
+      }
+    }
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
   return (
-    <div className="mover" style={moverStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={modalStyle}>
+    <div className="mover" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" ref={boxRef}>
         <div className="modal-title">{title}</div>
         <button className="mclose" onClick={onClose}>✕ CLOSE</button>
         {children}
@@ -2145,17 +2160,33 @@ function AppAdmin({ state, upd, showToast }) {
 
 /* ─── AD DETAIL MODAL ───────────────────────────────────────── */
 function AdDetail({ ad, onClose }) {
-  const isMob = typeof window !== "undefined" && window.innerWidth <= 600;
-  const overlayStyle = isMob ? {padding:0, alignItems:"flex-end"} : {};
-  const modalStyle = isMob ? {
-    position:"fixed", bottom:0, left:0, right:0, top:"auto",
-    borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
-    height:"92vh", maxHeight:"92vh", overflowY:"scroll",
-    WebkitOverflowScrolling:"touch", margin:0, borderBottom:"none"
-  } : {};
+  const boxRef = useRef(null);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    function apply() {
+      const mob = window.innerWidth <= 768;
+      const vh  = window.innerHeight;
+      if (mob) {
+        Object.assign(el.style, {
+          position:"fixed", bottom:"0px", left:"0px", right:"0px", top:"auto",
+          borderRadius:"20px 20px 0 0", maxWidth:"100%", width:"100%",
+          height: Math.round(vh * 0.92) + "px",
+          maxHeight: Math.round(vh * 0.92) + "px",
+          overflowY:"scroll", WebkitOverflowScrolling:"touch",
+          margin:"0", borderBottom:"none",
+        });
+        const overlay = el.parentElement;
+        if (overlay) Object.assign(overlay.style, { padding:"0", alignItems:"flex-end" });
+      }
+    }
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
   return (
-    <div className="ad-modal-overlay" style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ad-modal" style={modalStyle}>
+    <div className="ad-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ad-modal" ref={boxRef}>
         <button className="ad-modal-close" onClick={onClose}>✕</button>
 
         {/* Thumbnail / hero */}
