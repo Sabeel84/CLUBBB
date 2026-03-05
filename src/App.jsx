@@ -685,32 +685,128 @@ const DEFAULT_RANKS = [
   {id:5,name:"Desert Legend",color:"#a060d0",level:5},
 ];
 
-/* ─── PERSISTENCE — localStorage so state survives page refresh ─
-   State is saved to localStorage on every change.
-   Supabase is the eventual cloud backend; localStorage is the
-   offline/fallback layer that always works without config.
-────────────────────────────────────────────────────────────── */
+/* ═══ PERSISTENCE — Supabase real tables + localStorage cache ════
+   Reads/writes directly to your existing Supabase tables:
+   users, clubs, drives, ads, drive_registrations
+   localStorage is used as instant cache so app loads fast.
+   All devices share the same data via Supabase.
+═══════════════════════════════════════════════════════════════ */
 const STORAGE_KEY = "clubbb_state_v1";
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) {
-    console.warn("[CLUBBB] Failed to load state from localStorage:", e);
-    return null;
-  }
+const SB = {
+  headers: () => ({
+    "apikey": SUPA_KEY,
+    "Authorization": `Bearer ${SUPA_KEY}`,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation",
+  }),
+  get: async (table, query = "") => {
+    if (!SUPA_URL || !SUPA_KEY) return [];
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { headers: SB.headers() });
+      if (!res.ok) { console.warn(`[SB] GET ${table} failed`, res.status); return []; }
+      return await res.json();
+    } catch (e) { console.warn(`[SB] GET ${table} error`, e); return []; }
+  },
+  upsert: async (table, data) => {
+    if (!SUPA_URL || !SUPA_KEY) return null;
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: { ...SB.headers(), "Prefer": "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { console.warn(`[SB] UPSERT ${table} failed`, res.status); return null; }
+      const json = await res.json();
+      return Array.isArray(json) ? json[0] : json;
+    } catch (e) { console.warn(`[SB] UPSERT ${table} error`, e); return null; }
+  },
+  patch: async (table, match, data) => {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    try {
+      const query = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join("&");
+      await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, {
+        method: "PATCH", headers: SB.headers(), body: JSON.stringify(data),
+      });
+    } catch (e) { console.warn(`[SB] PATCH ${table} error`, e); }
+  },
+  del: async (table, match) => {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    try {
+      const query = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join("&");
+      await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, {
+        method: "DELETE", headers: SB.headers(),
+      });
+    } catch (e) { console.warn(`[SB] DELETE ${table} error`, e); }
+  },
+};
+
+/* ── Row mappers: Supabase ↔ app state ── */
+function dbToUser(r) {
+  return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", role:r.role,
+           rankId:r.rank_id||1, clubId:r.club_id||null, drives:r.drives_count||0,
+           passwordHash:r.password_hash||"", suspended:r.suspended||false,
+           emailVerified:r.email_verified||false };
+}
+function userToDb(u) {
+  return { id:u.id, name:u.name, email:u.email, phone:u.phone||"", role:u.role,
+           rank_id:u.rankId||1, club_id:u.clubId||null, drives_count:u.drives||0,
+           password_hash:u.passwordHash||"", suspended:u.suspended||false,
+           email_verified:u.emailVerified||false };
+}
+function dbToClub(r) {
+  return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", adminId:r.admin_id,
+           logo:r.logo||"", banner:r.banner||"", description:r.description||"", terms:r.terms||"" };
+}
+function clubToDb(c) {
+  return { id:c.id, name:c.name, email:c.email, phone:c.phone||"", admin_id:c.adminId||null,
+           logo:c.logo||"", banner:c.banner||"", description:c.description||"", terms:c.terms||"" };
+}
+function dbToDrive(r, regs=[]) {
+  return { id:r.id, clubId:r.club_id, postedBy:r.posted_by, title:r.title,
+           description:r.description||"", location:r.location||"", coordinates:r.coordinates||"",
+           mapLink:r.map_link||"", date:r.date||"", startTime:r.start_time||"",
+           requiredRankId:r.required_rank_id||1, capacity:r.capacity||10,
+           image:r.image||"", attendanceRecorded:r.attendance_recorded||false,
+           registrations: regs.filter(x=>x.drive_id===r.id).map(x=>({
+             userId:x.user_id, status:x.status, attended:x.attended||false })) };
+}
+function driveToDB(d) {
+  return { id:d.id, club_id:d.clubId, posted_by:d.postedBy||null, title:d.title,
+           description:d.description||"", location:d.location||"", coordinates:d.coordinates||"",
+           map_link:d.mapLink||"", date:d.date||null, start_time:d.startTime||null,
+           required_rank_id:d.requiredRankId||1, capacity:d.capacity||10,
+           image:d.image||"", attendance_recorded:d.attendanceRecorded||false };
 }
 
-function saveState(state) {
+/* ── Load all data from Supabase ── */
+async function loadRemoteState() {
+  if (!SUPA_URL || !SUPA_KEY) return null;
   try {
-    // Don't persist liveTrack (GPS positions are ephemeral)
-    const { liveTrack, ...rest } = state;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
-  } catch (e) {
-    console.warn("[CLUBBB] Failed to save state to localStorage:", e);
-  }
+    const [users, clubs, drives, regs, ads] = await Promise.all([
+      SB.get("users",               "select=*&order=created_at.asc"),
+      SB.get("clubs",               "select=*&order=created_at.asc"),
+      SB.get("drives",              "select=*&order=date.desc"),
+      SB.get("drive_registrations", "select=*"),
+      SB.get("ads",                 "select=*&active=eq.true&order=created_at.desc"),
+    ]);
+    return {
+      users:  users.map(dbToUser),
+      clubs:  clubs.map(dbToClub),
+      drives: drives.map(d => dbToDrive(d, regs)),
+      ads,
+    };
+  } catch (e) { console.warn("[CLUBBB] loadRemoteState error:", e); return null; }
+}
+
+/* ── localStorage cache ── */
+function loadLocalState() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; }
+  catch(e) { return null; }
+}
+function saveLocalState(state) {
+  try { const {liveTrack,...rest}=state; localStorage.setItem(STORAGE_KEY,JSON.stringify(rest)); }
+  catch(e) {}
 }
 
 /* ─── INITIAL STATE — production clean, no demo data ────────── */
@@ -730,8 +826,8 @@ const BLANK_STATE = {
   ads:[],
 };
 
-// Merge saved state with blank — so new fields added in future versions are present
-const INIT = { ...BLANK_STATE, ...(loadState() || {}), liveTrack:{} };
+// Start from localStorage cache immediately (fast), Supabase syncs after mount
+const INIT = { ...BLANK_STATE, ...(loadLocalState() || {}), liveTrack:{} };
 
 
 /* ─── UTILS ─────────────────────────────────────────────────── */
@@ -3507,6 +3603,9 @@ function SetupWizard({ onComplete }) {
     // ── Step 4: Always complete locally regardless of Supabase result ──
     setLoading(false);
     onComplete(adminUser);
+    // Also write to Supabase users table so all devices can see admin exists
+    SB.upsert("users", userToDb(adminUser))
+      .catch(e => console.warn("[CLUBBB] admin user upsert failed (non-blocking):", e));
   }
 
   return (
@@ -3621,8 +3720,25 @@ export default function App() {
     Object.assign(document.body.style, { margin:'0', padding:'0', overflowX:'hidden', background:'#f7f7f8' });
   }, []);
 
-  // Persist state to localStorage on every change (survives refresh)
-  useEffect(() => { saveState(S); }, [S]);
+  // ── On mount: pull all data from Supabase real tables ──
+  useEffect(() => {
+    loadRemoteState().then(remote => {
+      if (!remote) return;
+      setS(s => ({
+        ...s,
+        users:  remote.users.length  ? remote.users  : s.users,
+        clubs:  remote.clubs.length  ? remote.clubs  : s.clubs,
+        drives: remote.drives.length ? remote.drives : s.drives,
+        ads:    remote.ads.length    ? remote.ads    : s.ads,
+      }));
+      saveLocalState({ ...remote });
+    });
+  }, []);
+
+  // ── On every state change: update localStorage cache ──
+  useEffect(() => {
+    saveLocalState(S);
+  }, [S]);
 
   // ── First-time setup: show wizard when no users exist ──
   // This is AFTER all hooks so it doesn't violate Rules of Hooks
@@ -3639,7 +3755,47 @@ export default function App() {
   }
 
   const showToast = msg => setToast(msg);
-  const upd  = patch => setS(s => ({...s, ...patch}));
+  const upd = patch => {
+    setS(s => {
+      const next = {...s, ...patch};
+      // Sync changed users to Supabase
+      if (patch.users) {
+        const changed = patch.users.filter(u => {
+          const old = s.users.find(o => o.id === u.id);
+          return !old || JSON.stringify(old) !== JSON.stringify(u);
+        });
+        changed.forEach(u => SB.upsert("users", userToDb(u)).catch(() => {}));
+      }
+      // Sync changed clubs to Supabase
+      if (patch.clubs) {
+        const changed = patch.clubs.filter(c => {
+          const old = s.clubs.find(o => o.id === c.id);
+          return !old || JSON.stringify(old) !== JSON.stringify(c);
+        });
+        changed.forEach(c => SB.upsert("clubs", clubToDb(c)).catch(() => {}));
+      }
+      // Sync changed drives to Supabase
+      if (patch.drives) {
+        const changed = patch.drives.filter(d => {
+          const old = s.drives.find(o => o.id === d.id);
+          return !old || JSON.stringify(old) !== JSON.stringify(d);
+        });
+        changed.forEach(d => {
+          const {registrations, ...dbRow} = driveToDB(d);
+          SB.upsert("drives", dbRow).catch(() => {});
+          // Sync registrations
+          if (d.registrations) {
+            d.registrations.forEach(r => {
+              SB.upsert("drive_registrations", {
+                drive_id: d.id, user_id: r.userId, status: r.status || "confirmed",
+              }).catch(() => {});
+            });
+          }
+        });
+      }
+      return next;
+    });
+  };
   const go   = page  => { setS(s => ({...s, page})); setMob(false); };
   const login  = u   => { setS(s => ({...s, currentUser:u, page:"dashboard"})); setMob(false); };
   const logout = ()  => { setS(s => ({...s, currentUser:null, page:"home"})); setMob(false); };
@@ -3648,48 +3804,45 @@ export default function App() {
     const emailExists = S.users.find(u => u.email.toLowerCase() === form.email.toLowerCase());
     if (emailExists) { alert("An account with this email already exists. Please sign in instead."); return; }
 
-    // ── Always create the account locally first ──
-    // Email is a welcome notification, NOT a verification gate.
-    // Users can sign in immediately after registering.
+    // ── Always create the account locally first (instant) ──
     if (type === "member") {
-      const u = {id:Date.now(), name:form.name, email:form.email, phone:form.phone,
-                 role:"member", rankId:1, clubId:Number(form.clubId), drives:0,
-                 passwordHash: form.passwordHash || ""};
+      const u = { id: crypto.randomUUID?.() || String(Date.now()),
+                  name:form.name, email:form.email, phone:form.phone,
+                  role:"member", rankId:1, clubId:Number(form.clubId), drives:0,
+                  passwordHash:form.passwordHash||"", emailVerified:false };
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
+      // Persist to Supabase
+      SB.upsert("users", userToDb(u)).catch(e => console.warn("[CLUBBB] user upsert failed:", e));
+
     } else {
       const cid = Math.max(0, ...S.clubs.map(c => c.id)) + 1;
       const adminName = form.contactName || form.name;
       const clubName  = form.clubName  || form.name;
-      const u   = {id:Date.now(), name:adminName, email:form.email, phone:form.phone,
-                   role:"admin", rankId:5, clubId:cid, drives:0,
-                   passwordHash: form.passwordHash || ""};
-      const c   = {id:cid, name:clubName, email:form.email, phone:form.phone,
-                   adminId:u.id, logo:"", banner:"", description:"", terms:""};
-      setS(s => ({
-        ...s,
-        users:     [...s.users, u],
-        clubs:     [...s.clubs, c],
-        currentUser: u,
-        page:      "club-admin",
-        clubRanks: {...s.clubRanks, [cid]: DEFAULT_RANKS.map(r => ({...r}))},
-      }));
+      const u = { id: crypto.randomUUID?.() || String(Date.now()),
+                  name:adminName, email:form.email, phone:form.phone,
+                  role:"admin", rankId:5, clubId:cid, drives:0,
+                  passwordHash:form.passwordHash||"", emailVerified:false };
+      const c = { id:cid, name:clubName, email:form.email, phone:form.phone,
+                  adminId:u.id, logo:"", banner:"", description:"", terms:"" };
+      setS(s => ({...s, users:[...s.users,u], clubs:[...s.clubs,c],
+                  currentUser:u, page:"club-admin",
+                  clubRanks:{...s.clubRanks,[cid]:DEFAULT_RANKS.map(r=>({...r}))}}));
+      // Persist club first (user references club_id), then user
+      SB.upsert("clubs", clubToDb(c))
+        .then(() => SB.upsert("users", userToDb(u)))
+        .catch(e => console.warn("[CLUBBB] club/user upsert failed:", e));
     }
     showToast("✅ Welcome to CLUBBB!");
 
-    // ── Fire-and-forget welcome email (non-blocking) ──
+    // ── Fire-and-forget welcome email ──
     if (SUPA_URL && SUPA_KEY) {
       const payload = type === "member"
-        ? { name: form.name, email: form.email, phone: form.phone, role: "member", rank_id: 1, club_id: Number(form.clubId), drives: 0 }
-        : {
-            user: { name: form.contactName || form.name, email: form.email, phone: form.phone, role: "admin", rank_id: 5, drives: 0 },
-            club: { name: form.clubName || form.name, email: form.email, phone: form.phone },
-          };
+        ? { name:form.name, email:form.email, phone:form.phone }
+        : { user:{name:form.contactName||form.name, email:form.email},
+            club:{name:form.clubName||form.name} };
       sendVerificationEmail(form.email, type, payload)
-        .then(r => {
-          if (r.ok) showToast("📧 Welcome email sent to " + form.email);
-          else console.warn("[CLUBBB] Welcome email failed (non-blocking):", r);
-        })
-        .catch(e => console.warn("[CLUBBB] Email error (non-blocking):", e));
+        .then(r => { if (r.ok) showToast("📧 Welcome email sent to " + form.email); })
+        .catch(() => {});
     }
   }
 
