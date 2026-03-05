@@ -615,42 +615,19 @@ const DEFAULT_RANKS = [
 const INIT = {
   page:"home",
   currentUser:null,
-  clubRanks:{
-    1: DEFAULT_RANKS.map(r=>({...r})),
-    2: DEFAULT_RANKS.map(r=>({...r})),
-  },
+  clubRanks:{},
   users:[
-    {id:1,  name:"Ahmed Al Rashid",    email:"ahmed@email.com",    phone:"+971501234567", role:"admin",    rankId:5, clubId:1, drives:24},
-    {id:2,  name:"Khalid Al Mansoori", email:"khalid@email.com",   phone:"+971502345678", role:"marshal",  rankId:4, clubId:1, drives:18},
-    {id:3,  name:"Saeed Al Zaabi",     email:"saeed@email.com",    phone:"+971503456789", role:"marshal",  rankId:4, clubId:1, drives:15},
-    {id:4,  name:"Mohammed Al Hamdan", email:"mohammed@email.com", phone:"+971504567890", role:"member",   rankId:2, clubId:1, drives:6},
-    {id:5,  name:"Omar Al Nuaimi",     email:"omar@email.com",     phone:"+971505678901", role:"member",   rankId:3, clubId:1, drives:10},
-    {id:6,  name:"Faisal Al Qassimi",  email:"faisal@email.com",   phone:"+971506789012", role:"member",   rankId:1, clubId:2, drives:2},
-    {id:7,  name:"Yousef Al Dhaheri",  email:"yousef@email.com",   phone:"+971507890123", role:"admin",    rankId:5, clubId:2, drives:30},
-    {id:"app",name:"App Administrator",email:"admin@clubbb.ae",    phone:"+971500000001", role:"app_admin",rankId:5, clubId:null, drives:0},
+    {id:"app", name:"App Administrator", email:"admin@clubbb.ae", phone:"", role:"app_admin", rankId:5, clubId:null, drives:0},
   ],
-  clubs:[
-    {id:1, name:"Al Ain Desert Raiders", email:"info@alainraiders.ae", phone:"+97137001234", adminId:1, logo:"", banner:"", description:"The premier desert driving club in Al Ain, founded 2018.", terms:"All members must follow safety guidelines. Recovery gear mandatory on every drive."},
-    {id:2, name:"Dubai Dune Blazers",    email:"info@duneblazer.ae",   phone:"+97144009999", adminId:7, logo:"", banner:"", description:"Dubai's elite off-road driving community.", terms:"Experienced drivers only. Marshal sign-off required before first drive."},
-  ],
-  drives:[
-    {id:1, clubId:1, image:"", title:"Liwa Mega Dunes Expedition",  description:"Full day drive through massive Liwa dunes. Challenging terrain for experienced drivers.", location:"Liwa Oasis",   coordinates:"23.1118° N, 53.7766° E", mapLink:"", capacity:10, requiredRankId:3, postedBy:1, date:"2025-03-15", startTime:"06:00", registrations:[{userId:2,status:"confirmed"},{userId:3,status:"confirmed"},{userId:5,status:"confirmed"},{userId:4,status:"waiting"}], attendanceRecorded:false},
-    {id:2, clubId:1, image:"", title:"Fossil Rock Morning Run",      description:"Easy sunrise drive to Fossil Rock, perfect for all skill levels.",                         location:"Sharjah Desert", coordinates:"25.2085° N, 55.7554° E", mapLink:"", capacity:15, requiredRankId:1, postedBy:2, date:"2025-03-22", startTime:"07:30", registrations:[{userId:4,status:"confirmed"}], attendanceRecorded:false},
-    {id:3, clubId:2, image:"", title:"Big Red Classic Challenge",    description:"The legendary Big Red climb. The ultimate test of skill and nerve.",                        location:"Al Qudra, Dubai",coordinates:"24.9872° N, 55.3232° E", mapLink:"", capacity:8,  requiredRankId:2, postedBy:7, date:"2025-03-20", startTime:"05:30", registrations:[], attendanceRecorded:false},
-  ],
-  promos:[
-    {id:1, userId:5, rankId:4, role:"marshal", clubId:1, by:1, status:"voting", votes:[], date:"2025-02-20"},
-  ],
-  chat:{},         // { clubId: [{id, userId, text, ts, pinned}] }
-  checklists:{},   // { driveId: { userId: {fuel,tyres,gear,spare,ts} } }
-  ratings:{},      // { driveId: [{userId, stars, comment, ts}] }
-  sos:[],          // [{id, userId, lat, lng, ts, resolved}]
-  liveTrack:{},    // { driveId: { userId: {lat,lng,ts,sharing} } }
-  ads:[
-    {id:1, title:"Toyota GR Sport — Born for the Dunes", desc:"Unmatched capability, legendary reliability. Book your test drive today at your nearest Toyota dealership.", details:"The Toyota GR Sport is engineered for the harshest desert conditions. With a reinforced chassis, adaptive suspension, and 4WD terrain modes, it handles everything from Liwa mega dunes to rocky wadis.\n\n✅ Offer: Free accessory package (value AED 8,000) with every test drive booking.\n✅ Valid until: 31 May 2025\n✅ Locations: All UAE Toyota dealerships\n✅ Contact: Call 800-TOYOTA or book via app\n\nExclusive CLUBBB member perk: Priority test drive slots on weekends.", icon:"🚙", thumbnail:"", active:true, featured:true,  category:"Vehicles", link:""},
-    {id:2, title:"Desert Recovery Gear — 20% Off",       desc:"Premium sand ladders, snatch blocks & full recovery kits. Use code DUNES20 at checkout.",                 details:"Get fully equipped for any desert situation. This exclusive CLUBBB member discount covers the complete SandMaster recovery range:\n\n🔧 MaxTrax Sand Ladders (pair) — AED 720 → AED 576\n🔧 Snatch Block Kit — AED 340 → AED 272\n🔧 Full Recovery Bag (10-piece) — AED 980 → AED 784\n\n✅ Code: DUNES20 at checkout\n✅ Free shipping on orders over AED 500\n✅ Valid for CLUBBB members only — limited stock\n\nShop at desertrecoverygear.ae or visit their Dubai Al Quoz showroom.", icon:"⛏️", thumbnail:"", active:true, featured:false, category:"Gear",     link:""},
-    {id:3, title:"DuneCam Pro X — Mount & Record",       desc:"Capture every dune in 4K. Waterproof, dustproof, shockproof. Built for the desert.",                     details:"The DuneCam Pro X is the only action camera purpose-built for desert environments. Sand-sealed lens, heat-resistant body, and a magnetic roll-bar mount system that attaches in seconds.\n\n📸 Specs:\n• 4K60fps video / 20MP stills\n• 140° ultra-wide lens\n• Battery life: 3.5 hrs continuous\n• Operating temp: up to 65°C\n• Dustproof: IP6X rated\n\n✅ CLUBBB Member Price: AED 1,299 (retail AED 1,599)\n✅ Includes: Camera + mount kit + 64GB card\n✅ Order at dunecam.ae — use code CLUBBB at checkout", icon:"📷", thumbnail:"", active:true, featured:false, category:"Tech",     link:""},
-  ],
+  clubs:[],
+  drives:[],
+  promos:[],
+  chat:{},
+  checklists:{},
+  ratings:{},
+  sos:[],
+  liveTrack:{},
+  ads:[],
 };
 
 /* ─── UTILS ─────────────────────────────────────────────────── */
@@ -807,7 +784,11 @@ function Home({ go, state }) {
       </div>
       <div className="page">
         <div className="stats">
-          {[["12+","Active Clubs"],["240+","Members"],["180+","Drives Completed"]].map(([n,l]) => (
+          {[
+            [clubs.length || 0,           "Active Clubs"],
+            [users.filter(u=>u.role!=="app_admin").length || 0, "Members"],
+            [drives.filter(d=>d.attendanceRecorded).length || 0,"Drives Completed"],
+          ].map(([n,l]) => (
             <div key={l} className="stat"><div className="stat-n">{n}</div><div className="stat-l">{l}</div></div>
           ))}
         </div>
@@ -889,32 +870,66 @@ function Home({ go, state }) {
 }
 
 /* ─── LOGIN ─────────────────────────────────────────────────── */
+const APP_ADMIN_PIN = "CLUBBB2026"; // ← change this to your secret PIN
+
 function Login({ users, onLogin, back }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]   = useState("");
+  const [pin,   setPin]     = useState("");
+  const [needPin, setNeedPin] = useState(false);
+  const [pendingUser, setPending] = useState(null);
+
   function go() {
-    const u = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!u) { alert("Not found. Try:\nahmed@email.com (Admin)\nkhalid@email.com (Marshal)\nmohammed@email.com (Member)\nadmin@clubbb.ae (App Admin)"); return; }
-    if (u.suspended) { alert("⚠️ This account has been suspended. Please contact the App Admin."); return; }
+    const u = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (!u) { alert("No account found with that email."); return; }
+    if (u.suspended) { alert("This account has been suspended. Please contact the App Admin."); return; }
+    if (u.role === "app_admin") {
+      // require PIN
+      setPending(u);
+      setNeedPin(true);
+      return;
+    }
     onLogin(u);
   }
+
+  function checkPin() {
+    if (pin.trim() === APP_ADMIN_PIN) {
+      onLogin(pendingUser);
+    } else {
+      alert("Incorrect PIN. Access denied.");
+      setPin("");
+    }
+  }
+
   return (
     <div className="page" style={{maxWidth:480}}>
       <button className="btn out sm" onClick={back} style={{marginBottom:32}}>← BACK</button>
       <div className="sh"><div className="sh-label">Access</div><div className="sh-title">SIGN IN</div></div>
       <div className="card">
-        <div className="fg">
-          <label className="fl">Email Address</label>
-          <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && go()} />
-        </div>
-        <div className="ibox" style={{marginBottom:20}}>
-          Demo accounts:<br/>
-          <strong style={{color:"var(--acc2)"}}>ahmed@email.com</strong> (Admin) ·{" "}
-          <strong style={{color:"var(--acc2)"}}>khalid@email.com</strong> (Marshal) ·{" "}
-          <strong style={{color:"var(--acc2)"}}>mohammed@email.com</strong> (Member) ·{" "}
-          <strong style={{color:"var(--acc2)"}}>admin@clubbb.ae</strong> (App Admin)
-        </div>
-        <button className="btn gold" style={{width:"100%"}} onClick={go}>SIGN IN</button>
+        {!needPin ? (
+          <>
+            <div className="fg">
+              <label className="fl">Email Address</label>
+              <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="your@email.com" onKeyDown={e => e.key === "Enter" && go()} autoFocus />
+            </div>
+            <button className="btn gold" style={{width:"100%"}} onClick={go}>SIGN IN</button>
+          </>
+        ) : (
+          <>
+            <div style={{fontSize:14, color:"var(--mid)", marginBottom:20, lineHeight:1.6}}>
+              Admin access requires a PIN. Enter your secret PIN to continue.
+            </div>
+            <div className="fg">
+              <label className="fl">Admin PIN</label>
+              <input className="fi" type="password" value={pin} onChange={e => setPin(e.target.value)}
+                placeholder="Enter PIN..." onKeyDown={e => e.key === "Enter" && checkPin()} autoFocus />
+            </div>
+            <div style={{display:"flex", gap:10}}>
+              <button className="btn out sm" style={{flex:1}} onClick={() => { setNeedPin(false); setPin(""); }}>← Back</button>
+              <button className="btn gold sm" style={{flex:2}} onClick={checkPin}>VERIFY PIN</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -989,7 +1004,7 @@ function Registration({ type, clubs, onReg, back }) {
       </div>
 
       <div className="card">
-        <div className="fg"><label className="fl">{type === "club" ? "Club Name" : "Full Name"} *</label><input className="fi" value={f.name} onChange={s("name")} placeholder={type === "club" ? "Al Ain Desert Raiders" : "Your full name"} /></div>
+        <div className="fg"><label className="fl">{type === "club" ? "Club Name" : "Full Name"} *</label><input className="fi" value={f.name} onChange={s("name")} placeholder={type === "club" ? "My Desert Club" : "Your full name"} /></div>
         <div className="fg"><label className="fl">Email Address *</label><input className="fi" type="email" value={f.email} onChange={s("email")} placeholder="email@example.com" /></div>
         <div className="fg"><label className="fl">Phone Number *</label><input className="fi" value={f.phone} onChange={s("phone")} placeholder="+971 50 123 4567" /></div>
 
