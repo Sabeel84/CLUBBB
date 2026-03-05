@@ -678,52 +678,23 @@ const DEFAULT_RANKS = [
   {id:5,name:"Desert Legend",color:"#a060d0",level:5},
 ];
 
-/* ─── INITIAL STATE ─────────────────────────────────────────── */
-// Demo password hash for "Desert123" — pre-computed so demo logins work immediately
-// SHA-256("Desert123" + "clubbb_salt_2026") — matches hashPassword() output
-const DEMO_PW_HASH = "8f7a2b1e4c9d3f0a6b5e8c2d1f4a7b9e3c6d0f2a5b8e1c4d7a0b3e6f9c2d5a8";
-
+/* ─── INITIAL STATE — production clean, no demo data ────────── */
 const INIT = {
   page:"home",
   currentUser:null,
-  clubRanks:{
-    1: DEFAULT_RANKS.map(r=>({...r})),
-    2: DEFAULT_RANKS.map(r=>({...r})),
-  },
-  users:[
-    {id:1,  name:"Ahmed Al Rashid",    email:"ahmed@email.com",    phone:"+971501234567", role:"admin",    rankId:5, clubId:1, drives:24, passwordHash:DEMO_PW_HASH},
-    {id:2,  name:"Khalid Al Mansoori", email:"khalid@email.com",   phone:"+971502345678", role:"marshal",  rankId:4, clubId:1, drives:18, passwordHash:DEMO_PW_HASH},
-    {id:3,  name:"Saeed Al Zaabi",     email:"saeed@email.com",    phone:"+971503456789", role:"marshal",  rankId:4, clubId:1, drives:15, passwordHash:DEMO_PW_HASH},
-    {id:4,  name:"Mohammed Al Hamdan", email:"mohammed@email.com", phone:"+971504567890", role:"member",   rankId:2, clubId:1, drives:6,  passwordHash:DEMO_PW_HASH},
-    {id:5,  name:"Omar Al Nuaimi",     email:"omar@email.com",     phone:"+971505678901", role:"member",   rankId:3, clubId:1, drives:10, passwordHash:DEMO_PW_HASH},
-    {id:6,  name:"Faisal Al Qassimi",  email:"faisal@email.com",   phone:"+971506789012", role:"member",   rankId:1, clubId:2, drives:2,  passwordHash:DEMO_PW_HASH},
-    {id:7,  name:"Yousef Al Dhaheri",  email:"yousef@email.com",   phone:"+971507890123", role:"admin",    rankId:5, clubId:2, drives:30, passwordHash:DEMO_PW_HASH},
-    {id:"app",name:"App Administrator",email:"admin@clubbb.ae",    phone:"+971500000001", role:"app_admin",rankId:5, clubId:null, drives:0},
-  ],
-  clubs:[
-    {id:1, name:"Al Ain Desert Raiders", email:"info@alainraiders.ae", phone:"+97137001234", adminId:1, logo:"", banner:"", description:"The premier desert driving club in Al Ain, founded 2018.", terms:"All members must follow safety guidelines. Recovery gear mandatory on every drive."},
-    {id:2, name:"Dubai Dune Blazers",    email:"info@duneblazer.ae",   phone:"+97144009999", adminId:7, logo:"", banner:"", description:"Dubai's elite off-road driving community.", terms:"Experienced drivers only. Marshal sign-off required before first drive."},
-  ],
-  drives:[
-    {id:1, clubId:1, image:"", title:"Liwa Mega Dunes Expedition",  description:"Full day drive through massive Liwa dunes. Challenging terrain for experienced drivers.", location:"Liwa Oasis",    coordinates:"23.1118° N, 53.7766° E", mapLink:"", capacity:10, requiredRankId:3, postedBy:1, date:"2026-04-15", startTime:"06:00", registrations:[{userId:2,status:"confirmed"},{userId:3,status:"confirmed"},{userId:5,status:"confirmed"},{userId:4,status:"waiting"}], attendanceRecorded:false},
-    {id:2, clubId:1, image:"", title:"Fossil Rock Morning Run",      description:"Easy sunrise drive to Fossil Rock, perfect for all skill levels.",                         location:"Sharjah Desert",coordinates:"25.2085° N, 55.7554° E", mapLink:"", capacity:15, requiredRankId:1, postedBy:2, date:"2026-04-22", startTime:"07:30", registrations:[{userId:4,status:"confirmed"}], attendanceRecorded:false},
-    {id:3, clubId:2, image:"", title:"Big Red Classic Challenge",    description:"The legendary Big Red climb. The ultimate test of skill and nerve.",                        location:"Al Qudra, Dubai",coordinates:"24.9872° N, 55.3232° E", mapLink:"", capacity:8,  requiredRankId:2, postedBy:7, date:"2026-04-20", startTime:"05:30", registrations:[], attendanceRecorded:false},
-    {id:4, clubId:1, image:"", title:"Al Ain Red Dunes Rally",       description:"Monthly club drive in Al Ain dunes. Great for all members.",                               location:"Al Ain Desert", coordinates:"24.2075° N, 55.7447° E", mapLink:"", capacity:12, requiredRankId:1, postedBy:1, date:"2026-02-10", startTime:"07:00", registrations:[{userId:1,status:"confirmed",attended:true},{userId:2,status:"confirmed",attended:true},{userId:4,status:"confirmed",attended:false}], attendanceRecorded:true},
-  ],
-  promos:[
-    {id:1, userId:5, rankId:4, role:"marshal", clubId:1, by:1, status:"voting", votes:[], date:"2025-02-20"},
-  ],
+  clubRanks:{},
+  users:[],
+  clubs:[],
+  drives:[],
+  promos:[],
   chat:{},
   checklists:{},
   ratings:{},
   sos:[],
   liveTrack:{},
-  ads:[
-    {id:1, title:"Toyota GR Sport — Born for the Dunes", desc:"Unmatched capability, legendary reliability. Book your test drive today at your nearest Toyota dealership.", details:"The Toyota GR Sport is engineered for the harshest desert conditions.\n\n✅ Offer: Free accessory package (value AED 8,000) with every test drive booking.\n✅ Valid until: 31 May 2026\n✅ Locations: All UAE Toyota dealerships\n\nExclusive CLUBBB member perk: Priority test drive slots on weekends.", icon:"🚙", thumbnail:"", active:true, featured:true,  category:"Vehicles", link:""},
-    {id:2, title:"Desert Recovery Gear — 20% Off",       desc:"Premium sand ladders, snatch blocks & full recovery kits. Use code DUNES20 at checkout.",                   details:"CLUBBB member discount covers the complete SandMaster recovery range:\n\n🔧 MaxTrax Sand Ladders — AED 720 → AED 576\n🔧 Snatch Block Kit — AED 340 → AED 272\n🔧 Full Recovery Bag — AED 980 → AED 784\n\n✅ Code: DUNES20 · Free shipping on orders over AED 500", icon:"⛏️", thumbnail:"", active:true, featured:false, category:"Gear",     link:""},
-    {id:3, title:"DuneCam Pro X — Mount & Record",       desc:"Capture every dune in 4K. Waterproof, dustproof, shockproof. Built for the desert.",                       details:"4K60fps · 140° lens · IP6X dustproof · Up to 65°C\n\n✅ CLUBBB Member Price: AED 1,299 (retail AED 1,599)\n✅ Use code CLUBBB at dunecam.ae", icon:"📷", thumbnail:"", active:true, featured:false, category:"Tech",     link:""},
-  ],
+  ads:[],
 };
+
 
 /* ─── UTILS ─────────────────────────────────────────────────── */
 function getClubRanks(clubRanks, clubId) {
@@ -966,56 +937,23 @@ function Home({ go, state }) {
 }
 
 /* ─── LOGIN ─────────────────────────────────────────────────── */
-const APP_ADMIN_PIN = "CLUBBB2026"; // ← change this to your secret PIN
-
 function Login({ users, onLogin, back }) {
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [pin,      setPin]      = useState("");
-  const [needPin,  setNeedPin]  = useState(false);
-  const [pendingUser, setPending] = useState(null);
-  const [loading,  setLoading]  = useState(false);
-  const [showPw,   setShowPw]   = useState(false);
+  const [email,   setEmail]   = useState("");
+  const [password,setPassword]= useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPw,  setShowPw]  = useState(false);
 
   async function go() {
     const u = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
     if (!u) { alert("No account found with that email."); return; }
     if (u.suspended) { alert("This account has been suspended. Please contact the App Admin."); return; }
-
-    // App Admin uses PIN instead of password
-    if (u.role === "app_admin") {
-      setPending(u);
-      setNeedPin(true);
-      return;
-    }
-
     if (!password) { alert("Please enter your password."); return; }
-
-    // If user has no passwordHash (legacy or demo account), allow any password
-    if (!u.passwordHash) {
-      onLogin(u);
-      return;
-    }
-
+    if (!u.passwordHash) { alert("Account setup incomplete. Please contact the App Admin."); return; }
     setLoading(true);
     const ok = await verifyPassword(password, u.passwordHash);
     setLoading(false);
-
-    if (!ok) {
-      alert("Incorrect password. Please try again.");
-      setPassword("");
-      return;
-    }
+    if (!ok) { alert("Incorrect password. Please try again."); setPassword(""); return; }
     onLogin(u);
-  }
-
-  function checkPin() {
-    if (pin.trim() === APP_ADMIN_PIN) {
-      onLogin(pendingUser);
-    } else {
-      alert("Incorrect PIN. Access denied.");
-      setPin("");
-    }
   }
 
   return (
@@ -1044,10 +982,7 @@ function Login({ users, onLogin, back }) {
                 </button>
               </div>
             </div>
-            <div style={{background:"var(--bg3)", border:"1px solid var(--line2)", borderRadius:10, padding:"10px 14px", fontSize:12, color:"var(--mid)", marginBottom:16, lineHeight:1.6}}>
-              <strong style={{color:"var(--acc2)"}}>Demo accounts</strong> — use any password:<br/>
-              <strong>ahmed@email.com</strong> (Admin) · <strong>khalid@email.com</strong> (Marshal) · <strong>mohammed@email.com</strong> (Member) · <strong>admin@clubbb.ae</strong> (App Admin — needs PIN)
-            </div>
+
             <button className="btn gold" style={{width:"100%"}} onClick={go} disabled={loading}>
               {loading ? "SIGNING IN..." : "SIGN IN"}
             </button>
@@ -1161,7 +1096,7 @@ function Registration({ type, clubs, onReg, back }) {
       <div className="card">
         {type === "club" ? (
           <>
-            <div className="fg"><label className="fl">Club Name *</label><input className="fi" value={f.clubName||""} onChange={e => setF({...f, clubName:e.target.value})} placeholder="Al Ain Desert Raiders" /></div>
+            <div className="fg"><label className="fl">Club Name *</label><input className="fi" value={f.clubName||""} onChange={e => setF({...f, clubName:e.target.value})} placeholder="Your Club Name" /></div>
             <div className="fg"><label className="fl">Your Name (Admin) *</label><input className="fi" value={f.name} onChange={s("name")} placeholder="Your full name" /></div>
           </>
         ) : (
@@ -2685,19 +2620,13 @@ function LiveTracker({ drive, state, upd, showToast }) {
     };
   }, [watchId]);
 
-  // Simulate positions for demo members already on drive
-  const positions = Object.entries(driveTrack).map(([uid, pos]) => {
-    const u = getUser(us, Number(uid) || uid);
-    return { ...pos, user: u, isMe: (Number(uid) || uid) === cu.id };
-  });
-
-  // Generate stable demo positions for confirmed members
-  const confirmed = drive.registrations.filter(r => r.status === "confirmed");
-  const demoPositions = confirmed.filter(r => r.userId !== cu.id).map((r, i) => {
-    const u = getUser(us, r.userId);
-    const angle = (i / confirmed.length) * Math.PI * 2;
-    return { user: u, lat: 23.11 + Math.cos(angle) * 0.008, lng: 53.77 + Math.sin(angle) * 0.008, isMe: false, sharing: true };
-  });
+  // Only show members who are actively sharing their real GPS location
+  const positions = Object.entries(driveTrack)
+    .filter(([, pos]) => pos.sharing)
+    .map(([uid, pos]) => {
+      const u = getUser(us, Number(uid) || uid);
+      return { ...pos, user: u, isMe: (Number(uid) || uid) === cu.id };
+    });
 
   function startSharing() {
     if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
@@ -2707,8 +2636,7 @@ function LiveTracker({ drive, state, upd, showToast }) {
         upd({ liveTrack: { ...liveTrack, [drive.id]: { ...driveTrack, [cu.id]: { lat, lng, ts: Date.now(), sharing: true } } } });
       },
       () => {
-        // Fallback to simulated position for demo
-        upd({ liveTrack: { ...liveTrack, [drive.id]: { ...driveTrack, [cu.id]: { lat: 23.1118 + (Math.random()-.5)*.01, lng: 53.7766 + (Math.random()-.5)*.01, ts: Date.now(), sharing: true } } } });
+        showToast("⚠️ GPS unavailable — enable location access in your browser settings");
       },
       { enableHighAccuracy: true, maximumAge: 5000 }
     );
@@ -2725,9 +2653,9 @@ function LiveTracker({ drive, state, upd, showToast }) {
     showToast("Location sharing stopped");
   }
 
-  // Map rendering — place dots proportionally on canvas
-  const allPos = [...demoPositions, ...(driveTrack[cu.id]?.sharing ? [{ ...driveTrack[cu.id], user: cu, isMe: true }] : [])];
-  const sharingCount = demoPositions.length + (isSharing ? 1 : 0);
+  // Map rendering — only real sharing members
+  const allPos = positions;
+  const sharingCount = positions.length;
 
   return (
     <div>
@@ -3307,11 +3235,158 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
   );
 }
 
+/* ─── FIRST-TIME SETUP WIZARD ───────────────────────────────────
+   Shown when there are zero users (fresh install).
+   Creates the App Admin account — the only way to get app_admin role.
+   After setup, this screen is gone forever.
+───────────────────────────────────────────────────────────────── */
+function SetupWizard({ onComplete }) {
+  const [name,     setName]     = useState("");
+  const [email,    setEmail]    = useState("");
+  const [phone,    setPhone]    = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm,  setConfirm]  = useState("");
+  const [showPw,   setShowPw]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [err,      setErr]      = useState("");
+
+  async function create() {
+    setErr("");
+    if (!name.trim() || !email.trim() || !password) { setErr("All fields are required."); return; }
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRx.test(email.trim())) { setErr("Enter a valid email address."); return; }
+    const pwErr = validatePassword(password);
+    if (pwErr) { setErr(pwErr); return; }
+    if (password !== confirm) { setErr("Passwords do not match."); return; }
+    setLoading(true);
+    const passwordHash = await hashPassword(password);
+    setLoading(false);
+    const adminUser = {
+      id: Date.now(),
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      role: "app_admin",
+      rankId: 5,
+      clubId: null,
+      drives: 0,
+      passwordHash,
+    };
+    onComplete(adminUser);
+  }
+
+  return (
+    <div style={{minHeight:"100vh", background:"var(--off)", display:"flex", alignItems:"center", justifyContent:"center", padding:"20px"}}>
+      <div style={{width:"100%", maxWidth:480}}>
+        {/* Logo */}
+        <div style={{textAlign:"center", marginBottom:40}}>
+          <div style={{width:64, height:64, background:"var(--acc2)", borderRadius:20, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", boxShadow:"var(--sh-gold)"}}>
+            <span style={{fontFamily:"'Syne',sans-serif", fontSize:26, fontWeight:800, color:"#0a0a0a", letterSpacing:1}}>CB</span>
+          </div>
+          <div style={{fontFamily:"'Syne',sans-serif", fontSize:28, fontWeight:800, letterSpacing:-1, color:"var(--ink)"}}>CLUB<span style={{color:"var(--acc)"}}>BB</span></div>
+          <div style={{fontSize:13, color:"var(--mid)", marginTop:6}}>First-Time Setup</div>
+        </div>
+
+        <div className="card">
+          <div style={{fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--acc)", marginBottom:6}}>Step 1 of 1</div>
+          <div style={{fontFamily:"'Syne',sans-serif", fontSize:20, fontWeight:800, color:"var(--ink)", marginBottom:8, letterSpacing:-0.5}}>Create App Admin Account</div>
+          <div style={{fontSize:13, color:"var(--mid)", marginBottom:24, lineHeight:1.6}}>
+            This is the master administrator account for CLUBBB. Keep these credentials private — this account can manage all clubs, users, and platform settings.
+          </div>
+
+          <div className="fg">
+            <label className="fl">Full Name *</label>
+            <input className="fi" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" />
+          </div>
+          <div className="fg">
+            <label className="fl">Email Address *</label>
+            <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@yourdomain.com" />
+          </div>
+          <div className="fg">
+            <label className="fl">Phone Number</label>
+            <input className="fi" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+971 50 000 0000" />
+          </div>
+          <div className="fg">
+            <label className="fl">Password *</label>
+            <div style={{position:"relative"}}>
+              <input className="fi" type={showPw ? "text" : "password"} value={password}
+                onChange={e => { setPassword(e.target.value); setErr(""); }}
+                placeholder="Min 8 chars, 1 uppercase, 1 number"
+                style={{paddingRight:44}} />
+              <button type="button" onClick={() => setShowPw(v => !v)}
+                style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                  background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
+                {showPw ? "🙈" : "👁️"}
+              </button>
+            </div>
+            {password && (() => {
+              const checks = [password.length >= 8, /[A-Z]/.test(password), /[0-9]/.test(password), /[^A-Za-z0-9]/.test(password)];
+              const score  = checks.filter(Boolean).length;
+              const labels = ["","Weak","Fair","Good","Strong"];
+              const colors = ["","#ef4444","#f59e0b","#84cc16","#22c55e"];
+              return (
+                <div style={{marginTop:6}}>
+                  <div style={{display:"flex", gap:4, marginBottom:3}}>
+                    {[1,2,3,4].map(i => (
+                      <div key={i} style={{flex:1, height:4, borderRadius:4, background: score >= i ? colors[score] : "var(--line2)", transition:"background .2s"}} />
+                    ))}
+                  </div>
+                  <div style={{fontSize:11, color:colors[score], fontWeight:600}}>{labels[score]}</div>
+                </div>
+              );
+            })()}
+          </div>
+          <div className="fg">
+            <label className="fl">Confirm Password *</label>
+            <div style={{position:"relative"}}>
+              <input className="fi" type={showPw ? "text" : "password"} value={confirm}
+                onChange={e => { setConfirm(e.target.value); setErr(""); }}
+                placeholder="Re-enter password" style={{paddingRight:36}} />
+              {confirm && (
+                <span style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", fontSize:15}}>
+                  {confirm === password ? "✅" : "❌"}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {err && (
+            <div style={{background:"rgba(220,38,38,.08)", border:"1px solid rgba(220,38,38,.25)", borderRadius:10, padding:"10px 14px", fontSize:13, color:"var(--red)", marginBottom:12}}>
+              ⚠️ {err}
+            </div>
+          )}
+
+          <button className="btn gold" style={{width:"100%"}} onClick={create} disabled={loading}>
+            {loading ? "CREATING ACCOUNT..." : "CREATE APP ADMIN & LAUNCH →"}
+          </button>
+
+          <div style={{marginTop:16, padding:"12px 14px", background:"var(--acc-pale)", border:"1px solid var(--acc-pale3)", borderRadius:12, fontSize:12, color:"var(--ink2)", lineHeight:1.6}}>
+            🔒 <strong>Keep this safe.</strong> This is the only App Admin account. You can change the password later from your dashboard.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [S, setS]           = useState(INIT);
   const [toast, setToast]   = useState(null);
   const [mobOpen, setMob]   = useState(false);
   const { notifs, push: pushNotif, dismiss } = useNotifications();
+
+  // ── First-time setup: no users at all means platform is brand new ──
+  if (S.users.length === 0) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <SetupWizard onComplete={adminUser => {
+          setS(s => ({ ...s, users: [adminUser], currentUser: adminUser, page: "app-admin" }));
+        }} />
+        {toast && <Toast msg={toast} done={() => setToast(null)} />}
+      </>
+    );
+  }
 
   // Inject essential mobile meta tags on mount
   useEffect(() => {
