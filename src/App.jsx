@@ -466,6 +466,15 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .club-tile-stat-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1}
 .club-tile-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;color:var(--mid2);letter-spacing:1px;font-weight:700;text-transform:uppercase;white-space:normal;word-break:break-word;max-width:80px;line-height:1.2}
 .club-tile-badge{position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc3),var(--acc));padding:3px 9px;border-radius:100px;z-index:3;box-shadow:0 2px 10px rgba(232,130,12,.35)}
+.club-tier-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;font-size:10px;font-weight:800;letter-spacing:.5px;border-radius:100px;border:1.5px solid rgba(255,255,255,.4);white-space:nowrap;box-shadow:0 2px 12px var(--tier-glow,rgba(0,0,0,.15))}
+.streak-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;font-size:11px;font-weight:800;background:linear-gradient(135deg,#ff6b35,#f7c59f);color:#7c2d12;border-radius:100px;border:1.5px solid rgba(255,107,53,.25);letter-spacing:.3px}
+.leaderboard-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;transition:all .2s}
+.leaderboard-row:hover{box-shadow:var(--sh-sm);transform:translateX(2px)}
+.leaderboard-rank{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:36px;text-align:center;color:var(--mid)}
+.leaderboard-rank.top1{background:linear-gradient(135deg,#f5c842,#e8a30c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.leaderboard-rank.top2{background:linear-gradient(135deg,#c0c0c0,#a8a8a8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.leaderboard-rank.top3{background:linear-gradient(135deg,#cd7f32,#a0522d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.leaderboard-score{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--acc);margin-left:auto}
 @media(max-width:600px){
   .clubs-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px}
   .club-tile{border-radius:16px}
@@ -848,6 +857,58 @@ function getClub(cs, id)  { return cs ? cs.find(c => c.id === id)  : null; }
 function fmtTime(t)       { if (!t) return null; const [h,m]=t.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; }
 function fmtDate(d)       { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
 
+/* ─── CLUB TIER SYSTEM ──────────────────────────────────────────
+   Score is calculated from real activity data.
+   Tiers: Silver → Gold → Diamond → Platinum
+─────────────────────────────────────────────────────────────── */
+const CLUB_TIERS = [
+  { name:"Platinum", icon:"👑", min:200, gradient:"linear-gradient(135deg,#e5e4e2,#a8a9ad,#d4d4d4)", glow:"rgba(168,169,173,.5)", color:"#6b7280" },
+  { name:"Diamond",  icon:"💎", min:100, gradient:"linear-gradient(135deg,#a8d8ea,#7ec8e3,#b3e5fc)", glow:"rgba(126,200,227,.5)", color:"#0284c7" },
+  { name:"Gold",     icon:"🥇", min:40,  gradient:"linear-gradient(135deg,#f5c842,#e8a30c,#f7d96c)", glow:"rgba(232,163,12,.5)", color:"#b45309" },
+  { name:"Silver",   icon:"🥈", min:0,   gradient:"linear-gradient(135deg,#c0c0c0,#a8a8a8,#d8d8d8)", glow:"rgba(168,168,168,.4)", color:"#6b7280" },
+];
+
+function getClubScore(club, users, drives) {
+  const members       = users.filter(u => u.clubId === club.id && u.role !== "app_admin");
+  const clubDrives    = drives.filter(d => d.clubId === club.id);
+  const completedDrives = clubDrives.filter(d => d.attendanceRecorded);
+  const totalAttendance = completedDrives.reduce((s,d) =>
+    s + d.registrations.filter(r => r.attended).length, 0);
+  return (
+    completedDrives.length * 10 +
+    totalAttendance        * 5  +
+    members.length         * 3  +
+    clubDrives.filter(d => !d.attendanceRecorded).length * 2
+  );
+}
+
+function getClubTier(score) {
+  return CLUB_TIERS.find(t => score >= t.min) || CLUB_TIERS[CLUB_TIERS.length - 1];
+}
+
+/* ─── MEMBER STREAK ──────────────────────────────────────────────
+   Counts consecutive most-recent drives attended.
+   Streak breaks if a drive was recorded but user wasn't attended.
+─────────────────────────────────────────────────────────────── */
+function getMemberStreak(userId, drives) {
+  // Get all completed drives sorted newest first
+  const completed = drives
+    .filter(d => d.attendanceRecorded && d.date)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  let streak = 0;
+  for (const d of completed) {
+    const reg = d.registrations.find(r => r.userId === userId);
+    if (reg && reg.attended) {
+      streak++;
+    } else if (reg && !reg.attended) {
+      break; // registered but didn't attend — streak broken
+    }
+    // not registered at all → skip (doesn't break streak)
+  }
+  return streak;
+}
+
 /* ─── SHARED UI ─────────────────────────────────────────────── */
 function RankBadge({ rankId, clubRanks, clubId }) {
   const r = getRank(rankId, clubRanks, clubId);
@@ -870,6 +931,32 @@ function RankPill({ rankId, clubRanks, clubId }) {
 function RolePill({ role }) {
   const r = role || "member";
   return <span className={`rolebdg rolebdg-${r.replace(/\s/g,"_")}`}>{r.replace("_"," ").toUpperCase()}</span>;
+}
+
+function ClubTierBadge({ club, users, drives, size="sm" }) {
+  const score = getClubScore(club, users, drives);
+  const tier  = getClubTier(score);
+  const pad   = size === "lg" ? "6px 16px" : "3px 10px";
+  const fs    = size === "lg" ? 12 : 10;
+  return (
+    <span className="club-tier-badge" style={{
+      background: tier.gradient,
+      "--tier-glow": tier.glow,
+      padding: pad, fontSize: fs, color: tier.color,
+    }}>
+      {tier.icon} {tier.name}
+    </span>
+  );
+}
+
+function StreakBadge({ userId, drives }) {
+  const streak = getMemberStreak(userId, drives);
+  if (streak < 2) return null;
+  return (
+    <span className="streak-badge">
+      🔥 {streak} Drive Streak
+    </span>
+  );
 }
 
 function ImageUpload({ value, onChange, height=160, label="Upload Image", hint="JPG, PNG, WEBP · Max 5MB" }) {
@@ -1021,7 +1108,10 @@ function Home({ go, state }) {
                       ? <img src={cl.logo} alt="" className="club-tile-logo-img" />
                       : <div className="club-tile-logo-init">{initials}</div>
                     }
-                    <div className="club-tile-name">{cl.name}</div>
+                    <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
+                      <div className="club-tile-name">{cl.name}</div>
+                      <ClubTierBadge club={cl} users={users} drives={drives} />
+                    </div>
                     {cl.description && <div className="club-tile-desc">{cl.description}</div>}
                     <div className="club-tile-foot">
                       <div className="club-tile-stat">
@@ -1458,6 +1548,8 @@ function Dashboard({ state, go, showToast }) {
                 {(cu.role||"member").replace("_"," ").toUpperCase()}
               </span>
               {myCl && <span className="bdg d">{myCl.name}</span>}
+              {myCl && <ClubTierBadge club={myCl} users={state.users} drives={ds} />}
+              <StreakBadge userId={cu.id} drives={ds} />
             </div>
             <div style={{fontSize:12, color:"var(--mid)", marginTop:8}}>{cu.email} · {cu.phone}</div>
           </div>
@@ -2441,7 +2533,7 @@ function AppAdmin({ state, upd, showToast }) {
         <div className="sh-sub">Global platform management</div>
       </div>
       <div className="tabs">
-        {[["ads","Marketplace Ads"],["clubs","All Clubs"],["users","All Users"],["settings","⚙️ Settings"]].map(([id, l]) => (
+        {[["ads","Marketplace Ads"],["clubs","All Clubs"],["leaderboard","🏆 Leaderboard"],["users","All Users"],["settings","⚙️ Settings"]].map(([id, l]) => (
           <button key={id} className={`tab ${tab === id ? "on" : ""}`} onClick={() => setTab(id)}>{l}</button>
         ))}
       </div>
@@ -2569,6 +2661,97 @@ function AppAdmin({ state, upd, showToast }) {
           })}
         </div>
       )}
+
+      {tab === "leaderboard" && (() => {
+        const { drives: ds } = state;
+        const ranked = cs
+          .map(c => ({ club:c, score: getClubScore(c, us, ds), tier: getClubTier(getClubScore(c, us, ds)) }))
+          .sort((a, b) => b.score - a.score);
+
+        // Top member streaks across all clubs
+        const memberStreaks = us
+          .filter(u => u.role !== "app_admin")
+          .map(u => ({ user:u, streak: getMemberStreak(u.id, ds) }))
+          .filter(x => x.streak > 0)
+          .sort((a, b) => b.streak - a.streak)
+          .slice(0, 10);
+
+        return (
+          <div>
+            {/* Club Leaderboard */}
+            <div className="sh" style={{marginTop:8}}>
+              <div className="sh-label">Rankings</div>
+              <div className="sh-title">CLUB LEADERBOARD</div>
+              <div className="sh-sub">Ranked by activity score — drives completed, attendance, members</div>
+            </div>
+            {ranked.length === 0 && <div style={{color:"var(--mid)", fontSize:14, marginBottom:24}}>No clubs registered yet.</div>}
+            {ranked.map(({ club:c, score, tier }, i) => {
+              const members = us.filter(u => u.clubId === c.id && u.role !== "app_admin").length;
+              const completed = ds.filter(d => d.clubId === c.id && d.attendanceRecorded).length;
+              return (
+                <div key={c.id} className="leaderboard-row">
+                  <div className={`leaderboard-rank ${i===0?"top1":i===1?"top2":i===2?"top3":""}`}>
+                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i+1}`}
+                  </div>
+                  <div className="club-tile-logo-init" style={{width:38, height:38, fontSize:13, margin:0, borderRadius:10, flexShrink:0}}>
+                    {(c.name||"CL").slice(0,2).toUpperCase()}
+                  </div>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:800, color:"var(--ink)", letterSpacing:-.3}}>{c.name}</div>
+                    <div style={{fontSize:11, color:"var(--mid)", marginTop:2, display:"flex", gap:10, flexWrap:"wrap"}}>
+                      <span>👥 {members} members</span>
+                      <span>🏁 {completed} drives</span>
+                    </div>
+                  </div>
+                  <ClubTierBadge club={c} users={us} drives={ds} size="sm" />
+                  <div className="leaderboard-score">{score} pts</div>
+                </div>
+              );
+            })}
+
+            {/* Score breakdown info */}
+            <div className="card" style={{marginTop:8, background:"var(--acc-pale)", border:"1px solid var(--acc-pale3)"}}>
+              <div style={{fontSize:11, fontWeight:700, letterSpacing:2, color:"var(--acc2)", textTransform:"uppercase", marginBottom:10}}>How Points Are Earned</div>
+              <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:8}}>
+                {[["🏁 Drive completed","10 pts"],["👤 Member attends","5 pts"],["🧑‍🤝‍🧑 New member joins","3 pts"],["📅 Upcoming drive","2 pts"]].map(([l,v]) => (
+                  <div key={l} style={{display:"flex", justifyContent:"space-between", fontSize:12, padding:"6px 10px", background:"var(--bg)", borderRadius:8, border:"1px solid var(--line)"}}>
+                    <span style={{color:"var(--ink2)"}}>{l}</span>
+                    <span style={{fontWeight:700, color:"var(--acc)"}}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{fontSize:11, color:"var(--mid)", marginTop:10, lineHeight:1.6}}>
+                🥈 Silver: 0+ pts &nbsp;·&nbsp; 🥇 Gold: 40+ pts &nbsp;·&nbsp; 💎 Diamond: 100+ pts &nbsp;·&nbsp; 👑 Platinum: 200+ pts
+              </div>
+            </div>
+
+            {/* Member Streak Leaderboard */}
+            {memberStreaks.length > 0 && <>
+              <div className="sh" style={{marginTop:32}}>
+                <div className="sh-label">Members</div>
+                <div className="sh-title">🔥 DRIVE STREAKS</div>
+                <div className="sh-sub">Members with the longest consecutive drive attendance</div>
+              </div>
+              {memberStreaks.map(({ user:u, streak }, i) => {
+                const club = cs.find(c => c.id === u.clubId);
+                return (
+                  <div key={u.id} className="leaderboard-row">
+                    <div className={`leaderboard-rank ${i===0?"top1":i===1?"top2":i===2?"top3":""}`}>
+                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i+1}`}
+                    </div>
+                    <div className="ava" style={{width:38, height:38, fontSize:15, borderRadius:10, flexShrink:0}}>{(u.name||"?")[0]}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14, fontWeight:700, color:"var(--ink)"}}>{u.name}</div>
+                      <div style={{fontSize:11, color:"var(--mid)"}}>{club ? club.name : "No club"}</div>
+                    </div>
+                    <span className="streak-badge">🔥 {streak}</span>
+                  </div>
+                );
+              })}
+            </>}
+          </div>
+        );
+      })()}
 
       {tab === "settings" && (
         <div>
