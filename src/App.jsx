@@ -1767,9 +1767,16 @@ function Drives({ state, upd, showToast, pushNotif }) {
           clubId={cu.clubId}
           ranks={myRanks}
           onClose={() => setCreate(false)}
-          onSave={d => {
-            const newDrive = {...d, id:Date.now(), postedBy:cu.id, registrations:[], attendanceRecorded:false};
-            upd({ drives: [...ds, newDrive] });
+          onSave={async d => {
+            // Save to Supabase first to get real serial ID
+            let savedDrive = null;
+            const driveRow = driveToDB({...d, id:undefined, postedBy:cu.id, registrations:[], attendanceRecorded:false});
+            delete driveRow.id; // let Supabase generate it
+            if (SUPA_URL && SUPA_KEY) {
+              savedDrive = await SB.upsert("drives", driveRow);
+            }
+            const newDrive = {...d, id: savedDrive?.id || Date.now(), postedBy:cu.id, registrations:[], attendanceRecorded:false};
+            setS(s => ({...s, drives:[...s.drives, newDrive]}));
             setCreate(false);
             showToast("Drive posted! Members are being notified.");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
@@ -3954,45 +3961,42 @@ export default function App() {
 
   const showToast = msg => setToast(msg);
   const upd = patch => {
-    setS(s => {
-      const next = {...s, ...patch};
-      // Sync changed users to Supabase
-      if (patch.users) {
-        const changed = patch.users.filter(u => {
-          const old = s.users.find(o => o.id === u.id);
-          return !old || JSON.stringify(old) !== JSON.stringify(u);
-        });
-        changed.forEach(u => SB.upsert("users", userToDb(u)).catch(() => {}));
-      }
-      // Sync changed clubs to Supabase
-      if (patch.clubs) {
-        const changed = patch.clubs.filter(c => {
-          const old = s.clubs.find(o => o.id === c.id);
-          return !old || JSON.stringify(old) !== JSON.stringify(c);
-        });
-        changed.forEach(c => SB.upsert("clubs", clubToDb(c)).catch(() => {}));
-      }
-      // Sync changed drives to Supabase
-      if (patch.drives) {
-        const changed = patch.drives.filter(d => {
-          const old = s.drives.find(o => o.id === d.id);
-          return !old || JSON.stringify(old) !== JSON.stringify(d);
-        });
-        changed.forEach(d => {
-          const {registrations, ...dbRow} = driveToDB(d);
-          SB.upsert("drives", dbRow).catch(() => {});
-          // Sync registrations
+    // Sync to Supabase BEFORE setS so we use current values, not stale closure
+    if (patch.users) {
+      const currentUsers = S.users;
+      patch.users.forEach(u => {
+        const old = currentUsers.find(o => o.id === u.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(u)) {
+          SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user sync failed:", e));
+        }
+      });
+    }
+    if (patch.clubs) {
+      const currentClubs = S.clubs;
+      patch.clubs.forEach(c => {
+        const old = currentClubs.find(o => o.id === c.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(c)) {
+          SB.upsert("clubs", clubToDb(c)).catch(e => console.error("[SB] club sync failed:", e));
+        }
+      });
+    }
+    if (patch.drives) {
+      const currentDrives = S.drives;
+      patch.drives.forEach(d => {
+        const old = currentDrives.find(o => o.id === d.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(d)) {
+          SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive sync failed:", e));
           if (d.registrations) {
             d.registrations.forEach(r => {
               SB.upsert("drive_registrations", {
-                drive_id: d.id, user_id: r.userId, status: r.status || "confirmed",
+                drive_id: d.id, user_id: r.userId, status: r.status || "confirmed", attended: r.attended || false,
               }).catch(() => {});
             });
           }
-        });
-      }
-      return next;
-    });
+        }
+      });
+    }
+    setS(s => ({...s, ...patch}));
   };
   const go   = page  => { setS(s => ({...s, page})); setMob(false); };
   const login  = u   => { setS(s => ({...s, currentUser:u, page:"dashboard"})); setMob(false); };
@@ -4005,30 +4009,49 @@ export default function App() {
     // ── Always create the account locally first (instant) ──
     if (type === "member") {
       const u = { id: crypto.randomUUID?.() || String(Date.now()),
-                  name:form.name, email:form.email, phone:form.phone,
+                  name:form.name, email:form.email, phone:form.phone||"",
                   role:"member", rankId:1, clubId:Number(form.clubId), drives:0,
                   passwordHash:form.passwordHash||"", emailVerified:false };
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
       // Persist to Supabase
-      SB.upsert("users", userToDb(u)).catch(e => console.warn("[CLUBBB] user upsert failed:", e));
+      SB.upsert("users", userToDb(u))
+        .then(r => r ? console.log("[CLUBBB] Member saved ✅") : console.error("[CLUBBB] Member save failed ❌"))
+        .catch(e => console.error("[CLUBBB] Member upsert error:", e));
 
     } else {
-      const cid = Math.max(0, ...S.clubs.map(c => c.id)) + 1;
       const adminName = form.contactName || form.name;
       const clubName  = form.clubName  || form.name;
-      const u = { id: crypto.randomUUID?.() || String(Date.now()),
-                  name:adminName, email:form.email, phone:form.phone,
+      const userId = crypto.randomUUID?.() || String(Date.now());
+
+      // Create club in Supabase first to get the real auto-generated ID
+      const clubRow = { name:clubName, email:form.email, phone:form.phone||"",
+                        logo:"", banner:"", description:"", terms:"" };
+
+      showToast("Creating club...");
+      let savedClub = null;
+      if (SUPA_URL && SUPA_KEY) {
+        savedClub = await SB.upsert("clubs", clubRow);
+      }
+
+      // Use Supabase-returned ID or fallback to timestamp
+      const cid = savedClub?.id || (Math.max(0, ...S.clubs.map(c => c.id)) + 1);
+
+      const u = { id: userId, name:adminName, email:form.email, phone:form.phone||"",
                   role:"admin", rankId:5, clubId:cid, drives:0,
                   passwordHash:form.passwordHash||"", emailVerified:false };
-      const c = { id:cid, name:clubName, email:form.email, phone:form.phone,
-                  adminId:u.id, logo:"", banner:"", description:"", terms:"" };
+      const c = { id:cid, name:clubName, email:form.email, phone:form.phone||"",
+                  adminId:userId, logo:"", banner:"", description:"", terms:"" };
+
+      // Update club with admin_id now that we have the user ID
+      if (savedClub) {
+        SB.upsert("clubs", { ...clubToDb(c) }).catch(e => console.error("[SB] club admin update failed:", e));
+      }
+      // Save user
+      SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user upsert failed:", e));
+
       setS(s => ({...s, users:[...s.users,u], clubs:[...s.clubs,c],
                   currentUser:u, page:"club-admin",
                   clubRanks:{...s.clubRanks,[cid]:DEFAULT_RANKS.map(r=>({...r}))}}));
-      // Persist club first (user references club_id), then user
-      SB.upsert("clubs", clubToDb(c))
-        .then(() => SB.upsert("users", userToDb(u)))
-        .catch(e => console.warn("[CLUBBB] club/user upsert failed:", e));
     }
     showToast("✅ Welcome to CLUBBB!");
 
