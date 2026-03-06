@@ -3725,16 +3725,17 @@ export default function App() {
   useEffect(() => {
     loadRemoteState().then(remote => {
       if (remote) {
+        // Supabase is the source of truth — always use its data, even if empty
         setS(s => ({
           ...s,
-          users:  remote.users.length  ? remote.users  : s.users,
-          clubs:  remote.clubs.length  ? remote.clubs  : s.clubs,
-          drives: remote.drives.length ? remote.drives : s.drives,
-          ads:    remote.ads.length    ? remote.ads    : s.ads,
+          users:  remote.users,
+          clubs:  remote.clubs,
+          drives: remote.drives,
+          ads:    remote.ads,
         }));
         saveLocalState({ ...remote });
       }
-      setSbReady(true); // always mark ready after attempt, success or fail
+      setSbReady(true);
     }).catch(() => setSbReady(true));
   }, []);
 
