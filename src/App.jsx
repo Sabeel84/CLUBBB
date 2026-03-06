@@ -716,10 +716,14 @@ const SB = {
         headers: { ...SB.headers(), "Prefer": "resolution=merge-duplicates,return=representation" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) { console.warn(`[SB] UPSERT ${table} failed`, res.status); return null; }
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error(`[SB] UPSERT ${table} failed ${res.status}:`, errText, "| data:", JSON.stringify(data).slice(0, 200));
+        return null;
+      }
       const json = await res.json();
       return Array.isArray(json) ? json[0] : json;
-    } catch (e) { console.warn(`[SB] UPSERT ${table} error`, e); return null; }
+    } catch (e) { console.error(`[SB] UPSERT ${table} error:`, e); return null; }
   },
   patch: async (table, match, data) => {
     if (!SUPA_URL || !SUPA_KEY) return;
@@ -3580,7 +3584,7 @@ function SetupWizard({ onComplete }) {
 
     // ── Step 2: Build admin user object ──
     const adminUser = {
-      id: Date.now(),
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       name: name.trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
@@ -3769,6 +3773,8 @@ export default function App() {
         <style>{CSS}</style>
         <SetupWizard onComplete={adminUser => {
           setS(s => ({ ...s, users: [adminUser], currentUser: adminUser, page: "app-admin" }));
+          SB.upsert("users", userToDb(adminUser))
+            .then(r => r ? console.log("[CLUBBB] App admin saved to Supabase ✅", r) : console.error("[CLUBBB] App admin save failed ❌"));
         }} />
         {toast && <Toast msg={toast} done={() => setToast(null)} />}
       </>
