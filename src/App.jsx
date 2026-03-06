@@ -3595,21 +3595,9 @@ function SetupWizard({ onComplete }) {
       passwordHash,
     };
 
-    // ── Step 3: Fire-and-forget Supabase sync — NEVER blocks or throws ──
-    if (SUPA_URL && SUPA_KEY) {
-      fetch(`${SUPA_URL}/functions/v1/setup-admin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPA_KEY}`, "apikey": SUPA_KEY },
-        body: JSON.stringify({ name: adminUser.name, email: adminUser.email, phone: adminUser.phone, passwordHash: adminUser.passwordHash }),
-      }).catch(e => console.warn("[CLUBBB] setup-admin sync failed (non-blocking):", e));
-    }
-
-    // ── Step 4: Always complete locally regardless of Supabase result ──
+    // ── Step 3: Complete ──
     setLoading(false);
     onComplete(adminUser);
-    // Also write to Supabase users table so all devices can see admin exists
-    SB.upsert("users", userToDb(adminUser))
-      .catch(e => console.warn("[CLUBBB] admin user upsert failed (non-blocking):", e));
   }
 
   return (
