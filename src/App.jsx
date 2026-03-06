@@ -3706,6 +3706,7 @@ export default function App() {
   const [S, setS]           = useState(INIT);
   const [toast, setToast]   = useState(null);
   const [mobOpen, setMob]   = useState(false);
+  const [sbReady, setSbReady] = useState(!SUPA_URL || !SUPA_KEY); // true immediately if no Supabase
   const { notifs, push: pushNotif, dismiss } = useNotifications();
 
   // ALL hooks must come before any conditional returns (Rules of Hooks)
@@ -3720,25 +3721,44 @@ export default function App() {
     Object.assign(document.body.style, { margin:'0', padding:'0', overflowX:'hidden', background:'#f7f7f8' });
   }, []);
 
-  // ── On mount: pull all data from Supabase real tables ──
+  // ── On mount: pull all data from Supabase, THEN decide wizard vs app ──
   useEffect(() => {
     loadRemoteState().then(remote => {
-      if (!remote) return;
-      setS(s => ({
-        ...s,
-        users:  remote.users.length  ? remote.users  : s.users,
-        clubs:  remote.clubs.length  ? remote.clubs  : s.clubs,
-        drives: remote.drives.length ? remote.drives : s.drives,
-        ads:    remote.ads.length    ? remote.ads    : s.ads,
-      }));
-      saveLocalState({ ...remote });
-    });
+      if (remote) {
+        setS(s => ({
+          ...s,
+          users:  remote.users.length  ? remote.users  : s.users,
+          clubs:  remote.clubs.length  ? remote.clubs  : s.clubs,
+          drives: remote.drives.length ? remote.drives : s.drives,
+          ads:    remote.ads.length    ? remote.ads    : s.ads,
+        }));
+        saveLocalState({ ...remote });
+      }
+      setSbReady(true); // always mark ready after attempt, success or fail
+    }).catch(() => setSbReady(true));
   }, []);
 
   // ── On every state change: update localStorage cache ──
   useEffect(() => {
     saveLocalState(S);
   }, [S]);
+
+  // ── Wait for Supabase before rendering anything ──
+  if (!sbReady) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <div style={{minHeight:"100vh", background:"var(--off)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16}}>
+          <div style={{width:56, height:56, background:"var(--acc2)", borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"var(--sh-gold)"}}>
+            <span style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"#0a0a0a"}}>CB</span>
+          </div>
+          <div style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"var(--ink)", letterSpacing:-0.5}}>CLUB<span style={{color:"var(--acc)"}}>BB</span></div>
+          <div style={{width:36, height:36, border:"3px solid var(--acc2)", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite"}} />
+          <div style={{fontSize:13, color:"var(--mid)"}}>Loading...</div>
+        </div>
+      </>
+    );
+  }
 
   // ── First-time setup: show wizard when no users exist ──
   // This is AFTER all hooks so it doesn't violate Rules of Hooks
