@@ -821,7 +821,8 @@ async function loadRemoteState() {
       users:  users.map(dbToUser),
       clubs:  clubs.map(dbToClub),
       drives: drives.map(d => dbToDrive(d, regs)),
-      ads,
+      // Map Supabase 'description' → app 'desc' for consistency
+      ads: ads.map(a => ({...a, desc: a.description || a.desc || ""})),
     };
   } catch (e) { console.warn("[CLUBBB] loadRemoteState error:", e); return null; }
 }
@@ -4084,6 +4085,42 @@ export default function App() {
       cur.forEach(o => {
         if (!patch.drives.find(d => d.id === o.id))
           SB.del("drives", { id: o.id }).catch(() => {});
+      });
+    }
+    // ── Sync ads ──
+    if (patch.ads) {
+      const cur = S.ads;
+      patch.ads.forEach(a => {
+        const old = cur.find(o => o.id === a.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(a)) {
+          // Map app field 'desc' → Supabase field 'description'
+          const row = {
+            title:       a.title       || "",
+            description: a.desc        || a.description || "",
+            details:     a.details     || "",
+            icon:        a.icon        || "🚙",
+            thumbnail:   a.thumbnail   || null,
+            category:    a.category    || "General",
+            link:        a.link        || "",
+            featured:    a.featured    || false,
+            active:      a.active !== false,
+          };
+          // Only include id if it's a real Supabase serial (not Date.now temp)
+          if (a.id && typeof a.id === "number" && a.id < 2000000000) row.id = a.id;
+          SB.upsert("ads", row)
+            .then(saved => {
+              // Swap temp id for real Supabase id
+              if (saved?.id && saved.id !== a.id) {
+                setS(s => ({...s, ads: s.ads.map(x => x.id === a.id ? {...x, id: saved.id} : x)}));
+              }
+            })
+            .catch(e => console.error("[SB] ad sync:", e));
+        }
+      });
+      // Deleted/removed ads
+      cur.forEach(o => {
+        if (!patch.ads.find(a => a.id === o.id))
+          SB.del("ads", { id: o.id }).catch(() => {});
       });
     }
     setS(s => ({...s, ...patch}));
