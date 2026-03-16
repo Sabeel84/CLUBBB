@@ -1836,40 +1836,49 @@ function Drives({ state, upd, showToast, pushNotif }) {
           clubId={cu.clubId}
           ranks={myRanks}
           onClose={() => setCreate(false)}
-          onSave={d => {
-            const tempId   = Date.now();
+          onSave={async d => {
+            // Build the row to send to Supabase — no id, no image
+            const row = {
+              club_id:             cu.clubId,
+              posted_by:           cu.id,
+              title:               d.title,
+              description:         d.description || "",
+              location:            d.location    || "",
+              coordinates:         d.coordinates || "",
+              map_link:            d.mapLink     || "",
+              date:                d.date        || null,
+              start_time:          d.startTime   || null,
+              required_rank_id:    Number(d.requiredRankId) || 1,
+              capacity:            Number(d.capacity)       || 10,
+              attendance_recorded: false,
+            };
+
+            // Save to Supabase first — get real serial ID back
+            let realId = null;
+            try {
+              const saved = await SB.upsert("drives", row);
+              realId = saved?.id || null;
+              console.log("[CLUBBB] Drive saved ✅ Supabase id:", realId);
+            } catch(e) {
+              console.error("[CLUBBB] Drive Supabase save failed:", e);
+            }
+
+            // Add to local state with real ID (or fallback)
             const newDrive = {
               ...d,
-              id:                 tempId,
-              clubId:             d.clubId || cu.clubId,
+              id:                 realId || Date.now(),
+              clubId:             cu.clubId,
               postedBy:           cu.id,
               registrations:      [],
               attendanceRecorded: false,
             };
-            // Close modal immediately
+
+            // Use setS directly — bypass upd() to avoid double-save
+            setS(s => ({...s, drives: [...s.drives, newDrive]}));
             setCreate(false);
-            // upd() handles both local state AND Supabase sync
-            upd({ drives: [...S.drives, newDrive] });
             showToast("🚙 Drive posted!");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
-            // Background: save to Supabase with no id to get real serial ID back
-            if (SUPA_URL && SUPA_KEY) {
-              const row = driveToDB(newDrive);
-              delete row.id;
-              SB.upsert("drives", row).then(saved => {
-                if (saved?.id && saved.id !== tempId) {
-                  // Swap tempId for real Supabase ID
-                  setS(s => ({...s, drives: s.drives.map(x =>
-                    x.id === tempId ? {...x, id: saved.id} : x
-                  )}));
-                }
-              }).catch(e => console.error("[SB] drive save:", e));
-            }
-            notifyDrivePosted({
-              club_id: cu.clubId, title: newDrive.title, location: newDrive.location,
-              date: newDrive.date, start_time: newDrive.startTime || "",
-              description: newDrive.description || "", required_rank_id: newDrive.requiredRankId || 1,
-            }).catch(() => {});
+            notifyDrivePosted({ club_id: cu.clubId, title: newDrive.title, location: newDrive.location, date: newDrive.date, start_time: newDrive.startTime || "", description: newDrive.description || "", required_rank_id: newDrive.requiredRankId || 1 }).catch(() => {});
           }}
         />
       )}
@@ -1940,9 +1949,20 @@ function Drives({ state, upd, showToast, pushNotif }) {
 }
 
 function CreateDrive({ clubId, ranks, onClose, onSave }) {
-  const [f, setF] = useState({title:"", description:"", location:"", coordinates:"", mapLink:"", capacity:10, requiredRankId:1, clubId, date:"", startTime:"", image:""});
+  const [f, setF]       = useState({title:"", description:"", location:"", coordinates:"", mapLink:"", capacity:10, requiredRankId:1, clubId, date:"", startTime:"", image:""});
+  const [saving, setSaving] = useState(false);
   const s = k => e => setF({...f, [k]: e.target.value});
   const rankList = ranks && ranks.length > 0 ? ranks : DEFAULT_RANKS;
+
+  async function submit() {
+    if (!f.title || !f.location) { alert("Fill required fields: Drive Name and Location"); return; }
+    if (!f.date)                 { alert("Please set a drive date"); return; }
+    if (!f.startTime)            { alert("Please set a start time"); return; }
+    setSaving(true);
+    await onSave(f);
+    setSaving(false);
+  }
+
   return (
     <Modal title="POST NEW DRIVE" onClose={onClose}>
       <div className="fg">
@@ -1973,12 +1993,9 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
           </select>
         </div>
       </div>
-      <button className="btn gold" style={{width:"100%", marginTop:8}} onClick={() => {
-        if (!f.title || !f.location) { alert("Fill required fields: Drive Name and Location"); return; }
-        if (!f.date)                 { alert("Please set a drive date"); return; }
-        if (!f.startTime)            { alert("Please set a start time"); return; }
-        onSave(f);
-      }}>POST DRIVE</button>
+      <button className="btn gold" style={{width:"100%", marginTop:8}} disabled={saving} onClick={submit}>
+        {saving ? "POSTING..." : "POST DRIVE"}
+      </button>
     </Modal>
   );
 }
@@ -4068,9 +4085,10 @@ export default function App() {
       const cur = S.drives;
       patch.drives.forEach(d => {
         const old = cur.find(o => o.id === d.id);
-        if (!old || JSON.stringify(old) !== JSON.stringify(d)) {
-          SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive sync:", e));
-          // Sync registrations
+        if (!old) return; // skip new drives — they are saved directly in onSave
+        if (JSON.stringify(old) !== JSON.stringify(d)) {
+          // This is an UPDATE (cancel, attendance, registration change)
+          SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive update:", e));
           if (d.registrations) {
             d.registrations.forEach(r =>
               SB.upsert("drive_registrations", {
