@@ -1853,14 +1853,36 @@ function Drives({ state, upd, showToast, pushNotif }) {
               attendance_recorded: false,
             };
 
+            console.log("[CLUBBB] Attempting drive save. row:", JSON.stringify(row));
+            console.log("[CLUBBB] SUPA_URL:", SUPA_URL ? "SET" : "MISSING");
+            console.log("[CLUBBB] SUPA_KEY:", SUPA_KEY ? "SET" : "MISSING");
+            console.log("[CLUBBB] cu.clubId:", cu.clubId, "cu.id:", cu.id);
+
             // Save to Supabase first — get real serial ID back
             let realId = null;
             try {
-              const saved = await SB.upsert("drives", row);
-              realId = saved?.id || null;
-              console.log("[CLUBBB] Drive saved ✅ Supabase id:", realId);
+              const res = await fetch(`${SUPA_URL}/rest/v1/drives`, {
+                method: "POST",
+                headers: {
+                  "apikey":        SUPA_KEY,
+                  "Authorization": `Bearer ${SUPA_KEY}`,
+                  "Content-Type":  "application/json",
+                  "Prefer":        "return=representation",
+                },
+                body: JSON.stringify(row),
+              });
+              const text = await res.text();
+              console.log("[CLUBBB] Drive save response status:", res.status);
+              console.log("[CLUBBB] Drive save response body:", text);
+              if (res.ok) {
+                const json = JSON.parse(text);
+                realId = Array.isArray(json) ? json[0]?.id : json?.id;
+                console.log("[CLUBBB] Drive saved ✅ realId:", realId);
+              } else {
+                console.error("[CLUBBB] Drive save FAILED:", res.status, text);
+              }
             } catch(e) {
-              console.error("[CLUBBB] Drive Supabase save failed:", e);
+              console.error("[CLUBBB] Drive save exception:", e);
             }
 
             // Add to local state with real ID (or fallback)
@@ -1873,10 +1895,9 @@ function Drives({ state, upd, showToast, pushNotif }) {
               attendanceRecorded: false,
             };
 
-            // Use setS directly — bypass upd() to avoid double-save
             setS(s => ({...s, drives: [...s.drives, newDrive]}));
             setCreate(false);
-            showToast("🚙 Drive posted!");
+            showToast(realId ? "🚙 Drive posted!" : "🚙 Drive saved locally (Supabase sync failed — check console)");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
             notifyDrivePosted({ club_id: cu.clubId, title: newDrive.title, location: newDrive.location, date: newDrive.date, start_time: newDrive.startTime || "", description: newDrive.description || "", required_rank_id: newDrive.requiredRankId || 1 }).catch(() => {});
           }}
