@@ -1819,50 +1819,54 @@ function Drives({ state, upd, showToast, pushNotif }) {
           clubId={cu.clubId}
           ranks={myRanks}
           onClose={() => setCreate(false)}
-          onSave={async d => {
-            // Build drive object — store image locally only (too large for Supabase row)
-            const driveRow = {
-              club_id:          d.clubId || cu.clubId,
-              posted_by:        cu.id,
-              title:            d.title,
-              description:      d.description || "",
-              location:         d.location || "",
-              coordinates:      d.coordinates || "",
-              map_link:         d.mapLink || "",
-              date:             d.date || null,
-              start_time:       d.startTime || null,
-              required_rank_id: d.requiredRankId || 1,
-              capacity:         Number(d.capacity) || 10,
-              attendance_recorded: false,
-              // Don't send image to Supabase — store in local state only
-            };
-
-            let savedId = null;
-            try {
-              if (SUPA_URL && SUPA_KEY) {
-                const saved = await SB.upsert("drives", driveRow);
-                savedId = saved?.id || null;
-                if (savedId) console.log("[CLUBBB] Drive saved to Supabase ✅ id:", savedId);
-                else console.error("[CLUBBB] Drive upsert returned no ID ❌");
-              }
-            } catch (e) {
-              console.error("[CLUBBB] Drive save error:", e);
-            }
-
-            // Always add to local state regardless of Supabase result
+          onSave={d => {
+            // ── 1. Close modal and add to local state IMMEDIATELY ──
+            const tempId  = Date.now();
             const newDrive = {
               ...d,
-              id:                 savedId || Date.now(),
+              id:                 tempId,
               clubId:             d.clubId || cu.clubId,
               postedBy:           cu.id,
               registrations:      [],
               attendanceRecorded: false,
             };
-            setS(s => ({...s, drives:[...s.drives, newDrive]}));
             setCreate(false);
+            setS(s => ({...s, drives:[...s.drives, newDrive]}));
             showToast("🚙 Drive posted!");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
-            // Fire-and-forget email notification — never blocks
+
+            // ── 2. Save to Supabase in background ──
+            if (SUPA_URL && SUPA_KEY) {
+              const driveRow = {
+                club_id:             d.clubId || cu.clubId,
+                posted_by:           cu.id,
+                title:               d.title,
+                description:         d.description || "",
+                location:            d.location || "",
+                coordinates:         d.coordinates || "",
+                map_link:            d.mapLink || "",
+                date:                d.date || null,
+                start_time:          d.startTime || null,
+                required_rank_id:    Number(d.requiredRankId) || 1,
+                capacity:            Number(d.capacity) || 10,
+                attendance_recorded: false,
+              };
+              SB.upsert("drives", driveRow)
+                .then(saved => {
+                  if (saved?.id) {
+                    // Update the local drive with the real Supabase ID
+                    setS(s => ({...s, drives: s.drives.map(x =>
+                      x.id === tempId ? {...x, id: saved.id} : x
+                    )}));
+                    console.log("[CLUBBB] Drive saved to Supabase ✅ id:", saved.id);
+                  } else {
+                    console.error("[CLUBBB] Drive upsert returned no ID ❌");
+                  }
+                })
+                .catch(e => console.error("[CLUBBB] Drive save error:", e));
+            }
+
+            // ── 3. Fire-and-forget email notification ──
             notifyDrivePosted({
               club_id: cu.clubId, title: newDrive.title, location: newDrive.location,
               date: newDrive.date, start_time: newDrive.startTime || "",
@@ -1939,14 +1943,13 @@ function Drives({ state, upd, showToast, pushNotif }) {
 
 function CreateDrive({ clubId, ranks, onClose, onSave }) {
   const [f, setF] = useState({title:"", description:"", location:"", coordinates:"", mapLink:"", capacity:10, requiredRankId:1, clubId, date:"", startTime:"", image:""});
-  const [saving, setSaving] = useState(false);
   const s = k => e => setF({...f, [k]: e.target.value});
   const rankList = ranks && ranks.length > 0 ? ranks : DEFAULT_RANKS;
   return (
     <Modal title="POST NEW DRIVE" onClose={onClose}>
       <div className="fg">
         <label className="fl">Drive Cover Image</label>
-        <ImageUpload value={f.image} onChange={v => setF({...f, image:v})} height={160} label="Upload Cover Photo" hint="Optional · JPG, PNG, WEBP · Max 5MB" />
+        <ImageUpload value={f.image} onChange={v => setF({...f, image:v})} height={160} label="Upload Cover Photo" hint="Optional · JPG, PNG, WEBP · Max 10MB" />
       </div>
       <div className="fg"><label className="fl">Drive Name <span style={{color:"var(--red)"}}>*</span></label><input className="fi" value={f.title} onChange={s("title")} placeholder="Liwa Dunes Expedition" /></div>
       <div className="fg"><label className="fl">Description</label><textarea className="fi fi-ta" value={f.description} onChange={s("description")} /></div>
@@ -1957,7 +1960,7 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
       <div className="fg">
         <label className="fl">Start Time <span style={{color:"var(--red)"}}>*</span></label>
         <input className="fi" type="time" value={f.startTime} onChange={s("startTime")} />
-        {f.startTime && <div style={{fontSize:11, color:"var(--mid)", marginTop:5, fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:1}}>
+        {f.startTime && <div style={{fontSize:11, color:"var(--mid)", marginTop:5}}>
           Meetup: {(() => { const [h,m]=f.startTime.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; })()}
         </div>}
       </div>
@@ -1972,14 +1975,12 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
           </select>
         </div>
       </div>
-      <button className="btn gold" style={{width:"100%", marginTop:8}} disabled={saving} onClick={async () => {
+      <button className="btn gold" style={{width:"100%", marginTop:8}} onClick={() => {
         if (!f.title || !f.location) { alert("Fill required fields: Drive Name and Location"); return; }
         if (!f.date)                 { alert("Please set a drive date"); return; }
         if (!f.startTime)            { alert("Please set a start time"); return; }
-        setSaving(true);
-        try { await onSave(f); } catch(e) { console.error("Drive save error:", e); }
-        setSaving(false);
-      }}>{saving ? "POSTING..." : "POST DRIVE"}</button>
+        onSave(f);
+      }}>POST DRIVE</button>
     </Modal>
   );
 }
