@@ -812,7 +812,8 @@ async function loadRemoteState() {
     const [users, clubs, drives, regs, ads] = await Promise.all([
       SB.get("users",               "select=*&order=created_at.asc"),
       SB.get("clubs",               "select=*&order=created_at.asc"),
-      SB.get("drives",              "select=*&order=date.desc"),
+      // Exclude image column — base64 images make response too large
+      SB.get("drives",              "select=id,club_id,posted_by,title,description,location,coordinates,map_link,date,start_time,required_rank_id,capacity,attendance_recorded,created_at&order=date.desc"),
       SB.get("drive_registrations", "select=*"),
       SB.get("ads",                 "select=*&active=eq.true&order=created_at.desc"),
     ]);
