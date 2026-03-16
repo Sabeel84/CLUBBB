@@ -1885,7 +1885,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
               console.error("[CLUBBB] Drive save exception:", e);
             }
 
-            // Add to local state with real ID (or fallback)
+            // Add to local state — use upd() since setS is not available here
             const newDrive = {
               ...d,
               id:                 realId || Date.now(),
@@ -1895,7 +1895,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
               attendanceRecorded: false,
             };
 
-            setS(s => ({...s, drives: [...s.drives, newDrive]}));
+            upd({ drives: [...state.drives, newDrive] });
             setCreate(false);
             showToast(realId ? "🚙 Drive posted!" : "🚙 Drive saved locally (Supabase sync failed — check console)");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
@@ -4106,7 +4106,7 @@ export default function App() {
       const cur = S.drives;
       patch.drives.forEach(d => {
         const old = cur.find(o => o.id === d.id);
-        if (!old) return; // skip new drives — they are saved directly in onSave
+        if (!old) return; // NEW drive — already saved directly to Supabase in onSave, skip
         if (JSON.stringify(old) !== JSON.stringify(d)) {
           // This is an UPDATE (cancel, attendance, registration change)
           SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive update:", e));
