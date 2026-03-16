@@ -959,30 +959,82 @@ function StreakBadge({ userId, drives }) {
   );
 }
 
-function ImageUpload({ value, onChange, height=160, label="Upload Image", hint="JPG, PNG, WEBP · Max 5MB" }) {
+/* ── Compress an image using Canvas before storing ──────────────
+   maxW/maxH: resize to fit within these dimensions
+   quality:   JPEG quality 0–1 (0.72 = good balance size/quality)
+   Result is always a JPEG data URL, much smaller than the original
+──────────────────────────────────────────────────────────────── */
+function compressImage(file, maxW = 1200, maxH = 900, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = ev => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        // Calculate new dimensions keeping aspect ratio
+        let { width, height } = img;
+        if (width > maxW || height > maxH) {
+          const ratio = Math.min(maxW / width, maxH / height);
+          width  = Math.round(width  * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width  = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageUpload({ value, onChange, height=160, label="Upload Image", hint="Optional · JPG, PNG, WEBP · Max 10MB" }) {
   const ref = useRef(null);
-  function handleFile(e) {
+  const [compressing, setCompressing] = useState(false);
+
+  async function handleFile(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert("File too large (max 5MB)"); return; }
-    const reader = new FileReader();
-    reader.onload = ev => onChange(ev.target.result);
-    reader.readAsDataURL(file);
+    if (file.size > 10 * 1024 * 1024) { alert("File too large (max 10MB)"); return; }
     e.target.value = "";
+    setCompressing(true);
+    try {
+      const compressed = await compressImage(file);
+      onChange(compressed);
+    } catch(err) {
+      console.error("Image compression failed, using original:", err);
+      // Fallback to original if compression fails
+      const reader = new FileReader();
+      reader.onload = ev => onChange(ev.target.result);
+      reader.readAsDataURL(file);
+    } finally {
+      setCompressing(false);
+    }
   }
+
   return (
-    <div className="img-upload-zone" style={{height}} onClick={() => ref.current && ref.current.click()}>
+    <div className="img-upload-zone" style={{height, opacity: compressing ? 0.7 : 1}}
+      onClick={() => !compressing && ref.current && ref.current.click()}>
       <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{display:"none"}} />
-      {value
+      {compressing
         ? <>
-            <img src={value} alt="preview" className="img-preview" />
-            <div className="img-preview-overlay">📷 Change Image</div>
+            <div style={{width:28, height:28, border:"3px solid var(--acc2)", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", marginBottom:8}} />
+            <div className="upl-label">Compressing...</div>
           </>
-        : <>
-            <div className="upl-icon">📷</div>
-            <div className="upl-label">{label}</div>
-            <div className="upl-sub">{hint}</div>
-          </>
+        : value
+          ? <>
+              <img src={value} alt="preview" className="img-preview" />
+              <div className="img-preview-overlay">📷 Change Image</div>
+            </>
+          : <>
+              <div className="upl-icon">📷</div>
+              <div className="upl-label">{label}</div>
+              <div className="upl-sub">{hint}</div>
+            </>
       }
     </div>
   );
@@ -1768,31 +1820,54 @@ function Drives({ state, upd, showToast, pushNotif }) {
           ranks={myRanks}
           onClose={() => setCreate(false)}
           onSave={async d => {
-            // Save to Supabase first to get real serial ID
-            let savedDrive = null;
-            const driveRow = driveToDB({...d, id:undefined, postedBy:cu.id, registrations:[], attendanceRecorded:false});
-            delete driveRow.id; // let Supabase generate it
-            if (SUPA_URL && SUPA_KEY) {
-              savedDrive = await SB.upsert("drives", driveRow);
+            // Build drive object — store image locally only (too large for Supabase row)
+            const driveRow = {
+              club_id:          d.clubId || cu.clubId,
+              posted_by:        cu.id,
+              title:            d.title,
+              description:      d.description || "",
+              location:         d.location || "",
+              coordinates:      d.coordinates || "",
+              map_link:         d.mapLink || "",
+              date:             d.date || null,
+              start_time:       d.startTime || null,
+              required_rank_id: d.requiredRankId || 1,
+              capacity:         Number(d.capacity) || 10,
+              attendance_recorded: false,
+              // Don't send image to Supabase — store in local state only
+            };
+
+            let savedId = null;
+            try {
+              if (SUPA_URL && SUPA_KEY) {
+                const saved = await SB.upsert("drives", driveRow);
+                savedId = saved?.id || null;
+                if (savedId) console.log("[CLUBBB] Drive saved to Supabase ✅ id:", savedId);
+                else console.error("[CLUBBB] Drive upsert returned no ID ❌");
+              }
+            } catch (e) {
+              console.error("[CLUBBB] Drive save error:", e);
             }
-            const newDrive = {...d, id: savedDrive?.id || Date.now(), postedBy:cu.id, registrations:[], attendanceRecorded:false};
+
+            // Always add to local state regardless of Supabase result
+            const newDrive = {
+              ...d,
+              id:                 savedId || Date.now(),
+              clubId:             d.clubId || cu.clubId,
+              postedBy:           cu.id,
+              registrations:      [],
+              attendanceRecorded: false,
+            };
             setS(s => ({...s, drives:[...s.drives, newDrive]}));
             setCreate(false);
-            showToast("Drive posted! Members are being notified.");
+            showToast("🚙 Drive posted!");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
-            // ── Notify eligible members via email ──
+            // Fire-and-forget email notification — never blocks
             notifyDrivePosted({
-              club_id:          cu.clubId,
-              title:            newDrive.title,
-              location:         newDrive.location,
-              date:             newDrive.date,
-              start_time:       newDrive.startTime || "",
-              description:      newDrive.description || "",
-              required_rank_id: newDrive.requiredRankId || 1,
-            }).then(r => {
-              if (r.ok) console.log("[CLUBBB] Drive notification sent to", r.data?.sent ?? "?", "members");
-              else if (r.reason !== "not_configured") console.warn("[CLUBBB] notify-drive failed:", r);
-            });
+              club_id: cu.clubId, title: newDrive.title, location: newDrive.location,
+              date: newDrive.date, start_time: newDrive.startTime || "",
+              description: newDrive.description || "", required_rank_id: newDrive.requiredRankId || 1,
+            }).catch(() => {});
           }}
         />
       )}
@@ -1864,14 +1939,14 @@ function Drives({ state, upd, showToast, pushNotif }) {
 
 function CreateDrive({ clubId, ranks, onClose, onSave }) {
   const [f, setF] = useState({title:"", description:"", location:"", coordinates:"", mapLink:"", capacity:10, requiredRankId:1, clubId, date:"", startTime:"", image:""});
+  const [saving, setSaving] = useState(false);
   const s = k => e => setF({...f, [k]: e.target.value});
   const rankList = ranks && ranks.length > 0 ? ranks : DEFAULT_RANKS;
   return (
     <Modal title="POST NEW DRIVE" onClose={onClose}>
       <div className="fg">
-        <label className="fl">Drive Cover Image <span style={{color:"var(--red)"}}>*</span></label>
-        <ImageUpload value={f.image} onChange={v => setF({...f, image:v})} height={160} label="Upload Cover Photo" hint="Required · JPG, PNG, WEBP · Max 5MB" />
-        {!f.image && <div style={{fontSize:11, color:"var(--red)", marginTop:6, fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:1}}>A cover image is required</div>}
+        <label className="fl">Drive Cover Image</label>
+        <ImageUpload value={f.image} onChange={v => setF({...f, image:v})} height={160} label="Upload Cover Photo" hint="Optional · JPG, PNG, WEBP · Max 5MB" />
       </div>
       <div className="fg"><label className="fl">Drive Name <span style={{color:"var(--red)"}}>*</span></label><input className="fi" value={f.title} onChange={s("title")} placeholder="Liwa Dunes Expedition" /></div>
       <div className="fg"><label className="fl">Description</label><textarea className="fi fi-ta" value={f.description} onChange={s("description")} /></div>
@@ -1897,13 +1972,14 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
           </select>
         </div>
       </div>
-      <button className="btn gold" style={{width:"100%", marginTop:8}} onClick={() => {
-        if (!f.image)               { alert("Please upload a cover image — it is required"); return; }
-        if (!f.title || !f.location){ alert("Fill required fields: Drive Name and Location"); return; }
-        if (!f.date)                { alert("Please set a drive date"); return; }
-        if (!f.startTime)           { alert("Please set a start time"); return; }
-        onSave(f);
-      }}>POST DRIVE</button>
+      <button className="btn gold" style={{width:"100%", marginTop:8}} disabled={saving} onClick={async () => {
+        if (!f.title || !f.location) { alert("Fill required fields: Drive Name and Location"); return; }
+        if (!f.date)                 { alert("Please set a drive date"); return; }
+        if (!f.startTime)            { alert("Please set a start time"); return; }
+        setSaving(true);
+        try { await onSave(f); } catch(e) { console.error("Drive save error:", e); }
+        setSaving(false);
+      }}>{saving ? "POSTING..." : "POST DRIVE"}</button>
     </Modal>
   );
 }
