@@ -785,11 +785,24 @@ function dbToDrive(r, regs=[]) {
              userId:x.user_id, status:x.status, attended:x.attended||false })) };
 }
 function driveToDB(d) {
-  return { id:d.id, club_id:d.clubId, posted_by:d.postedBy||null, title:d.title,
-           description:d.description||"", location:d.location||"", coordinates:d.coordinates||"",
-           map_link:d.mapLink||"", date:d.date||null, start_time:d.startTime||null,
-           required_rank_id:d.requiredRankId||1, capacity:d.capacity||10,
-           image:d.image||"", attendance_recorded:d.attendanceRecorded||false };
+  const row = {
+    club_id:             d.clubId,
+    posted_by:           d.postedBy || null,
+    title:               d.title,
+    description:         d.description || "",
+    location:            d.location || "",
+    coordinates:         d.coordinates || "",
+    map_link:            d.mapLink || "",
+    date:                d.date || null,
+    start_time:          d.startTime || null,
+    required_rank_id:    Number(d.requiredRankId) || 1,
+    capacity:            Number(d.capacity) || 10,
+    attendance_recorded: d.attendanceRecorded || false,
+    // Never include image — stored in local state only (too large for Supabase row)
+  };
+  // Only include id if it's a real Supabase serial (not a Date.now() temp)
+  if (d.id && typeof d.id === "number" && d.id < 2000000000) row.id = d.id;
+  return row;
 }
 
 /* ── Load all data from Supabase ── */
@@ -1571,12 +1584,14 @@ function Dashboard({ state, go, showToast }) {
   const today    = new Date().toISOString().split("T")[0];
   const myCl     = cu.clubId ? getClub(cs, cu.clubId) : null;
   const rk       = getRank(cu.rankId, clubRanks, cu.clubId);
-  // Upcoming = confirmed registrations on future drives not yet attended
-  const myDrives = ds.filter(d =>
-    d.registrations.find(r => r.userId === cu.id && r.status === "confirmed") &&
-    !d.attendanceRecorded &&
-    d.date >= today
-  );
+  // Upcoming: drives the user is registered for OR posted (for admins)
+  const myDrives = ds.filter(d => {
+    if (d.attendanceRecorded) return false;
+    if (d.date && d.date < today) return false;
+    const registered = d.registrations.find(r => r.userId === cu.id && r.status === "confirmed");
+    const isOwner    = d.postedBy === cu.id || (d.clubId === cu.clubId && ["admin","marshal"].includes(cu.role));
+    return registered || isOwner;
+  });
   // Done = drives where attendance was recorded AND user was marked attended
   const done = ds.filter(d =>
     d.attendanceRecorded &&
@@ -1820,8 +1835,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
           ranks={myRanks}
           onClose={() => setCreate(false)}
           onSave={d => {
-            // ── 1. Close modal and add to local state IMMEDIATELY ──
-            const tempId  = Date.now();
+            const tempId   = Date.now();
             const newDrive = {
               ...d,
               id:                 tempId,
@@ -1830,43 +1844,25 @@ function Drives({ state, upd, showToast, pushNotif }) {
               registrations:      [],
               attendanceRecorded: false,
             };
+            // Close modal immediately
             setCreate(false);
-            setS(s => ({...s, drives:[...s.drives, newDrive]}));
+            // upd() handles both local state AND Supabase sync
+            upd({ drives: [...S.drives, newDrive] });
             showToast("🚙 Drive posted!");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
-
-            // ── 2. Save to Supabase in background ──
+            // Background: save to Supabase with no id to get real serial ID back
             if (SUPA_URL && SUPA_KEY) {
-              const driveRow = {
-                club_id:             d.clubId || cu.clubId,
-                posted_by:           cu.id,
-                title:               d.title,
-                description:         d.description || "",
-                location:            d.location || "",
-                coordinates:         d.coordinates || "",
-                map_link:            d.mapLink || "",
-                date:                d.date || null,
-                start_time:          d.startTime || null,
-                required_rank_id:    Number(d.requiredRankId) || 1,
-                capacity:            Number(d.capacity) || 10,
-                attendance_recorded: false,
-              };
-              SB.upsert("drives", driveRow)
-                .then(saved => {
-                  if (saved?.id) {
-                    // Update the local drive with the real Supabase ID
-                    setS(s => ({...s, drives: s.drives.map(x =>
-                      x.id === tempId ? {...x, id: saved.id} : x
-                    )}));
-                    console.log("[CLUBBB] Drive saved to Supabase ✅ id:", saved.id);
-                  } else {
-                    console.error("[CLUBBB] Drive upsert returned no ID ❌");
-                  }
-                })
-                .catch(e => console.error("[CLUBBB] Drive save error:", e));
+              const row = driveToDB(newDrive);
+              delete row.id;
+              SB.upsert("drives", row).then(saved => {
+                if (saved?.id && saved.id !== tempId) {
+                  // Swap tempId for real Supabase ID
+                  setS(s => ({...s, drives: s.drives.map(x =>
+                    x.id === tempId ? {...x, id: saved.id} : x
+                  )}));
+                }
+              }).catch(e => console.error("[SB] drive save:", e));
             }
-
-            // ── 3. Fire-and-forget email notification ──
             notifyDrivePosted({
               club_id: cu.clubId, title: newDrive.title, location: newDrive.location,
               date: newDrive.date, start_time: newDrive.startTime || "",
@@ -4038,39 +4034,55 @@ export default function App() {
 
   const showToast = msg => setToast(msg);
   const upd = patch => {
-    // Sync to Supabase BEFORE setS so we use current values, not stale closure
+    // ── Sync users ──
     if (patch.users) {
-      const currentUsers = S.users;
+      const cur = S.users;
       patch.users.forEach(u => {
-        const old = currentUsers.find(o => o.id === u.id);
-        if (!old || JSON.stringify(old) !== JSON.stringify(u)) {
-          SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user sync failed:", e));
-        }
+        const old = cur.find(o => o.id === u.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(u))
+          SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user sync:", e));
+      });
+      // Deleted users
+      cur.forEach(o => {
+        if (!patch.users.find(u => u.id === o.id))
+          SB.del("users", { id: o.id }).catch(() => {});
       });
     }
+    // ── Sync clubs ──
     if (patch.clubs) {
-      const currentClubs = S.clubs;
+      const cur = S.clubs;
       patch.clubs.forEach(c => {
-        const old = currentClubs.find(o => o.id === c.id);
-        if (!old || JSON.stringify(old) !== JSON.stringify(c)) {
-          SB.upsert("clubs", clubToDb(c)).catch(e => console.error("[SB] club sync failed:", e));
-        }
+        const old = cur.find(o => o.id === c.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(c))
+          SB.upsert("clubs", clubToDb(c)).catch(e => console.error("[SB] club sync:", e));
+      });
+      cur.forEach(o => {
+        if (!patch.clubs.find(c => c.id === o.id))
+          SB.del("clubs", { id: o.id }).catch(() => {});
       });
     }
+    // ── Sync drives ──
     if (patch.drives) {
-      const currentDrives = S.drives;
+      const cur = S.drives;
       patch.drives.forEach(d => {
-        const old = currentDrives.find(o => o.id === d.id);
+        const old = cur.find(o => o.id === d.id);
         if (!old || JSON.stringify(old) !== JSON.stringify(d)) {
-          SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive sync failed:", e));
+          SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive sync:", e));
+          // Sync registrations
           if (d.registrations) {
-            d.registrations.forEach(r => {
+            d.registrations.forEach(r =>
               SB.upsert("drive_registrations", {
-                drive_id: d.id, user_id: r.userId, status: r.status || "confirmed", attended: r.attended || false,
-              }).catch(() => {});
-            });
+                drive_id: d.id, user_id: r.userId,
+                status: r.status || "confirmed", attended: r.attended || false,
+              }).catch(() => {})
+            );
           }
         }
+      });
+      // Deleted drives
+      cur.forEach(o => {
+        if (!patch.drives.find(d => d.id === o.id))
+          SB.del("drives", { id: o.id }).catch(() => {});
       });
     }
     setS(s => ({...s, ...patch}));
