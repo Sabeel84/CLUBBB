@@ -1750,7 +1750,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
   const [waitM, setWaitM]       = useState(null);
   const [attM,  setAttM]        = useState(null);
   const [detailDrive, setDetail] = useState(null);
-  const canCreate = ["admin","marshal","support"].includes(cu.role);
+  const canCreate = ["admin","marshal"].includes(cu.role);
   const myRanks   = getClubRanks(clubRanks, cu.clubId);
   const uLevel    = getRank(cu.rankId, clubRanks, cu.clubId)?.level || 1;
   const list      = cu.role === "app_admin" ? ds : ds.filter(d => d.clubId === cu.clubId);
@@ -2115,7 +2115,7 @@ function ClubAdmin({ state, upd, showToast }) {
           <div className="card" style={{marginTop:4}}>
             <div className="ibox">
               <strong>ROLE RULES</strong><br />
-              Admin, Marshal & Support can post drives. To promote to Marshal, 2 marshals must vote YES.
+              Only Admin & Marshal can post drives. To promote to Marshal, 2 marshals must vote YES.
             </div>
           </div>
         </div>
@@ -2237,7 +2237,7 @@ function ClubAdmin({ state, upd, showToast }) {
                   <select
                     className="fi fi-sel"
                     style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:120, flexShrink:0,
-                      borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : u.role==="support" ? "rgba(37,99,235,.3)" : "var(--line2)",
+                      borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : "var(--line2)",
                       color: u.role==="admin" ? "var(--red)" : u.role==="marshal" ? "var(--orange)" : u.role==="support" ? "var(--blue)" : "var(--ink)"
                     }}
                     value={u.role || "member"}
@@ -2251,7 +2251,6 @@ function ClubAdmin({ state, upd, showToast }) {
                     <option value="member">👤 Member</option>
                     <option value="marshal">🏴 Marshal</option>
                     <option value="admin">⚙️ Admin</option>
-                    <option value="support">🛠 Support</option>
                   </select>
                 </div>
               )}
@@ -3329,7 +3328,7 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
   return (
     <div>
       {/* Active SOS alerts visible to marshals/admins */}
-      {["marshal","admin","support"].includes(cu.role) && clubSOS.length > 0 && (
+      {["marshal","admin"].includes(cu.role) && clubSOS.length > 0 && (
         <div style={{ marginBottom:24 }}>
           <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--red)", marginBottom:12 }}>⚠️ Active SOS Alerts</div>
           {clubSOS.map(s => {
@@ -3424,7 +3423,7 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
   const msgs     = chat[clubId] || [];
   const [text, setText] = useState("");
   const endRef   = useRef(null);
-  const isAdmin  = ["admin","marshal","support"].includes(cu.role);
+  const isAdmin  = ["admin","marshal"].includes(cu.role);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs.length]);
 
@@ -3531,7 +3530,7 @@ function DriveChecklist({ drive, state, upd, showToast }) {
   const { currentUser:cu, users:us, checklists = {}, clubs:cs } = state;
   const driveChecks  = checklists[drive.id] || {};
   const myCheck      = driveChecks[cu.id]   || {};
-  const isAdmin      = ["admin","marshal","support"].includes(cu.role);
+  const isAdmin      = ["admin","marshal"].includes(cu.role);
   const confirmed    = drive.registrations.filter(r => r.status === "confirmed");
 
   // Combine base items with drive-specific custom items
@@ -4196,7 +4195,7 @@ export default function App() {
     {id:"chat",       label:"💬 Chat",        hide: !cu.clubId},
     {id:"market",     label:"Marketplace"},
     {id:"club-admin", label:"Club Admin",    hide: cu.role !== "admin"},
-    {id:"marshal",    label:"Marshal Panel", hide: !["marshal","support"].includes(cu.role)},
+    {id:"marshal",    label:"Marshal Panel", hide: cu.role !== "marshal"},
     {id:"app-admin",  label:"App Admin",     hide: cu.role !== "app_admin"},
   ].filter(i => !i.hide) : [];
 
@@ -4294,7 +4293,7 @@ export default function App() {
         )}
         {page === "market"     && cu && <Marketplace state={S} go={go} />}
         {page === "club-admin" && cu && cu.role === "admin"     && <ClubAdmin    state={S} upd={upd} showToast={showToast} />}
-        {page === "marshal"    && cu && ["marshal","support"].includes(cu.role) && <MarshalPanel state={S} upd={upd} showToast={showToast} />}
+        {page === "marshal"    && cu && cu.role === "marshal" && <MarshalPanel state={S} upd={upd} showToast={showToast} />}
         {page === "app-admin"  && cu && cu.role === "app_admin" && <AppAdmin     state={S} upd={upd} showToast={showToast} />}
       </div>
       {toast && <Toast msg={toast} done={() => setToast(null)} />}
@@ -4312,7 +4311,7 @@ export default function App() {
                 ? {id:"club-admin", label:"Admin", icon:"⚙️"}
                 : cu.role === "app_admin"
                   ? {id:"app-admin", label:"Admin", icon:"🔐"}
-                  : cu.role === "marshal" || cu.role === "support"
+                  : cu.role === "marshal"
                     ? {id:"marshal", label:"Marshal", icon:"🏴"}
                     : null,
             ].filter(Boolean).filter(i => !i.hide).map(i => (
