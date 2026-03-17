@@ -1837,7 +1837,6 @@ function Drives({ state, upd, showToast, pushNotif }) {
           ranks={myRanks}
           onClose={() => setCreate(false)}
           onSave={async d => {
-            // Build the row to send to Supabase — no id, no image
             const row = {
               club_id:             cu.clubId,
               posted_by:           cu.id,
@@ -1849,57 +1848,31 @@ function Drives({ state, upd, showToast, pushNotif }) {
               date:                d.date        || null,
               start_time:          d.startTime   || null,
               required_rank_id:    Number(d.requiredRankId) || 1,
-              capacity:            Number(d.capacity)       || 10,
+              capacity:            Number(d.capacity) || 10,
               attendance_recorded: false,
             };
-
-            console.log("[CLUBBB] Attempting drive save. row:", JSON.stringify(row));
-            console.log("[CLUBBB] SUPA_URL:", SUPA_URL ? "SET" : "MISSING");
-            console.log("[CLUBBB] SUPA_KEY:", SUPA_KEY ? "SET" : "MISSING");
-            console.log("[CLUBBB] cu.clubId:", cu.clubId, "cu.id:", cu.id);
-
-            // Save to Supabase first — get real serial ID back
             let realId = null;
             try {
               const res = await fetch(`${SUPA_URL}/rest/v1/drives`, {
                 method: "POST",
-                headers: {
-                  "apikey":        SUPA_KEY,
-                  "Authorization": `Bearer ${SUPA_KEY}`,
-                  "Content-Type":  "application/json",
-                  "Prefer":        "return=representation",
-                },
+                headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" },
                 body: JSON.stringify(row),
               });
               const text = await res.text();
-              console.log("[CLUBBB] Drive save response status:", res.status);
-              console.log("[CLUBBB] Drive save response body:", text);
+              console.log("[DRIVE SAVE] status:", res.status, "body:", text.slice(0,300));
               if (res.ok) {
                 const json = JSON.parse(text);
                 realId = Array.isArray(json) ? json[0]?.id : json?.id;
-                console.log("[CLUBBB] Drive saved ✅ realId:", realId);
-              } else {
-                console.error("[CLUBBB] Drive save FAILED:", res.status, text);
               }
-            } catch(e) {
-              console.error("[CLUBBB] Drive save exception:", e);
-            }
+            } catch(e) { console.error("[DRIVE SAVE] exception:", e); }
 
-            // Add to local state — use upd() since setS is not available here
-            const newDrive = {
-              ...d,
-              id:                 realId || Date.now(),
-              clubId:             cu.clubId,
-              postedBy:           cu.id,
-              registrations:      [],
-              attendanceRecorded: false,
-            };
-
-            upd({ drives: [...state.drives, newDrive] });
+            const newDrive = { ...d, id: realId || Date.now(), clubId: cu.clubId, postedBy: cu.id, registrations: [], attendanceRecorded: false };
+            // Update local state directly via setS passed through context
             setCreate(false);
-            showToast(realId ? "🚙 Drive posted!" : "🚙 Drive saved locally (Supabase sync failed — check console)");
+            upd({ drives: [...ds, newDrive] });
+            showToast(realId ? "🚙 Drive posted!" : "⚠️ Saved locally — check console for Supabase error");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
-            notifyDrivePosted({ club_id: cu.clubId, title: newDrive.title, location: newDrive.location, date: newDrive.date, start_time: newDrive.startTime || "", description: newDrive.description || "", required_rank_id: newDrive.requiredRankId || 1 }).catch(() => {});
+            notifyDrivePosted({ club_id: cu.clubId, title: newDrive.title, location: newDrive.location, date: newDrive.date, start_time: newDrive.startTime||"", description: newDrive.description||"", required_rank_id: newDrive.requiredRankId||1 }).catch(()=>{});
           }}
         />
       )}
@@ -4074,96 +4047,72 @@ export default function App() {
 
   const showToast = msg => setToast(msg);
   const upd = patch => {
-    // ── Sync users ──
+    // ── users: upsert changed, delete removed ──
     if (patch.users) {
-      const cur = S.users;
       patch.users.forEach(u => {
-        const old = cur.find(o => o.id === u.id);
+        const old = S.users.find(o => o.id === u.id);
         if (!old || JSON.stringify(old) !== JSON.stringify(u))
-          SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user sync:", e));
+          SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user:", e));
       });
-      // Deleted users
-      cur.forEach(o => {
+      S.users.forEach(o => {
         if (!patch.users.find(u => u.id === o.id))
           SB.del("users", { id: o.id }).catch(() => {});
       });
     }
-    // ── Sync clubs ──
+    // ── clubs: upsert changed, delete removed ──
     if (patch.clubs) {
-      const cur = S.clubs;
       patch.clubs.forEach(c => {
-        const old = cur.find(o => o.id === c.id);
+        const old = S.clubs.find(o => o.id === c.id);
         if (!old || JSON.stringify(old) !== JSON.stringify(c))
-          SB.upsert("clubs", clubToDb(c)).catch(e => console.error("[SB] club sync:", e));
+          SB.upsert("clubs", clubToDb(c)).catch(e => console.error("[SB] club:", e));
       });
-      cur.forEach(o => {
+      S.clubs.forEach(o => {
         if (!patch.clubs.find(c => c.id === o.id))
           SB.del("clubs", { id: o.id }).catch(() => {});
       });
     }
-    // ── Sync drives ──
+    // ── drives: skip new (already saved in onSave), update changed, delete removed ──
     if (patch.drives) {
-      const cur = S.drives;
       patch.drives.forEach(d => {
-        const old = cur.find(o => o.id === d.id);
-        if (!old) return; // NEW drive — already saved directly to Supabase in onSave, skip
-        if (JSON.stringify(old) !== JSON.stringify(d)) {
-          // This is an UPDATE (cancel, attendance, registration change)
-          SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive update:", e));
-          if (d.registrations) {
-            d.registrations.forEach(r =>
-              SB.upsert("drive_registrations", {
-                drive_id: d.id, user_id: r.userId,
-                status: r.status || "confirmed", attended: r.attended || false,
-              }).catch(() => {})
-            );
-          }
-        }
+        const old = S.drives.find(o => o.id === d.id);
+        if (!old) return; // new drive already saved directly — skip
+        if (JSON.stringify(old) === JSON.stringify(d)) return; // unchanged — skip
+        SB.upsert("drives", driveToDB(d)).catch(e => console.error("[SB] drive:", e));
+        d.registrations && d.registrations.forEach(r =>
+          SB.upsert("drive_registrations", { drive_id: d.id, user_id: r.userId, status: r.status||"confirmed", attended: r.attended||false }).catch(() => {})
+        );
       });
-      // Deleted drives
-      cur.forEach(o => {
+      S.drives.forEach(o => {
         if (!patch.drives.find(d => d.id === o.id))
           SB.del("drives", { id: o.id }).catch(() => {});
       });
     }
-    // ── Sync ads ──
+    // ── ads: upsert changed (with temp→real id swap), delete removed ──
     if (patch.ads) {
-      const cur = S.ads;
       patch.ads.forEach(a => {
-        const old = cur.find(o => o.id === a.id);
-        if (!old || JSON.stringify(old) !== JSON.stringify(a)) {
-          // Map app field 'desc' → Supabase field 'description'
-          const row = {
-            title:       a.title       || "",
-            description: a.desc        || a.description || "",
-            details:     a.details     || "",
-            icon:        a.icon        || "🚙",
-            thumbnail:   a.thumbnail   || null,
-            category:    a.category    || "General",
-            link:        a.link        || "",
-            featured:    a.featured    || false,
-            active:      a.active !== false,
-          };
-          // Only include id if it's a real Supabase serial (not Date.now temp)
-          if (a.id && typeof a.id === "number" && a.id < 2000000000) row.id = a.id;
-          SB.upsert("ads", row)
-            .then(saved => {
-              // Swap temp id for real Supabase id
-              if (saved?.id && saved.id !== a.id) {
-                setS(s => ({...s, ads: s.ads.map(x => x.id === a.id ? {...x, id: saved.id} : x)}));
-              }
-            })
-            .catch(e => console.error("[SB] ad sync:", e));
-        }
+        const old = S.ads.find(o => o.id === a.id);
+        if (old && JSON.stringify(old) === JSON.stringify(a)) return;
+        const isTemp = !a.id || (typeof a.id === "number" && a.id > 2000000000);
+        const row = {
+          title: a.title||"", description: a.desc||a.description||"",
+          details: a.details||"", icon: a.icon||"🚙",
+          thumbnail: a.thumbnail||null, category: a.category||"General",
+          link: a.link||"", featured: a.featured||false, active: a.active !== false,
+        };
+        if (!isTemp) row.id = a.id;
+        SB.upsert("ads", row).then(saved => {
+          if (saved?.id && saved.id !== a.id)
+            setS(s => ({...s, ads: s.ads.map(x => x.id === a.id ? {...x, id: saved.id} : x)}));
+        }).catch(e => console.error("[SB] ad:", e));
       });
-      // Deleted/removed ads
-      cur.forEach(o => {
+      S.ads.forEach(o => {
         if (!patch.ads.find(a => a.id === o.id))
           SB.del("ads", { id: o.id }).catch(() => {});
       });
     }
     setS(s => ({...s, ...patch}));
   };
+
   const go   = page  => { setS(s => ({...s, page})); setMob(false); };
   const login  = u   => { setS(s => ({...s, currentUser:u, page:"dashboard"})); setMob(false); };
   const logout = ()  => { setS(s => ({...s, currentUser:null, page:"home"})); setMob(false); };
