@@ -4138,17 +4138,16 @@ export default function App() {
       const clubName  = form.clubName  || form.name;
       const userId = crypto.randomUUID?.() || String(Date.now());
 
-      // Create club in Supabase first to get the real auto-generated ID
+      // Step 1: Create club WITHOUT admin_id first (no FK constraint yet)
       const clubRow = { name:clubName, email:form.email, phone:form.phone||"",
                         logo:"", banner:"", description:"", terms:"" };
-
       showToast("Creating club...");
       let savedClub = null;
       if (SUPA_URL && SUPA_KEY) {
         savedClub = await SB.upsert("clubs", clubRow);
+        console.log("[CLUBBB] Club created:", savedClub);
       }
 
-      // Use Supabase-returned ID or fallback to timestamp
       const cid = savedClub?.id || (Math.max(0, ...S.clubs.map(c => c.id)) + 1);
 
       const u = { id: userId, name:adminName, email:form.email, phone:form.phone||"",
@@ -4157,12 +4156,19 @@ export default function App() {
       const c = { id:cid, name:clubName, email:form.email, phone:form.phone||"",
                   adminId:userId, logo:"", banner:"", description:"", terms:"" };
 
-      // Update club with admin_id now that we have the user ID
-      if (savedClub) {
-        SB.upsert("clubs", { ...clubToDb(c) }).catch(e => console.error("[SB] club admin update failed:", e));
+      if (SUPA_URL && SUPA_KEY) {
+        // Step 2: Save user first (admin_id FK must exist before club references it)
+        await SB.upsert("users", userToDb(u))
+          .then(() => console.log("[CLUBBB] Club admin user saved ✅"))
+          .catch(e => console.error("[SB] user upsert failed:", e));
+
+        // Step 3: Now update club with admin_id (user exists now)
+        if (savedClub) {
+          SB.upsert("clubs", clubToDb(c))
+            .then(() => console.log("[CLUBBB] Club admin_id updated ✅"))
+            .catch(e => console.error("[SB] club admin_id update failed:", e));
+        }
       }
-      // Save user
-      SB.upsert("users", userToDb(u)).catch(e => console.error("[SB] user upsert failed:", e));
 
       setS(s => ({...s, users:[...s.users,u], clubs:[...s.clubs,c],
                   currentUser:u, page:"club-admin",
