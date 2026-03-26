@@ -141,11 +141,11 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes scaleIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes floatA{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
-@keyframes floatB{0%,100%{transform:translateY(0)}50%{transform:translateY(-13px)}}
-@keyframes shimmerBg{0%{background-position:-400% 0}100%{background-position:400% 0}}
-@keyframes goldPulse{0%,100%{box-shadow:var(--sh-gold)}50%{box-shadow:var(--sh-gold-lg)}}
-@keyframes dotDance{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+
+
+
+
+
 @keyframes tup{from{transform:translateY(14px) scale(.96);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 
 /* ── NAV ─────────────────────────────────────────────── */
@@ -207,18 +207,18 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
   radial-gradient(ellipse 55% 45% at 90% 85%,rgba(232,130,12,.07) 0%,transparent 55%),
   radial-gradient(ellipse 45% 55% at 5% 70%,rgba(245,158,11,.06) 0%,transparent 55%)}
 .hero-grain{position:absolute;inset:0;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-size:256px}
-.hero-blob1{position:absolute;top:-80px;right:5%;width:420px;height:420px;background:radial-gradient(circle,rgba(251,191,36,.14) 0%,transparent 65%);border-radius:50%;animation:floatA 10s ease-in-out infinite;pointer-events:none}
-.hero-blob2{position:absolute;bottom:-60px;left:2%;width:260px;height:260px;background:radial-gradient(circle,rgba(232,130,12,.09) 0%,transparent 65%);border-radius:50%;animation:floatB 13s ease-in-out infinite;pointer-events:none}
-.hero-eyebrow{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--acc);margin-bottom:26px;position:relative;display:flex;align-items:center;justify-content:center;gap:12px;animation:fadeIn .9s ease both}
+.hero-blob1{position:absolute;top:-80px;right:5%;width:420px;height:420px;background:radial-gradient(circle,rgba(251,191,36,.14) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.hero-blob2{position:absolute;bottom:-60px;left:2%;width:260px;height:260px;background:radial-gradient(circle,rgba(232,130,12,.09) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.hero-eyebrow{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--acc);margin-bottom:26px;position:relative;display:flex;align-items:center;justify-content:center;gap:12px}
 .hero-eyebrow::before,.hero-eyebrow::after{content:'';flex:0 0 28px;height:1.5px;background:linear-gradient(90deg,transparent,var(--acc2));border-radius:2px}
 .hero-eyebrow::after{background:linear-gradient(90deg,var(--acc2),transparent)}
-.hero-title{font-family:'Syne',sans-serif;font-size:clamp(42px,11vw,176px);font-weight:800;line-height:.88;color:var(--ink);position:relative;margin-bottom:8px;letter-spacing:-4px;animation:fadeUp .8s .08s ease both;text-align:center;white-space:normal;word-break:break-word}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(42px,11vw,176px);font-weight:800;line-height:.88;color:var(--ink);position:relative;margin-bottom:8px;letter-spacing:-4px;text-align:center;white-space:normal;word-break:break-word}
 .hero-title span{background:linear-gradient(135deg,var(--acc3),var(--acc2) 45%,var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
-.hero-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(14px,2vw,20px);font-weight:400;color:var(--mid);margin-bottom:48px;animation:fadeUp .8s .18s ease both;line-height:1.5}
-.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s .28s ease both}
-.hero-scroll-hint{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.4;animation:fadeIn 1.2s .8s ease both}
+.hero-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(14px,2vw,20px);font-weight:400;color:var(--mid);margin-bottom:48px;line-height:1.5}
+.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.hero-scroll-hint{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.4}
 .hero-scroll-hint span{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--mid)}
-.hero-scroll-dot{width:6px;height:6px;background:var(--mid2);border-radius:50%;animation:dotDance 2s 1s ease-in-out infinite}
+.hero-scroll-dot{width:6px;height:6px;background:var(--mid2);border-radius:50%}
 .hero-slash{display:none}
 @media(max-width:600px){
   .hero{padding:48px 16px 56px;text-align:center}
@@ -236,7 +236,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 
 /* ── BUTTONS ─────────────────────────────────────────── */
 .btn{padding:14px 30px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);border:none;border-radius:14px;letter-spacing:-.01em;position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px}
-.btn.gold{background:linear-gradient(135deg,var(--acc3) 0%,var(--acc2) 45%,var(--acc) 100%);color:#fff;box-shadow:var(--sh-gold);animation:goldPulse 3s ease-in-out infinite}
+.btn.gold{background:linear-gradient(135deg,var(--acc3) 0%,var(--acc2) 45%,var(--acc) 100%);color:#fff;box-shadow:var(--sh-gold)}
 .btn.gold:hover{box-shadow:var(--sh-gold-lg);transform:translateY(-2px) scale(1.02)}
 .btn.ghost{background:transparent;color:var(--acc);border:2px solid var(--acc-pale3);border-radius:14px}
 .btn.ghost:hover{background:var(--acc-pale);border-color:var(--acc);transform:translateY(-2px)}
@@ -252,7 +252,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 @media(max-width:600px){.btn{font-size:13px;padding:12px 20px;border-radius:12px}.btn.sm{padding:8px 14px;font-size:12px}.btn.xs{padding:6px 11px;font-size:11px}}
 
 /* ── PAGE ────────────────────────────────────────────── */
-.page{max-width:1180px;margin:0 auto;padding:60px 44px;animation:fadeUp .5s ease both}
+.page{max-width:1180px;margin:0 auto;padding:60px 44px}
 @media(max-width:600px){.page{padding:16px 12px}}
 @media(max-width:600px){.page{padding-bottom:96px!important}}
 
@@ -361,7 +361,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .adsub{font-size:13px;color:var(--mid)}
 
 /* ── MODAL ───────────────────────────────────────────── */
-.mover{position:fixed;inset:0;background:rgba(9,9,11,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:fadeIn .18s ease both}
+.mover{position:fixed;inset:0;background:rgba(9,9,11,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .18s ease both}
 .modal{background:var(--bg);border:1px solid var(--line);border-radius:24px;max-width:580px;width:100%;max-height:calc(100vh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:36px 32px 32px;position:relative;box-shadow:var(--sh-xl);margin:auto}
 .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.6px;color:var(--ink);margin-bottom:22px;padding-right:44px;line-height:1.2;word-break:break-word}
 .mclose{position:absolute;top:12px;right:12px;background:var(--bg2);border:1.5px solid var(--line2);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--mid);cursor:pointer;font-weight:800;transition:all .18s;z-index:10}
