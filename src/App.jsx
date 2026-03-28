@@ -4110,7 +4110,7 @@ export default function App() {
         <SetupWizard onComplete={adminUser => {
           setS(s => ({ ...s, users: [adminUser], currentUser: adminUser, page: "app-admin" }));
           SB.upsert("users", userToDb(adminUser))
-            .then(r => r ?  : console.error("[CLUBBB] App admin save failed ❌"));
+            .catch(() => {});
         }} />
         {toast && <Toast msg={toast} done={() => setToast(null)} />}
       </>
@@ -4202,7 +4202,7 @@ export default function App() {
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
       // Persist to Supabase
       SB.upsert("users", userToDb(u))
-        .then(r => r ?  : console.error("[CLUBBB] Member save failed ❌"))
+        .catch(() => {})
         .catch(e => console.error("[CLUBBB] Member upsert error:", e));
 
     } else {
@@ -4230,13 +4230,11 @@ export default function App() {
       if (SUPA_URL && SUPA_KEY) {
         // Step 2: Save user first (admin_id FK must exist before club references it)
         await SB.upsert("users", userToDb(u))
-          .then(() => )
           .catch(e => console.error("[SB] user upsert failed:", e));
 
         // Step 3: Now update club with admin_id (user exists now)
         if (savedClub) {
           SB.upsert("clubs", clubToDb(c))
-            .then(() => )
             .catch(e => console.error("[SB] club admin_id update failed:", e));
         }
       }
