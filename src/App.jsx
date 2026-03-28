@@ -55,10 +55,16 @@ async function hashPassword(password) {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   }
-  // Fallback for non-secure contexts (HTTP dev, older browsers)
-  let h = 0;
-  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
-  return "fallback_" + Math.abs(h).toString(16).padStart(8, "0") + "_" + str.length;
+  // Fallback for non-secure contexts — stronger multi-pass hash
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return "fb_" + (h2 >>> 0).toString(16).padStart(8,"0") + (h1 >>> 0).toString(16).padStart(8,"0");
 }
 
 async function verifyPassword(password, storedHash) {
@@ -727,7 +733,7 @@ const SB = {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[SB] UPSERT ${table} failed ${res.status}:`, errText, "| data:", JSON.stringify(data).slice(0, 200));
+        console.error(`[SB] UPSERT ${table} failed ${res.status}`);
         return null;
       }
       const json = await res.json();
@@ -762,7 +768,7 @@ function dbToUser(r) {
            emailVerified:r.email_verified||false };
 }
 function userToDb(u) {
-  return { id:u.id, name:u.name, email:u.email, phone:u.phone||"", role:u.role,
+  return { id:u.id, name:sanitize(u.name), email:(u.email||"").toLowerCase().trim(), phone:sanitize(u.phone)||"", role:u.role,
            rank_id:u.rankId||1, club_id:u.clubId||null, drives_count:u.drives||0,
            password_hash:u.passwordHash||"", suspended:u.suspended||false,
            email_verified:u.emailVerified||false };
@@ -772,7 +778,7 @@ function dbToClub(r) {
            logo:r.logo||"", banner:r.banner||"", description:r.description||"", terms:r.terms||"" };
 }
 function clubToDb(c) {
-  return { id:c.id, name:c.name, email:c.email, phone:c.phone||"", admin_id:c.adminId||null,
+  return { id:c.id, name:sanitize(c.name), email:(c.email||"").toLowerCase().trim(), phone:sanitize(c.phone)||"", admin_id:c.adminId||null,
            logo:c.logo||"", banner:c.banner||"", description:c.description||"", terms:c.terms||"" };
 }
 function dbToDrive(r, regs=[]) {
@@ -833,7 +839,12 @@ function loadLocalState() {
   catch(e) { return null; }
 }
 function saveLocalState(state) {
-  try { const {liveTrack,...rest}=state; localStorage.setItem(STORAGE_KEY,JSON.stringify(rest)); }
+  try {
+    const {liveTrack,...rest}=state;
+    // Strip password hashes from localStorage — never store credentials in browser storage
+    const safe = {...rest, users: (rest.users||[]).map(u => {const {passwordHash,...ur}=u; return ur;})};
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(safe));
+  }
   catch(e) {}
 }
 
@@ -871,6 +882,33 @@ function getUser(us, id)  { return us ? us.find(u => u.id === id)  : null; }
 function getClub(cs, id)  { return cs ? cs.find(c => c.id === id)  : null; }
 function fmtTime(t)       { if (!t) return null; const [h,m]=t.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; }
 function fmtDate(d)       { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
+
+
+
+/* ─── URL SANITIZER ─────────────────────────────────────────
+   Only allow http/https URLs in link fields.
+   Blocks javascript:, data:, vbscript: protocol attacks.
+─────────────────────────────────────────────────────────── */
+function safeUrl(url) {
+  if (!url || typeof url !== "string") return "#";
+  const u = url.trim();
+  if (/^https?:\/\//i.test(u)) return u;
+  return "#"; // block anything that isn't http/https
+}
+
+/* ─── INPUT SANITIZATION ────────────────────────────────────
+   Strip any HTML/script tags from user-provided text.
+   Prevents stored XSS attacks via drive titles, club names etc.
+─────────────────────────────────────────────────────────── */
+function sanitize(str) {
+  if (!str || typeof str !== "string") return str;
+  return str
+    .replace(/<script[^>]*>.*?<\/script>/gis, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/javascript:/gi, "")
+    .replace(/on\w+\s*=/gi, "")
+    .trim();
+}
 
 /* ─── CLUB TIER SYSTEM ──────────────────────────────────────────
    Score is calculated from real activity data.
@@ -1233,21 +1271,47 @@ function Home({ go, state }) {
 
 /* ─── LOGIN ─────────────────────────────────────────────────── */
 function Login({ users, onLogin, back }) {
-  const [email,   setEmail]   = useState("");
-  const [password,setPassword]= useState("");
-  const [loading, setLoading] = useState(false);
-  const [showPw,  setShowPw]  = useState(false);
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [showPw,   setShowPw]   = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [lockUntil,setLockUntil]= useState(0);
+  const [errMsg,   setErrMsg]   = useState("");
+
+  const MAX_ATTEMPTS = 5;
+  const LOCK_SECS    = 30;
 
   async function go() {
+    setErrMsg("");
+    // ── Brute force lockout ──
+    if (Date.now() < lockUntil) {
+      const secs = Math.ceil((lockUntil - Date.now()) / 1000);
+      setErrMsg(`Too many attempts. Try again in ${secs}s.`);
+      return;
+    }
     const u = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!u) { alert("No account found with that email."); return; }
-    if (u.suspended) { alert("This account has been suspended. Please contact the App Admin."); return; }
-    if (!password) { alert("Please enter your password."); return; }
-    if (!u.passwordHash) { alert("Account setup incomplete. Please contact the App Admin."); return; }
+    if (!u)            { setErrMsg("No account found with that email."); return; }
+    if (u.suspended)   { setErrMsg("Account suspended. Contact the App Admin."); return; }
+    if (!password)     { setErrMsg("Please enter your password."); return; }
+    if (!u.passwordHash){ setErrMsg("Account setup incomplete. Contact the App Admin."); return; }
     setLoading(true);
     const ok = await verifyPassword(password, u.passwordHash);
     setLoading(false);
-    if (!ok) { alert("Incorrect password. Please try again."); setPassword(""); return; }
+    if (!ok) {
+      const next = attempts + 1;
+      setAttempts(next);
+      if (next >= MAX_ATTEMPTS) {
+        setLockUntil(Date.now() + LOCK_SECS * 1000);
+        setAttempts(0);
+        setErrMsg(`${MAX_ATTEMPTS} failed attempts. Locked for ${LOCK_SECS} seconds.`);
+      } else {
+        setErrMsg(`Incorrect password. ${MAX_ATTEMPTS - next} attempt${MAX_ATTEMPTS - next !== 1 ? "s" : ""} remaining.`);
+      }
+      setPassword("");
+      return;
+    }
+    setAttempts(0);
     onLogin(u);
   }
 
@@ -1275,8 +1339,15 @@ function Login({ users, onLogin, back }) {
             </button>
           </div>
         </div>
-        <button className="btn gold" style={{width:"100%"}} onClick={go} disabled={loading}>
-          {loading ? "SIGNING IN..." : "SIGN IN"}
+        {errMsg && (
+          <div style={{background:"rgba(220,38,38,.08)", border:"1px solid rgba(220,38,38,.25)",
+            borderRadius:10, padding:"10px 14px", fontSize:13, color:"var(--red)", marginBottom:8}}>
+            ⚠️ {errMsg}
+          </div>
+        )}
+        <button className="btn gold" style={{width:"100%"}} onClick={go}
+          disabled={loading || Date.now() < lockUntil}>
+          {loading ? "SIGNING IN..." : Date.now() < lockUntil ? "LOCKED..." : "SIGN IN"}
         </button>
       </div>
     </div>
@@ -1840,9 +1911,9 @@ function Drives({ state, upd, showToast, pushNotif }) {
             const row = {
               club_id:             cu.clubId,
               posted_by:           cu.id,
-              title:               d.title,
-              description:         d.description || "",
-              location:            d.location    || "",
+              title:               sanitize(d.title),
+              description:         sanitize(d.description) || "",
+              location:            sanitize(d.location)    || "",
               coordinates:         d.coordinates || "",
               map_link:            d.mapLink     || "",
               date:                d.date        || null,
@@ -1859,7 +1930,6 @@ function Drives({ state, upd, showToast, pushNotif }) {
                 body: JSON.stringify(row),
               });
               const text = await res.text();
-              console.log("[DRIVE SAVE] status:", res.status, "body:", text.slice(0,300));
               if (res.ok) {
                 const json = JSON.parse(text);
                 realId = Array.isArray(json) ? json[0]?.id : json?.id;
@@ -2243,6 +2313,9 @@ function ClubAdmin({ state, upd, showToast }) {
                     value={u.role || "member"}
                     onChange={e => {
                       const newRole = e.target.value;
+                      // Whitelist — club admins can ONLY set these roles, never app_admin
+                      const ALLOWED = ["member","marshal","admin"];
+                      if (!ALLOWED.includes(newRole)) { showToast("Invalid role"); return; }
                       if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
                       upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
                       showToast(`${u.name} is now ${newRole.toUpperCase()}`);
@@ -3040,7 +3113,7 @@ function AdDetail({ ad, onClose }) {
           )}
           <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
             {ad.link
-              ? <a href={ad.link} target="_blank" rel="noreferrer" className="btn gold sm" style={{textDecoration:"none", flex:1, justifyContent:"center"}}>VISIT OFFER PAGE →</a>
+              ? <a href={safeUrl(ad.link)} target="_blank" rel="noreferrer noopener" className="btn gold sm" style={{textDecoration:"none", flex:1, justifyContent:"center"}}>VISIT OFFER PAGE →</a>
               : <span style={{fontSize:12, color:"var(--mid)"}}>Contact the advertiser for more information.</span>
             }
             <button className="btn out sm" onClick={onClose} style={{flex:1, justifyContent:"center"}}>CLOSE</button>
@@ -3082,7 +3155,7 @@ function AdDetail({ ad, onClose }) {
           )}
           <div className="ad-modal-actions">
             {ad.link
-              ? <a href={ad.link} target="_blank" rel="noreferrer" className="btn gold sm" style={{textDecoration:"none"}}>VISIT OFFER PAGE →</a>
+              ? <a href={safeUrl(ad.link)} target="_blank" rel="noreferrer noopener" className="btn gold sm" style={{textDecoration:"none"}}>VISIT OFFER PAGE →</a>
               : <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, color:"var(--mid)"}}>Contact the advertiser for more information.</span>
             }
             <button className="btn out sm" onClick={onClose}>CLOSE</button>
@@ -3342,7 +3415,7 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
                   <div style={{ fontSize:11, color:"var(--mid3)", marginTop:2 }}>{new Date(s.ts).toLocaleTimeString()}</div>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" className="btn out xs">🗺 Open Map</a>
+                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer noopener" className="btn out xs">🗺 Open Map</a>
                   <button className="btn out-grn xs" onClick={() => resolveAlert(s.id)}>✓ Resolved</button>
                 </div>
               </div>
@@ -3807,7 +3880,7 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
             {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
             {drive.date      && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
             {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
-            {drive.mapLink   && <a href={drive.mapLink} target="_blank" rel="noreferrer" className="btn out sm" style={{ marginTop:8 }}>🗺 Open in Google Maps</a>}
+            {drive.mapLink   && <a href={safeUrl(drive.mapLink)} target="_blank" rel="noreferrer noopener" className="btn out sm" style={{ marginTop:8 }}>🗺 Open in Google Maps</a>}
           </div>
         </div>
       )}
@@ -4037,7 +4110,7 @@ export default function App() {
         <SetupWizard onComplete={adminUser => {
           setS(s => ({ ...s, users: [adminUser], currentUser: adminUser, page: "app-admin" }));
           SB.upsert("users", userToDb(adminUser))
-            .then(r => r ? console.log("[CLUBBB] App admin saved to Supabase ✅", r) : console.error("[CLUBBB] App admin save failed ❌"));
+            .then(r => r ?  : console.error("[CLUBBB] App admin save failed ❌"));
         }} />
         {toast && <Toast msg={toast} done={() => setToast(null)} />}
       </>
@@ -4124,12 +4197,12 @@ export default function App() {
     if (type === "member") {
       const u = { id: crypto.randomUUID?.() || String(Date.now()),
                   name:form.name, email:form.email, phone:form.phone||"",
-                  role:"member", rankId:1, clubId:Number(form.clubId), drives:0,
+                  role:"member", rankId:1, clubId:Number(form.clubId) || null, drives:0,
                   passwordHash:form.passwordHash||"", emailVerified:false };
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
       // Persist to Supabase
       SB.upsert("users", userToDb(u))
-        .then(r => r ? console.log("[CLUBBB] Member saved ✅") : console.error("[CLUBBB] Member save failed ❌"))
+        .then(r => r ?  : console.error("[CLUBBB] Member save failed ❌"))
         .catch(e => console.error("[CLUBBB] Member upsert error:", e));
 
     } else {
@@ -4144,8 +4217,7 @@ export default function App() {
       let savedClub = null;
       if (SUPA_URL && SUPA_KEY) {
         savedClub = await SB.upsert("clubs", clubRow);
-        console.log("[CLUBBB] Club created:", savedClub);
-      }
+              }
 
       const cid = savedClub?.id || (Math.max(0, ...S.clubs.map(c => c.id)) + 1);
 
@@ -4158,13 +4230,13 @@ export default function App() {
       if (SUPA_URL && SUPA_KEY) {
         // Step 2: Save user first (admin_id FK must exist before club references it)
         await SB.upsert("users", userToDb(u))
-          .then(() => console.log("[CLUBBB] Club admin user saved ✅"))
+          .then(() => )
           .catch(e => console.error("[SB] user upsert failed:", e));
 
         // Step 3: Now update club with admin_id (user exists now)
         if (savedClub) {
           SB.upsert("clubs", clubToDb(c))
-            .then(() => console.log("[CLUBBB] Club admin_id updated ✅"))
+            .then(() => )
             .catch(e => console.error("[SB] club admin_id update failed:", e));
         }
       }
