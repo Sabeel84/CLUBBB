@@ -1608,39 +1608,63 @@ function Dashboard({ state, go, showToast }) {
             No registered drives yet.{" "}
             <button className="btn out xs" onClick={() => go("drives")} style={{marginLeft:8}}>BROWSE DRIVES</button>
           </div>
-        : myDrives.map(d => (
-          <div key={d.id} className="dcard">
-            <div className="dcard-accent" />
-            {d.image && <img src={d.image} alt={d.title} className="dcard-img" />}
-            <div className="dcard-inner">
-              <div className="dcard-title">{d.title}</div>
-              <div className="dcard-badges">
-                <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={d.clubId} />
+        : myDrives.map(d => {
+          const club        = cs.find(c => c.id === d.clubId);
+          const confirmed   = d.registrations.filter(r => r.status === "confirmed").length;
+          const isRegistered = d.registrations.find(r => r.userId === cu.id && r.status === "confirmed");
+          const isFull       = confirmed >= d.capacity;
+          return (
+            <div key={d.id} onClick={() => setDetail(d)} style={{
+              background:"var(--bg)", border:"1px solid var(--line)",
+              borderLeft:"3px solid var(--acc2)",
+              borderRadius:"var(--r-lg)", padding:"14px 16px",
+              marginBottom:10, cursor:"pointer", display:"flex",
+              alignItems:"center", gap:14,
+              boxShadow:"0 1px 4px rgba(0,0,0,.05)",
+            }}>
+              {/* Thumbnail — small */}
+              {d.image
+                ? <img src={d.image} alt={d.title} style={{width:64,height:64,objectFit:"cover",borderRadius:10,flexShrink:0}} />
+                : <div style={{width:64,height:64,background:"var(--bg3)",borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>🚙</div>
+              }
+              {/* Info */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800,color:"var(--ink)",letterSpacing:-.3,marginBottom:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.title}</div>
+                <div style={{fontSize:12,color:"var(--mid)",marginBottom:5}}>
+                  {d.location && <span>📍 {d.location}</span>}
+                  {d.date && <span style={{marginLeft:10}}>📅 {fmtDate(d.date)}</span>}
+                  {d.startTime && <span style={{marginLeft:10}}>🕐 {fmtTime(d.startTime)}</span>}
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={d.clubId} />
+                  <span style={{fontSize:11,color:"var(--mid2)"}}>👥 {confirmed}/{d.capacity}</span>
+                  {isRegistered && <span className="bdg g" style={{fontSize:9}}>✓ REGISTERED</span>}
+                  {isFull && !isRegistered && <span className="bdg o" style={{fontSize:9}}>FULL</span>}
+                </div>
               </div>
-              {d.description && <div className="dcard-desc">{d.description}</div>}
-              <div className="dcard-meta-grid">
-                {d.location  && <div className="dm">📍 <strong>{d.location}</strong></div>}
-                {d.date      && <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>}
-                {d.startTime && <div className="dm">🕐 <strong>{fmtTime(d.startTime)}</strong></div>}
-                {d.coordinates && <div className="dm">🗺 <strong>{d.coordinates}</strong></div>}
-              </div>
+              {/* Arrow */}
+              <div style={{color:"var(--mid3)",fontSize:18,flexShrink:0}}>›</div>
             </div>
-          </div>
-        ))
+          );
+        })
       }
 
       {done.length > 0 && <>
         <div className="sh" style={{marginTop:32}}><div className="sh-label">History</div><div className="sh-title">COMPLETED DRIVES</div></div>
         {done.map(d => (
-          <div key={d.id} className="dcard" style={{opacity:.7}}>
-            <div className="dcard-accent" style={{background:"var(--green)"}} />
-            <div className="dcard-inner">
-              <div className="dcard-title">{d.title}</div>
-              <div className="dcard-meta">
-                <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>
-                <span className="bdg g">✓ COMPLETED</span>
-              </div>
+          <div key={d.id} onClick={() => setDetail(d)} style={{
+            background:"var(--bg)", border:"1px solid var(--line)",
+            borderLeft:"3px solid var(--green)",
+            borderRadius:"var(--r-lg)", padding:"14px 16px",
+            marginBottom:10, cursor:"pointer", display:"flex",
+            alignItems:"center", gap:14, opacity:.8,
+          }}>
+            <div style={{width:44,height:44,background:"var(--green-pale)",borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>✓</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:700,color:"var(--ink)"}}>{d.title}</div>
+              <div style={{fontSize:12,color:"var(--mid)"}}>📅 {fmtDate(d.date)}</div>
             </div>
+            <span className="bdg g" style={{fontSize:9}}>DONE</span>
           </div>
         ))}
       </>}
@@ -1725,50 +1749,66 @@ function Drives({ state, upd, showToast, pushNotif }) {
       {list.length === 0 && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>No drives posted yet.</div>}
 
       {list.map(drive => {
-        const confirmed = drive.registrations.filter(r => r.status === "confirmed").length;
-        const waiting   = drive.registrations.filter(r => r.status === "waiting").length;
-        const myReg     = drive.registrations.find(r => r.userId === cu.id);
-        const isOwner   = drive.postedBy === cu.id || cu.role === "admin" || cu.role === "marshal";
-        const reqLevel  = getRank(drive.requiredRankId, clubRanks, drive.clubId)?.level || 1;
-        const cl        = getClub(cs, drive.clubId);
-        const pct       = drive.capacity > 0 ? Math.min(confirmed / drive.capacity * 100, 100) : 0;
+        const confirmed   = drive.registrations.filter(r => r.status === "confirmed").length;
+        const waiting     = drive.registrations.filter(r => r.status === "waiting").length;
+        const myReg       = drive.registrations.find(r => r.userId === cu.id);
+        const isOwner     = drive.postedBy === cu.id || cu.role === "admin" || cu.role === "marshal";
+        const reqLevel    = getRank(drive.requiredRankId, clubRanks, drive.clubId)?.level || 1;
+        const cl          = getClub(cs, drive.clubId);
+        const pct         = drive.capacity > 0 ? Math.min(confirmed / drive.capacity * 100, 100) : 0;
+        const isFull      = confirmed >= drive.capacity;
         return (
-          <div key={drive.id} className="dcard">
-            <div className="dcard-accent" />
-            {drive.image && <img src={drive.image} alt={drive.title} className="dcard-img" />}
-            <div className="dcard-inner">
-              <div className="dcard-title">{drive.title}</div>
-              <div className="dcard-badges">
-                <RankBadge rankId={drive.requiredRankId} clubRanks={clubRanks} clubId={drive.clubId} />
-                {cl && <span className="bdg d">{cl.name}</span>}
-                {drive.cancelled && <span className="bdg r">CANCELLED</span>}
-              </div>
-              {drive.description && <div className="dcard-desc">{drive.description}</div>}
-              <div className="dcard-meta-grid">
-                {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
-                {drive.date      && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
-                {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
-                {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
-                <div className="dm">👥 <strong>{confirmed}/{drive.capacity}</strong> confirmed</div>
-                {waiting > 0 && <div className="dm"><span className="waitbdg">⏳ {waiting} waiting</span></div>}
-              </div>
-              <div className="capbar"><div className="capfill" style={{width:`${pct}%`}} /></div>
-              {drive.attendanceRecorded && myReg && (
-                <div style={{marginBottom:8}}>
-                  <span className={`bdg ${myReg.attended ? "g" : "d"}`}>
-                    {myReg.attended ? "✓ ATTENDED" : "✗ DID NOT ATTEND"}
-                  </span>
+          <div key={drive.id} style={{
+            background:"var(--bg)", border:"1px solid var(--line)",
+            borderLeft:`3px solid ${drive.attendanceRecorded ? "var(--green)" : "var(--acc2)"}`,
+            borderRadius:"var(--r-lg)", marginBottom:10,
+            overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)",
+          }}>
+            {/* Main row — click to open detail */}
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",cursor:"pointer"}}
+              onClick={() => setDetail(drive)}>
+              {drive.image
+                ? <img src={drive.image} alt={drive.title} style={{width:56,height:56,objectFit:"cover",borderRadius:10,flexShrink:0}} />
+                : <div style={{width:56,height:56,background:"var(--bg3)",borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>🚙</div>
+              }
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800,color:"var(--ink)",letterSpacing:-.3,marginBottom:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{drive.title}</div>
+                <div style={{fontSize:12,color:"var(--mid)",display:"flex",gap:10,flexWrap:"wrap"}}>
+                  {drive.location  && <span>📍 {drive.location}</span>}
+                  {drive.date      && <span>📅 {fmtDate(drive.date)}</span>}
+                  {drive.startTime && <span>🕐 {fmtTime(drive.startTime)}</span>}
                 </div>
-              )}
-              <div className="dcard-actions">
-                {myReg && <span className={`bdg ${myReg.status === "confirmed" ? "g" : "o"}`}>{myReg.status === "confirmed" ? "✓ CONFIRMED" : "⏳ WAITLIST"}</span>}
-                {!myReg && uLevel >= reqLevel && <button className="btn gold xs" onClick={() => register(drive)}>REGISTER</button>}
-                {!myReg && uLevel < reqLevel  && <span className="bdg d">RANK LOW</span>}
-                {isOwner && waiting > 0 && <button className="btn out xs" onClick={() => setWaitM(drive)}>WAITLIST ({waiting})</button>}
-                {isOwner && !drive.attendanceRecorded && confirmed > 0 && <button className="btn out-grn xs" onClick={() => setAttM(drive)}>ATTENDANCE</button>}
-                <button className="btn out xs" style={{marginLeft:"auto"}} onClick={() => setDetail(drive)}>VIEW →</button>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:5}}>
+                  <RankBadge rankId={drive.requiredRankId} clubRanks={clubRanks} clubId={drive.clubId} />
+                  {cl && <span className="bdg d" style={{fontSize:9}}>{cl.name}</span>}
+                  {myReg && <span className={`bdg ${myReg.status==="confirmed"?"g":"o"}`} style={{fontSize:9}}>{myReg.status==="confirmed"?"✓ CONFIRMED":"⏳ WAITLIST"}</span>}
+                  {drive.attendanceRecorded && <span className="bdg g" style={{fontSize:9}}>✅ DONE</span>}
+                </div>
               </div>
+              <div style={{flexShrink:0,textAlign:"right"}}>
+                <div style={{fontSize:12,color:"var(--mid)",marginBottom:4}}>👥 {confirmed}/{drive.capacity}</div>
+                <div style={{width:48,height:4,background:"var(--bg3)",borderRadius:100,overflow:"hidden"}}>
+                  <div style={{height:"100%",background:"var(--acc2)",width:`${pct}%`,borderRadius:100}} />
+                </div>
+              </div>
+              <div style={{color:"var(--mid3)",fontSize:20,flexShrink:0}}>›</div>
             </div>
+
+            {/* Action buttons — compact row below */}
+            {(!myReg || isOwner || waiting > 0) && (
+              <div style={{display:"flex",gap:8,padding:"0 16px 12px",flexWrap:"wrap"}}>
+                {!myReg && !drive.attendanceRecorded && uLevel >= reqLevel && !isFull &&
+                  <button className="btn gold xs" onClick={() => register(drive)}>+ REGISTER</button>}
+                {!myReg && !drive.attendanceRecorded && uLevel >= reqLevel && isFull &&
+                  <button className="btn out xs" onClick={() => register(drive)}>⏳ JOIN WAITLIST</button>}
+                {!myReg && uLevel < reqLevel &&
+                  <span className="bdg d" style={{fontSize:10}}>⚠️ Rank too low</span>}
+                {isOwner && waiting > 0 &&
+                  <button className="btn out xs" onClick={() => setWaitM(drive)}>WAITLIST ({waiting})</button>}
+                {isOwner && !drive.attendanceRecorded && confirmed > 0 &&
+                  <button className="btn out-grn xs" onClick={() => setAttM(drive)}>ATTENDANCE</button>}
+              </div>
+            )}
           </div>
         );
       })}
