@@ -413,7 +413,17 @@ a{color:var(--acc);text-decoration:none}
 .chat-input:focus{border-color:var(--acc2);background:#fff}
 .chat-send{background:var(--acc2);border:none;border-radius:var(--r-md);width:48px;height:48px;font-size:20px;font-weight:700;color:#0a0a0a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-/* ── SOS ── */
+/* ── MAP ── */
+.map-wrap{position:relative;margin-bottom:16px}
+.map-frame{width:100%;height:300px;background:linear-gradient(135deg,#e8f4ea,#d4e8d4);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border:1px solid var(--line)}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.06) 1px,transparent 1px);background-size:40px 40px}
+.map-car{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;transform:translate(-50%,-50%);z-index:10}
+.map-car-label{font-size:10px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 8px;white-space:nowrap;box-shadow:var(--sh-xs)}
+.map-legend{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px}
+.map-legend-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);margin-bottom:2px}
+.track-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-md);margin-top:8px;flex-wrap:wrap}
+.track-dot{width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
+.track-sharing{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--green);font-weight:600;flex:1}
 .sos-btn{width:100%;padding:18px;background:var(--red);color:#fff;border:none;border-radius:var(--r-xl);font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,.3)}
 
 /* ── MISC ── */
@@ -3096,55 +3106,77 @@ function Marketplace({ state }) {
    FEATURE 1 — LIVE DRIVE TRACKER
 ════════════════════════════════════════════════════════ */
 function LiveTracker({ drive, state, upd, showToast }) {
-  const { currentUser:cu, users:us, liveTrack = {} } = state;
-  const driveTrack = liveTrack[drive.id] || {};
-  const isSharing  = driveTrack[cu.id]?.sharing || false;
-  const [watchId, setWatchId] = useState(null);
+  const { currentUser:cu, users:us } = state;
+  const [positions, setPositions] = useState([]);
+  const [isSharing, setIsSharing] = useState(false);
+  const [watchId,   setWatchId]   = useState(null);
 
-  // Cleanup GPS watch on unmount
+  // ── Load positions from Supabase every 5s ──
+  async function loadPositions() {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    const rows = await SB.get("live_positions",
+      `drive_id=eq.${drive.id}&sharing=eq.true`);
+    setPositions(rows || []);
+  }
+
+  useEffect(() => {
+    loadPositions();
+    const t = setInterval(loadPositions, 5000);
+    return () => clearInterval(t);
+  }, [drive.id]);
+
   useEffect(() => {
     return () => {
-      if (watchId !== null) {
-        navigator.geolocation && navigator.geolocation.clearWatch(watchId);
-      }
+      if (watchId) navigator.geolocation?.clearWatch(watchId);
     };
   }, [watchId]);
 
-  // Only show members who are actively sharing their real GPS location
-  const positions = Object.entries(driveTrack)
-    .filter(([, pos]) => pos.sharing)
-    .map(([uid, pos]) => {
-      const u = getUser(us, Number(uid) || uid);
-      return { ...pos, user: u, isMe: (Number(uid) || uid) === cu.id };
+  async function savePosition(lat, lng) {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    await SB.upsert("live_positions", {
+      drive_id:  drive.id,
+      user_id:   cu.id,
+      user_name: cu.name,
+      lat, lng,
+      sharing:   true,
+      updated_at: new Date().toISOString(),
     });
+  }
+
+  async function stopSharingDB() {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    await SB.patch("live_positions", { drive_id: drive.id, user_id: cu.id }, { sharing: false });
+  }
 
   function startSharing() {
     if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
     const id = navigator.geolocation.watchPosition(
       pos => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        upd({ liveTrack: { ...liveTrack, [drive.id]: { ...driveTrack, [cu.id]: { lat, lng, ts: Date.now(), sharing: true } } } });
+        const { latitude:lat, longitude:lng } = pos.coords;
+        savePosition(lat, lng);
+        // Update local immediately for self-view
+        setPositions(p => {
+          const others = p.filter(x => x.user_id !== cu.id);
+          return [...others, { drive_id:drive.id, user_id:cu.id, user_name:cu.name, lat, lng, sharing:true }];
+        });
       },
-      () => {
-        showToast("⚠️ GPS unavailable — enable location access in your browser settings");
-      },
-      { enableHighAccuracy: true, maximumAge: 5000 }
+      () => showToast("⚠️ GPS unavailable — enable location in browser settings"),
+      { enableHighAccuracy:true, maximumAge:5000 }
     );
     setWatchId(id);
+    setIsSharing(true);
     showToast("📡 Live location sharing started");
   }
 
   function stopSharing() {
-    if (watchId) navigator.geolocation.clearWatch(watchId);
+    if (watchId) navigator.geolocation?.clearWatch(watchId);
     setWatchId(null);
-    const updated = { ...driveTrack };
-    if (updated[cu.id]) updated[cu.id] = { ...updated[cu.id], sharing: false };
-    upd({ liveTrack: { ...liveTrack, [drive.id]: updated } });
+    setIsSharing(false);
+    stopSharingDB();
+    setPositions(p => p.filter(x => x.user_id !== cu.id));
     showToast("Location sharing stopped");
   }
 
-  // Map rendering — only real sharing members
-  const allPos = positions;
   const sharingCount = positions.length;
 
   return (
@@ -3152,46 +3184,46 @@ function LiveTracker({ drive, state, upd, showToast }) {
       <div className="map-wrap">
         <div className="map-frame">
           <div className="map-grid" />
-          {/* Render member dots */}
-          {allPos.map((p, i) => {
-            const x = 15 + ((i + 1) / (allPos.length + 1)) * 70;
+          {positions.map((p, i) => {
+            const isMe = p.user_id === cu.id;
+            const x = 15 + ((i + 1) / (positions.length + 1)) * 70;
             const y = 20 + (i % 3) * 25;
             return (
-              <div key={i} className={`map-car${p.isMe ? " me" : ""}`}
-                style={{ left: `${x}%`, top: `${y}%` }}>
-                <div style={{ width:36, height:36, borderRadius:"50%", background: p.isMe ? "var(--acc2)" : "var(--ink)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, border: p.isMe ? "3px solid var(--acc)" : "3px solid #fff" }}>
-                  🚙
-                </div>
-                <div className="map-car-label">{p.isMe ? "YOU" : (p.user?.name?.split(" ")[0] || "?")}</div>
+              <div key={p.user_id} className="map-car" style={{left:`${x}%`, top:`${y}%`}}>
+                <div style={{width:38, height:38, borderRadius:"50%",
+                  background: isMe ? "var(--acc2)" : "var(--ink)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:18, border: isMe ? "3px solid var(--acc)" : "3px solid #fff",
+                  boxShadow:"var(--sh-sm)"}}>🚙</div>
+                <div className="map-car-label">{isMe ? "YOU" : (p.user_name?.split(" ")[0] || "?")}</div>
               </div>
             );
           })}
-          {allPos.length === 0 && (
-            <div style={{ textAlign:"center", zIndex:2, position:"relative" }}>
-              <div style={{ fontSize:48, marginBottom:8 }}>🏜️</div>
-              <div style={{ fontSize:13, color:"var(--mid)", fontWeight:600 }}>Start sharing to appear on map</div>
+          {sharingCount === 0 && (
+            <div style={{textAlign:"center", zIndex:2, position:"relative"}}>
+              <div style={{fontSize:48, marginBottom:8}}>🏜️</div>
+              <div style={{fontSize:13, color:"var(--mid)", fontWeight:600}}>No one is sharing location yet</div>
             </div>
           )}
           <div className="map-legend">
-            <div className="map-legend-row">🚙 {sharingCount} member{sharingCount !== 1 ? "s" : ""} live</div>
+            <div className="map-legend-row">🚙 {sharingCount} member{sharingCount!==1?"s":""} live</div>
             <div className="map-legend-row">📍 {drive.location}</div>
           </div>
         </div>
+
         <div className="track-bar">
           {isSharing
-            ? <div className="track-sharing"><div className="track-dot" /><span>Sharing your location</span></div>
-            : <div style={{ fontSize:13, color:"var(--mid)", fontWeight:500 }}>Your location is private</div>
+            ? <div className="track-sharing"><div className="track-dot"/><span>Sharing your location live</span></div>
+            : <div style={{fontSize:13, color:"var(--mid)", fontWeight:500, flex:1}}>Your location is private</div>
           }
-          <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
-            {!isSharing
-              ? <button className="btn gold sm" onClick={startSharing}>📡 Share My Location</button>
-              : <button className="btn out-red sm" onClick={stopSharing}>⏹ Stop Sharing</button>
-            }
-          </div>
+          {!isSharing
+            ? <button className="btn gold sm" onClick={startSharing}>📡 Share My Location</button>
+            : <button className="btn out-red sm" onClick={stopSharing}>⏹ Stop Sharing</button>
+          }
         </div>
       </div>
-      <div className="ibox" style={{ fontSize:12 }}>
-        📌 Location is only shared with members of this drive. Sharing stops automatically when you close the app.
+      <div className="ibox" style={{fontSize:12, marginTop:8}}>
+        📌 Location is only shared with members of this drive. Sharing stops when you close the app.
       </div>
     </div>
   );
@@ -3201,80 +3233,123 @@ function LiveTracker({ drive, state, upd, showToast }) {
    FEATURE 2 — SOS EMERGENCY
 ════════════════════════════════════════════════════════ */
 function SOSPanel({ state, upd, showToast, pushNotif }) {
-  const { currentUser:cu, users:us, clubs:cs, sos = [] } = state;
-  const myClub    = cu.clubId ? getClub(cs, cu.clubId) : null;
-  const marshals  = us.filter(u => u.clubId === cu.clubId && ["marshal","admin"].includes(u.role) && u.id !== cu.id);
-  const myActive  = sos.find(s => s.userId === cu.id && !s.resolved);
-  const clubSOS   = sos.filter(s => {
-    const u = getUser(us, s.userId);
-    return u?.clubId === cu.clubId && !s.resolved;
-  });
+  const { currentUser:cu, users:us, clubs:cs } = state;
+  const myClub   = cu.clubId ? getClub(cs, cu.clubId) : null;
+  const marshals = us.filter(u => u.clubId === cu.clubId && ["marshal","admin"].includes(u.role) && u.id !== cu.id);
+  const [alerts,    setAlerts]    = useState([]);
+  const [myActive,  setMyActive]  = useState(null);
+
+  async function loadAlerts() {
+    if (!SUPA_URL || !SUPA_KEY || !cu.clubId) return;
+    const rows = await SB.get("sos_alerts",
+      `club_id=eq.${cu.clubId}&resolved=eq.false&order=created_at.desc`);
+    setAlerts(rows || []);
+    setMyActive((rows || []).find(s => s.user_id === cu.id) || null);
+  }
+
+  useEffect(() => {
+    loadAlerts();
+    const t = setInterval(loadAlerts, 10000);
+    return () => clearInterval(t);
+  }, [cu.clubId]);
 
   function triggerSOS() {
-    if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals and the club admin with your location.")) return;
+    if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals with your GPS location.")) return;
     navigator.geolocation?.getCurrentPosition(
       pos => sendSOS(pos.coords.latitude, pos.coords.longitude),
-      ()  => sendSOS(23.1118 + (Math.random()-.5)*.02, 53.7766 + (Math.random()-.5)*.02)
+      ()  => sendSOS(null, null)
     );
   }
 
-  function sendSOS(lat, lng) {
-    const entry = { id: Date.now(), userId: cu.id, lat, lng, ts: Date.now(), resolved: false };
-    upd({ sos: [...sos, entry] });
-    marshals.forEach(m => pushNotif({ type:"sos", title:"🚨 SOS ALERT", body:`${cu.name} needs help at ${lat.toFixed(4)}°N ${lng.toFixed(4)}°E`, to: m.id }));
+  async function sendSOS(lat, lng) {
+    const entry = {
+      club_id:   cu.clubId,
+      user_id:   cu.id,
+      user_name: cu.name,
+      lat:       lat || null,
+      lng:       lng || null,
+      resolved:  false,
+    };
+    const saved = await SB.upsert("sos_alerts", entry);
+    if (saved) {
+      setAlerts(a => [saved, ...a]);
+      setMyActive(saved);
+    }
+    marshals.forEach(m => pushNotif({
+      type:"sos", title:"🚨 SOS ALERT",
+      body: lat
+        ? `${cu.name} needs help at ${lat.toFixed(4)}°N ${lng.toFixed(4)}°E`
+        : `${cu.name} needs help — no GPS`,
+      to: m.id
+    }));
     showToast("🚨 SOS sent to " + marshals.length + " marshal(s)!");
   }
 
-  function resolveAlert(id) {
-    upd({ sos: sos.map(s => s.id === id ? { ...s, resolved: true } : s) });
+  async function resolveAlert(id) {
+    await SB.patch("sos_alerts", { id }, { resolved: true });
+    setAlerts(a => a.filter(s => s.id !== id));
+    if (myActive?.id === id) setMyActive(null);
     showToast("✓ SOS marked as resolved");
   }
+
+  const clubSOS = alerts.filter(s => !s.resolved);
 
   return (
     <div>
       {/* Active SOS alerts visible to marshals/admins */}
       {["marshal","admin"].includes(cu.role) && clubSOS.length > 0 && (
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--red)", marginBottom:12 }}>⚠️ Active SOS Alerts</div>
-          {clubSOS.map(s => {
-            const u = getUser(us, s.userId);
-            return (
-              <div key={s.id} className="sos-list-item">
-                <div className="sos-ping" />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:15, color:"var(--ink)", marginBottom:3 }}>{u?.name || "Unknown"}</div>
-                  <div style={{ fontSize:12, color:"var(--mid)" }}>📍 {s.lat.toFixed(5)}°N, {s.lng.toFixed(5)}°E</div>
-                  <div style={{ fontSize:11, color:"var(--mid3)", marginTop:2 }}>{new Date(s.ts).toLocaleTimeString()}</div>
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase",
+            color:"var(--red)", marginBottom:12}}>⚠️ Active SOS Alerts</div>
+          {clubSOS.map(s => (
+            <div key={s.id} className="sos-list-item">
+              <div className="sos-ping" />
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700, fontSize:15, color:"var(--ink)", marginBottom:3}}>
+                  {s.user_name || "Unknown"}
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer noopener" className="btn out xs">🗺 Open Map</a>
-                  <button className="btn out-grn xs" onClick={() => resolveAlert(s.id)}>✓ Resolved</button>
+                {s.lat && <div style={{fontSize:12, color:"var(--mid)"}}>
+                  📍 {Number(s.lat).toFixed(5)}°N, {Number(s.lng).toFixed(5)}°E
+                </div>}
+                <div style={{fontSize:11, color:"var(--mid3)", marginTop:2}}>
+                  {new Date(s.created_at).toLocaleTimeString()}
                 </div>
               </div>
-            );
-          })}
+              <div style={{display:"flex", flexDirection:"column", gap:6}}>
+                {s.lat && (
+                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`}
+                    target="_blank" rel="noreferrer noopener" className="btn out xs">
+                    🗺 Open Map
+                  </a>
+                )}
+                <button className="btn out-grn xs" onClick={() => resolveAlert(s.id)}>✓ Resolved</button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* SOS button for members */}
       {myActive ? (
         <div className="sos-active">
-          <div style={{ fontWeight:700, fontSize:16, color:"var(--red)", marginBottom:6 }}>🚨 SOS Active</div>
-          <div style={{ fontSize:13, color:"var(--mid)", marginBottom:14 }}>Your distress signal is live. Marshals have been notified and can see your location.</div>
-          <button className="btn out-grn sm" onClick={() => { upd({ sos: sos.map(s => s.id === myActive.id ? {...s, resolved:true} : s) }); showToast("SOS cancelled"); }}>
+          <div style={{fontWeight:700, fontSize:16, color:"var(--red)", marginBottom:6}}>🚨 SOS Active</div>
+          <div style={{fontSize:13, color:"var(--mid)", marginBottom:14}}>
+            Your distress signal is live. Marshals have been notified and can see your location.
+          </div>
+          <button className="btn out-grn sm" onClick={() => resolveAlert(myActive.id)}>
             ✓ I'm Safe — Cancel SOS
           </button>
         </div>
       ) : (
-        <div style={{ textAlign:"center", padding:"32px 20px" }}>
-          <div style={{ fontSize:13, color:"var(--mid)", marginBottom:24, lineHeight:1.6 }}>
-            Press only in a genuine emergency. This will immediately alert <strong>{marshals.length} marshal{marshals.length !== 1 ? "s" : ""}</strong> in {myClub?.name || "your club"} with your GPS coordinates.
+        <div style={{textAlign:"center", padding:"32px 20px"}}>
+          <div style={{fontSize:13, color:"var(--mid)", marginBottom:24, lineHeight:1.6}}>
+            Press only in a genuine emergency. This will immediately alert{" "}
+            <strong>{marshals.length} marshal{marshals.length!==1?"s":""}</strong> in{" "}
+            {myClub?.name || "your club"} with your GPS coordinates.
           </div>
-          <button className="sos-btn" onClick={triggerSOS}>
-            🚨 SEND SOS
-          </button>
-          <div style={{ fontSize:11, color:"var(--mid3)", marginTop:16 }}>
-            Only use in a real emergency situation
+          <button className="sos-btn" onClick={triggerSOS}>🚨 SEND SOS</button>
+          <div style={{fontSize:11, color:"var(--mid3)", marginTop:16}}>
+            For real emergencies only · Police: 999 · Ambulance: 998
           </div>
         </div>
       )}
