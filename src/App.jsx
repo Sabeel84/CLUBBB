@@ -4028,34 +4028,160 @@ function DriveRating({ drive, state, upd, showToast }) {
 ════════════════════════════════════════════════════════ */
 function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
   const [tab, setTab] = useState("info");
-  const { currentUser:cu } = state;
+  const { currentUser:cu, users:us, clubRanks } = state;
+  const canManage = ["admin","marshal"].includes(cu.role);
   const tabs = [
     { id:"info",      label:"Info" },
-    { id:"tracker",   label:"🗺 Live Map" },
+    { id:"tracker",   label:"🗺 Map" },
     { id:"sos",       label:"🚨 SOS" },
     { id:"checklist", label:"✅ Checklist" },
     { id:"chat",      label:"💬 Chat" },
     { id:"rating",    label:"⭐ Rate" },
   ];
+
+  const confirmed  = drive.registrations.filter(r => r.status === "confirmed");
+  const waiting    = drive.registrations.filter(r => r.status === "waiting");
+
+  function exportCSV() {
+    const rows = [
+      ["#","Name","Email","Phone","Rank","Status","Attended"],
+      ...confirmed.map((r, i) => {
+        const u = us.find(x => x.id === r.userId);
+        const rank = u ? (clubRanks?.[drive.clubId]?.find(rk => rk.id === u.rankId)?.name || "Newbie") : "";
+        return [i+1, u?.name||"Unknown", u?.email||"", u?.phone||"", rank,
+                r.status, drive.attendanceRecorded ? (r.attended ? "Yes" : "No") : "Pending"];
+      }),
+    ];
+    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv"});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `${drive.title}-registrations.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <Modal title={drive.title} onClose={onClose}>
-      <div className="tabs" style={{ marginBottom:20 }}>
-        {tabs.map(t => (
-          <button key={t.id} className={`tab ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)} style={{ fontSize:12, padding:"7px 12px" }}>{t.label}</button>
-        ))}
-      </div>
-      {tab === "info" && (
-        <div>
-          {drive.description && <p style={{ fontSize:14, color:"var(--mid)", lineHeight:1.65, marginBottom:16 }}>{drive.description}</p>}
-          <div className="dcard-meta" style={{ flexDirection:"column", gap:10 }}>
-            {drive.location  && <div className="dm">📍 <strong>{drive.location}</strong></div>}
-            {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
-            {drive.date      && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
-            {drive.startTime && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
-            {drive.mapLink   && <a href={safeUrl(drive.mapLink)} target="_blank" rel="noreferrer noopener" className="btn out sm" style={{ marginTop:8 }}>🗺 Open in Google Maps</a>}
-          </div>
+      {/* ── Drive cover image ── */}
+      {drive.image && (
+        <div style={{margin:"0 -16px", marginBottom:20}}>
+          <img src={drive.image} alt={drive.title}
+            style={{width:"100%", maxHeight:280, objectFit:"cover", display:"block"}} />
         </div>
       )}
+
+      <div className="tabs" style={{marginBottom:20}}>
+        {tabs.map(t => (
+          <button key={t.id} className={`tab ${tab===t.id?"on":""}`}
+            onClick={() => setTab(t.id)} style={{fontSize:12, padding:"7px 12px"}}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === "info" && (
+        <div>
+          {/* Drive details */}
+          <div style={{background:"var(--bg2)", borderRadius:"var(--r-lg)", padding:"16px", marginBottom:20}}>
+            {drive.description && <p style={{fontSize:14, color:"var(--mid)", lineHeight:1.65, marginBottom:14}}>{drive.description}</p>}
+            <div style={{display:"flex", flexDirection:"column", gap:10}}>
+              {drive.location   && <div className="dm">📍 <strong>{drive.location}</strong></div>}
+              {drive.date       && <div className="dm">📅 <strong>{fmtDate(drive.date)}</strong></div>}
+              {drive.startTime  && <div className="dm">🕐 <strong>{fmtTime(drive.startTime)}</strong></div>}
+              {drive.coordinates && <div className="dm">🗺 <strong>{drive.coordinates}</strong></div>}
+              <div className="dm">👥 <strong>{confirmed.length}/{drive.capacity}</strong> confirmed · <strong>{waiting.length}</strong> waiting</div>
+            </div>
+            {drive.mapLink && (
+              <a href={safeUrl(drive.mapLink)} target="_blank" rel="noreferrer noopener"
+                className="btn out sm" style={{marginTop:12, display:"inline-flex", textDecoration:"none"}}>
+                🗺 Open in Google Maps
+              </a>
+            )}
+          </div>
+
+          {/* Registered members table */}
+          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, flexWrap:"wrap", gap:8}}>
+            <div style={{fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:800, color:"var(--ink)"}}>
+              Registered Members ({confirmed.length})
+            </div>
+            {canManage && confirmed.length > 0 && (
+              <button className="btn out sm" onClick={exportCSV}>⬇ Export CSV</button>
+            )}
+          </div>
+
+          {confirmed.length === 0 && (
+            <div style={{color:"var(--mid)", fontSize:13, padding:"16px 0", textAlign:"center"}}>
+              No registrations yet.
+            </div>
+          )}
+
+          {confirmed.length > 0 && (
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%", borderCollapse:"collapse", fontSize:13}}>
+                <thead>
+                  <tr style={{background:"var(--bg3)"}}>
+                    {["#","Name","Rank","Status", drive.attendanceRecorded && "Attended"].filter(Boolean).map(h => (
+                      <th key={h} style={{padding:"8px 12px", textAlign:"left", fontSize:10,
+                        fontWeight:700, letterSpacing:1.5, textTransform:"uppercase",
+                        color:"var(--mid2)", borderBottom:"1px solid var(--line)"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {confirmed.map((r, i) => {
+                    const u = us.find(x => x.id === r.userId);
+                    const rankName = u && clubRanks?.[drive.clubId]
+                      ? (clubRanks[drive.clubId].find(rk => rk.id === u?.rankId)?.name || "Newbie")
+                      : "Newbie";
+                    return (
+                      <tr key={r.userId} style={{borderBottom:"1px solid var(--line)", background: i%2===0 ? "var(--bg)" : "var(--bg2)"}}>
+                        <td style={{padding:"10px 12px", color:"var(--mid2)", fontWeight:700}}>{i+1}</td>
+                        <td style={{padding:"10px 12px"}}>
+                          <div style={{fontWeight:600, color:"var(--ink)"}}>{u?.name || "Unknown"}</div>
+                          {canManage && u?.phone && <div style={{fontSize:11, color:"var(--mid)"}}>{u.phone}</div>}
+                        </td>
+                        <td style={{padding:"10px 12px"}}>
+                          <span className="rbdg" style={{fontSize:10}}>{rankName}</span>
+                        </td>
+                        <td style={{padding:"10px 12px"}}>
+                          <span className={`bdg ${r.status==="confirmed"?"g":"o"}`} style={{fontSize:9}}>
+                            {r.status==="confirmed" ? "✓ Confirmed" : "⏳ Waiting"}
+                          </span>
+                        </td>
+                        {drive.attendanceRecorded && (
+                          <td style={{padding:"10px 12px"}}>
+                            <span className={`bdg ${r.attended?"g":"d"}`} style={{fontSize:9}}>
+                              {r.attended ? "✓ Attended" : "✗ Absent"}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Waiting list */}
+          {waiting.length > 0 && (
+            <div style={{marginTop:20}}>
+              <div style={{fontSize:13, fontWeight:700, color:"var(--orange)", marginBottom:10}}>
+                ⏳ Waiting List ({waiting.length})
+              </div>
+              {waiting.map((r, i) => {
+                const u = us.find(x => x.id === r.userId);
+                return (
+                  <div key={r.userId} style={{display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid var(--line)"}}>
+                    <span style={{fontSize:12, color:"var(--mid2)", width:20}}>{i+1}</span>
+                    <div className="ava" style={{width:28, height:28, fontSize:12, borderRadius:8, flexShrink:0}}>{(u?.name||"?")[0]}</div>
+                    <div style={{fontSize:13, fontWeight:600, color:"var(--ink)"}}>{u?.name || "Unknown"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === "tracker"   && <LiveTracker   drive={drive} state={state} upd={upd} showToast={showToast} />}
       {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={showToast} />}
       {tab === "checklist" && <DriveChecklist drive={drive} state={state} upd={upd} showToast={showToast} />}
