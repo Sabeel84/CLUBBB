@@ -2228,14 +2228,16 @@ function MembersTab({ members, myRanks, clubRanks, cu, myCl, promos, us, upd, sh
 }
 
 function ClubAdmin({ state, upd, showToast }) {
-  const { currentUser:cu, clubs:cs, users:us, promos, clubRanks } = state;
+  const { currentUser:cu, clubs:cs, users:us, promos, clubRanks, drives:allDrives } = state;
   const cl      = getClub(cs, cu.clubId);
+  const myCl    = cl;
   const [tab, setTab]   = useState("profile");
   const [form, setForm] = useState(cl ? {...cl} : {logo:"", banner:"", description:"", terms:""});
   const s = k => e => setForm({...form, [k]: e.target.value});
-  const members  = us.filter(u => u.clubId === cu.clubId && u.role !== "app_admin");
-  const myPromos = promos.filter(p => p.clubId === cu.clubId);
-  const myRanks  = getClubRanks(clubRanks, cu.clubId);
+  const members   = us.filter(u => u.clubId === cu.clubId && u.role !== "app_admin");
+  const myPromos  = promos ? promos.filter(p => p.clubId === cu.clubId) : [];
+  const myRanks   = getClubRanks(clubRanks, cu.clubId);
+  const clubDrives = allDrives ? allDrives.filter(d => d.clubId === cu.clubId) : [];
   const [editRanks, setEditRanks] = useState(myRanks.map(r => ({...r})));
 
   function moveRank(idx, dir) {
@@ -2395,6 +2397,64 @@ function ClubAdmin({ state, upd, showToast }) {
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── DRIVES TAB ── */}
+      {tab === "drives" && (
+        <div>
+          {clubDrives.length === 0 && (
+            <div style={{color:"var(--mid)", fontSize:14, marginTop:8}}>
+              No drives posted yet. Go to the Drives page to post one.
+            </div>
+          )}
+          {clubDrives.map(d => {
+            const confirmed = d.registrations ? d.registrations.filter(r => r.status === "confirmed").length : 0;
+            const waiting   = d.registrations ? d.registrations.filter(r => r.status === "waiting").length   : 0;
+            return (
+              <div key={d.id} className="card" style={{marginBottom:12, padding:"16px 20px"}}>
+                <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, alignItems:"flex-start"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, color:"var(--ink)", marginBottom:4}}>{d.title}</div>
+                    <div style={{fontSize:12, color:"var(--mid)", marginBottom:6}}>
+                      📍 {d.location} &nbsp;·&nbsp; 📅 {fmtDate(d.date)} &nbsp;·&nbsp; ⏰ {fmtTime(d.startTime)}
+                    </div>
+                    <div style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center"}}>
+                      <span className="bdg d">👥 {confirmed}/{d.capacity} confirmed</span>
+                      {waiting > 0 && <span className="bdg o">⏳ {waiting} waiting</span>}
+                      {d.attendanceRecorded && <span className="bdg g">✅ Attendance recorded</span>}
+                      <RankBadge rankId={d.requiredRankId} clubRanks={clubRanks} clubId={cu.clubId} />
+                    </div>
+                    {/* Registrations list */}
+                    {d.registrations && d.registrations.length > 0 && (
+                      <div style={{marginTop:10, borderTop:"1px solid var(--line)", paddingTop:10}}>
+                        <div style={{fontSize:11, fontWeight:700, letterSpacing:2, color:"var(--mid2)", textTransform:"uppercase", marginBottom:6}}>Registrations</div>
+                        {d.registrations.map(reg => {
+                          const ru = getUser(us, reg.userId);
+                          return (
+                            <div key={reg.userId} style={{fontSize:12, color:"var(--ink2)", display:"flex", alignItems:"center", gap:6, marginBottom:3}}>
+                              <span>{reg.status === "waiting" ? "⏳" : "✓"}</span>
+                              <span>{ru ? ru.name : reg.userId}</span>
+                              {reg.attended && <span className="bdg g" style={{fontSize:9}}>Attended</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{display:"flex", flexDirection:"column", gap:6, flexShrink:0}}>
+                    {!d.attendanceRecorded && (
+                      <button className="btn out-red xs" onClick={() => {
+                        if (!window.confirm(`Cancel drive "${d.title}"? All registrations will be lost.`)) return;
+                        upd({ drives: allDrives.filter(x => x.id !== d.id) });
+                        showToast("Drive cancelled");
+                      }}>🗑 DELETE DRIVE</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
