@@ -555,6 +555,14 @@ function getMemberStreak(userId, drives) {
 }
 
 /* ─── SHARED UI ─────────────────────────────────────────────── */
+const RANK_COLORS = ["#5b8a9e","#9a7b20","#c45c1a","#7b3bb5","#1a6b3c"];
+const RANK_META   = [
+  {icon:"🌱", sym:"○"},
+  {icon:"🏜️",  sym:"◑"},
+  {icon:"🔥",  sym:"●"},
+  {icon:"⚡",  sym:"◈"},
+  {icon:"👑",  sym:"★"},
+];
 function RankBadge({ rankId, clubRanks, clubId }) {
   const r = getRank(rankId, clubRanks, clubId);
   if (!r) return null;
