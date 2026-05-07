@@ -307,7 +307,7 @@ a{color:var(--acc);text-decoration:none}
 
 /* ── IMAGE UPLOAD ── */
 .img-upload-zone{width:100%;border-radius:var(--r-lg);border:2px dashed var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;background:var(--bg3);gap:8px}
-.img-preview{width:100%;height:100%;object-fit:contain;background:var(--bg3);position:absolute;inset:0;border-radius:var(--r-lg)}
+.img-preview{width:100%;height:100%;object-fit:cover;background:var(--bg3);position:absolute;inset:0;border-radius:var(--r-lg)}
 .img-preview-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;font-size:12px;font-weight:700;color:#fff;border-radius:var(--r-lg)}
 .img-upload-zone:hover .img-preview-overlay{opacity:1}
 .upl-icon{font-size:28px}
@@ -2139,14 +2139,19 @@ function ClubAdmin({ state, upd, showToast }) {
   if (!cl) return <div className="page"><div style={{color:"var(--mid)"}}>Club not found.</div></div>;
 
   return (
-    <div className="page">
-      <div className="sh">
-        <div className="sh-label">Administration</div>
-        <div className="sh-title">CLUB ADMIN</div>
-        <div className="sh-sub">{cl.name}</div>
+    <div>
+      {/* ── HEADER with back button ── */}
+      <div style={{background:"var(--bg)", borderBottom:"1px solid var(--line)", padding:"12px 20px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:100}}>
+        <button onClick={() => window.history.back()} style={{background:"var(--bg3)", border:"1px solid var(--line2)", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, cursor:"pointer", color:"var(--ink)", fontWeight:700}}>←</button>
+        <div>
+          <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--acc)"}}>Administration</div>
+          <div style={{fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, color:"var(--ink)", letterSpacing:-.3}}>{cl.name} — Club Admin</div>
+        </div>
       </div>
+
+      <div className="page">
       <div className="tabs">
-        {[["profile","Club Profile"],["members","Members"],["drives","Drives"],["rankings","Rankings"],["promotions","Promotions"]].map(([id, l]) => (
+        {[["profile","Club Profile"],["members","Members"],["drives","Drives"],["rankings","Rankings"],["votes","Marshal Votes"]].map(([id, l]) => (
           <button key={id} className={`tab ${tab === id ? "on" : ""}`} onClick={() => setTab(id)}>{l}</button>
         ))}
       </div>
@@ -2158,7 +2163,7 @@ function ClubAdmin({ state, upd, showToast }) {
             <div className="card-label">Club Branding</div>
             <div className="fg">
               <label className="fl">Club Banner</label>
-              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={220} label="Upload Banner Image" hint="Recommended: 1200 × 400px (wide landscape) · Max 10MB" />
+              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={180} label="Upload Banner Image" hint="Recommended: 1200 × 400px (wide landscape) · Max 10MB" />
             </div>
             <div className="g2" style={{marginTop:8}}>
               <div className="fg">
@@ -2356,76 +2361,121 @@ function ClubAdmin({ state, upd, showToast }) {
       )}
 
       {/* ── PROMOTIONS TAB ── */}
-      {tab === "promotions" && (() => {
-        const [promoReqs, setPromoReqs] = useState([]);
-        const [promoLoading, setPromoLoading] = useState(true);
+      {tab === "votes" && (
+        <ClubVotesTab cu={cu} us={us} clubRanks={clubRanks} upd={upd} showToast={showToast} />
+      )}
 
-        useEffect(() => {
-          if (!SUPA_URL || !SUPA_KEY) { setPromoLoading(false); return; }
-          SB.get("promotion_requests", `club_id=eq.${cu.clubId}&order=created_at.desc`)
-            .then(rows => { setPromoReqs(rows || []); setPromoLoading(false); });
-        }, []);
+      </div>{/* end .page */}
+    </div>
+  );
+}
 
-        return (
-          <div>
-            <div className="ibox" style={{marginBottom:24}}>
-              Two active marshals must vote YES before you can finalize a promotion.
+/* ── Club Votes Tab — proper component so hooks work ── */
+function ClubVotesTab({ cu, us, clubRanks, upd, showToast }) {
+  const [reqs, setReqs]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const members = us.filter(u => u.clubId === cu.clubId && u.role !== "app_admin" && u.id !== cu.id);
+
+  useEffect(() => {
+    if (!SUPA_URL || !SUPA_KEY) { setLoading(false); return; }
+    SB.get("promotion_requests", `club_id=eq.${cu.clubId}&order=created_at.desc`)
+      .then(rows => { setReqs(rows || []); setLoading(false); });
+  }, []);
+
+  async function directPromote(userId, rankId) {
+    upd({ users: us.map(u => u.id === userId ? {...u, rankId, role:"marshal"} : u) });
+    showToast("🎖️ Member directly promoted to Marshal!");
+  }
+
+  async function finalizePromo(req) {
+    upd({ users: us.map(u => u.id === req.user_id ? {...u, rankId:req.rank_id, role:"marshal"} : u) });
+    await SB.patch("promotion_requests", { id: req.id }, { status: "approved" });
+    setReqs(r => r.map(x => x.id === req.id ? {...x, status:"approved"} : x));
+    showToast("🎖️ Promotion finalized!");
+  }
+
+  async function revokePromo(reqId) {
+    await SB.patch("promotion_requests", { id: reqId }, { status: "rejected" });
+    setReqs(r => r.map(x => x.id === reqId ? {...x, status:"rejected"} : x));
+    showToast("Promotion revoked");
+  }
+
+  const myRanks = getClubRanks(clubRanks, cu.clubId);
+
+  return (
+    <div>
+      {/* ── Direct promote — admin bypasses voting ── */}
+      <div className="card" style={{marginBottom:20}}>
+        <div className="card-label">Direct Promotion (Admin Only)</div>
+        <div className="ibox" style={{marginBottom:16}}>
+          As Club Admin you can promote any member directly without marshal voting.
+        </div>
+        {members.filter(u => u.role === "member").map(u => (
+          <div key={u.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid var(--line)", flexWrap:"wrap"}}>
+            <div className="ava" style={{width:36, height:36, fontSize:14, borderRadius:10, flexShrink:0}}>{(u.name||"?")[0]}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14, fontWeight:700, color:"var(--ink)"}}>{u.name}</div>
+              <div style={{fontSize:11, color:"var(--mid)"}}>{u.email}</div>
             </div>
-            {promoLoading && <div style={{color:"var(--mid)", fontSize:14}}>Loading...</div>}
-            {!promoLoading && promoReqs.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No pending promotion requests.</div>}
-            {promoReqs.map(req => {
-              const target = getUser(us, req.user_id);
-              const votes  = req.votes || [];
-              const yes    = votes.filter(v => v.vote === "yes").length;
-              const no     = votes.filter(v => v.vote === "no").length;
-              return (
-                <div key={req.id} className="vcard">
-                  <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12}}>
-                    <div>
-                      <div className="vcard-name">{target ? target.name : "Unknown"}</div>
-                      <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginTop:4}}>
-                        <span style={{fontSize:12, color:"var(--mid)"}}>Promote to:</span>
-                        <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
-                      </div>
-                    </div>
-                    <span className={`bdg ${req.status==="approved" ? "g" : req.status==="rejected" ? "r" : "o"}`}>
-                      {req.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <div style={{display:"flex", gap:24, marginBottom:12}}>
-                    <div style={{fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
-                    <div style={{fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
-                  </div>
-                  {votes.map((v, i) => (
-                    <div key={i} style={{fontSize:12, color:"var(--mid)", marginBottom:3}}>
-                      <strong style={{color:"var(--ink2)"}}>{v.voterName || "Marshal"}</strong>:{" "}
-                      <span style={{color: v.vote==="yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
-                      {v.comment && ` — ${v.comment}`}
-                    </div>
-                  ))}
-                  {req.status === "voting" && yes >= 2 && (
-                    <button className="btn gold sm" style={{marginTop:14}} onClick={async () => {
-                      // Update user rank + role
-                      upd({ users: us.map(u => u.id === req.user_id ? {...u, rankId:req.rank_id, role:"marshal"} : u) });
-                      // Mark approved in Supabase
-                      await SB.patch("promotion_requests", { id: req.id }, { status: "approved" });
-                      setPromoReqs(r => r.map(x => x.id === req.id ? {...x, status:"approved"} : x));
-                      showToast("🎖️ Member promoted to Marshal!");
-                    }}>FINALIZE PROMOTION TO MARSHAL</button>
-                  )}
-                  {req.status === "voting" && (
-                    <button className="btn out-red xs" style={{marginTop:8}} onClick={async () => {
-                      await SB.patch("promotion_requests", { id: req.id }, { status: "rejected" });
-                      setPromoReqs(r => r.map(x => x.id === req.id ? {...x, status:"rejected"} : x));
-                      showToast("Promotion request rejected");
-                    }}>✗ REJECT</button>
-                  )}
+            <button className="btn gold xs" onClick={() => {
+              const topRank = myRanks.reduce((max, r) => r.level > max.level ? r : max, myRanks[0]);
+              if (window.confirm(`Promote ${u.name} to Marshal (${topRank.name}) directly?`))
+                directPromote(u.id, topRank.id);
+            }}>+ PROMOTE TO MARSHAL</button>
+          </div>
+        ))}
+        {members.filter(u => u.role === "member").length === 0 && (
+          <div style={{color:"var(--mid)", fontSize:13}}>No members available for promotion.</div>
+        )}
+      </div>
+
+      {/* ── Marshal voting requests ── */}
+      <div className="card-label" style={{marginBottom:12}}>Marshal Voting Requests</div>
+      <div className="ibox" style={{marginBottom:16}}>
+        Marshals vote on these requests. You can finalize or revoke at any time regardless of vote count.
+      </div>
+      {loading && <div style={{color:"var(--mid)", fontSize:14}}>Loading...</div>}
+      {!loading && reqs.length === 0 && <div style={{color:"var(--mid)", fontSize:13}}>No promotion requests yet.</div>}
+      {reqs.map(req => {
+        const target = getUser(us, req.user_id);
+        const votes  = req.votes || [];
+        const yes    = votes.filter(v => v.vote === "yes").length;
+        const no     = votes.filter(v => v.vote === "no").length;
+        return (
+          <div key={req.id} className="vcard" style={{marginBottom:12}}>
+            <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10}}>
+              <div>
+                <div className="vcard-name">{target?.name || "Unknown"}</div>
+                <div style={{display:"flex", gap:8, alignItems:"center", marginTop:4, flexWrap:"wrap"}}>
+                  <span style={{fontSize:12, color:"var(--mid)"}}>Proposed rank:</span>
+                  <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
                 </div>
-              );
-            })}
+              </div>
+              <span className={`bdg ${req.status==="approved"?"g":req.status==="rejected"?"r":"o"}`}>
+                {req.status.toUpperCase()}
+              </span>
+            </div>
+            <div style={{display:"flex", gap:20, marginBottom:10}}>
+              <span style={{fontWeight:700, fontSize:13}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span></span>
+              <span style={{fontWeight:700, fontSize:13}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></span>
+            </div>
+            {votes.map((v, i) => (
+              <div key={i} style={{fontSize:12, color:"var(--mid)", marginBottom:2}}>
+                <strong style={{color:"var(--ink2)"}}>{v.voterName||"Marshal"}</strong>: <span style={{color:v.vote==="yes"?"var(--green)":"var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
+                {v.comment && ` — ${v.comment}`}
+              </div>
+            ))}
+            {req.status === "voting" && (
+              <div style={{display:"flex", gap:10, marginTop:14, flexWrap:"wrap"}}>
+                <button className="btn gold sm" onClick={() => finalizePromo(req)}>
+                  ✓ FINALIZE PROMOTION {yes >= 2 ? "(2 YES votes)" : "(Override)"}
+                </button>
+                <button className="btn out-red sm" onClick={() => revokePromo(req.id)}>✗ REVOKE</button>
+              </div>
+            )}
           </div>
         );
-      })()}
+      })}
     </div>
   );
 }
