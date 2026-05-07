@@ -907,50 +907,27 @@ function Toast({ msg, done }) {
 }
 
 function Modal({ title, onClose, children }) {
-  const isMob = window.innerWidth <= 768;
-
-  if (isMob) {
-    // On mobile: render as a full-screen overlay that sits on top of everything
-    return (
-      <div style={{
-        position:"fixed", top:0, left:0, right:0, bottom:0,
-        zIndex:1000, background:"var(--bg)",
-        display:"flex", flexDirection:"column",
-        overflowY:"scroll", WebkitOverflowScrolling:"touch",
-      }}>
-        {/* sticky header bar */}
-        <div style={{
-          position:"sticky", top:0, zIndex:10,
-          background:"var(--bg)", borderBottom:"1px solid var(--line)",
-          padding:"14px 16px", display:"flex", alignItems:"center", gap:12,
-          boxShadow:"0 2px 12px rgba(0,0,0,.06)", flexShrink:0,
-        }}>
-          <button onClick={onClose} style={{
-            background:"var(--bg3)", border:"1.5px solid var(--line2)",
-            borderRadius:12, width:36, height:36, display:"flex",
-            alignItems:"center", justifyContent:"center",
-            fontSize:16, cursor:"pointer", flexShrink:0, color:"var(--ink)",
-          }}>←</button>
-          <div style={{
-            fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800,
-            letterSpacing:"-.3px", color:"var(--ink)", flex:1,
-            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-          }}>{title}</div>
-        </div>
-        {/* scrollable content */}
-        <div style={{ padding:"20px 16px 120px", flex:1 }}>
-          {children}
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop: centered modal
+  // Always render as inline full-width panel — no popup, no overlay
   return (
-    <div className="mover" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal">
-        <div className="modal-title">{title}</div>
-        <button className="mclose" onClick={onClose}>✕ CLOSE</button>
+    <div style={{background:"var(--bg)", minHeight:"100vh"}}>
+      {/* Sticky back bar */}
+      <div style={{
+        position:"sticky", top:0, zIndex:100,
+        background:"var(--bg)", borderBottom:"1px solid var(--line)",
+        padding:"12px 16px", display:"flex", alignItems:"center", gap:12,
+      }}>
+        <button onClick={onClose} style={{
+          background:"var(--bg3)", border:"1px solid var(--line2)",
+          borderRadius:10, width:36, height:36, display:"flex",
+          alignItems:"center", justifyContent:"center",
+          fontSize:18, cursor:"pointer", flexShrink:0, color:"var(--ink)", fontWeight:700,
+        }}>←</button>
+        <div style={{
+          fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800,
+          letterSpacing:"-.3px", color:"var(--ink)", flex:1,
+        }}>{title}</div>
+      </div>
+      <div style={{padding:"20px 16px 100px", maxWidth:600, margin:"0 auto"}}>
         {children}
       </div>
     </div>
@@ -1514,48 +1491,29 @@ function Registration({ type, clubs, onReg, back }) {
 
       {/* ── PLATFORM TERMS MODAL ── */}
       {termsOpen && (
-        <div className="mover" onClick={() => setTermsOpen(false)}>
-          <div className="modal" style={{maxWidth:660, maxHeight:"88vh"}} onClick={e => e.stopPropagation()}>
-            <button className="mclose" onClick={() => setTermsOpen(false)}>✕</button>
-            <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:6}}>
-              <div style={{width:42, height:42, background:"var(--acc2)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0}}>📋</div>
-              <div>
-                <div className="modal-title" style={{marginBottom:0, fontSize:20}}>Terms & Conditions</div>
-                <div style={{fontSize:12, color:"var(--mid)"}}>CLUBBB Platform — Club Registration Agreement</div>
-              </div>
-            </div>
-            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
-            <div style={{overflowY:"auto", maxHeight:"54vh", paddingRight:8, fontSize:12, lineHeight:1.75, color:"var(--ink2)", fontFamily:"'Plus Jakarta Sans',sans-serif", whiteSpace:"pre-wrap"}}>{CLUBBB_TERMS}</div>
-            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
-            <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
-              <button className="btn out sm" style={{flex:1}} onClick={() => setTermsOpen(false)}>Close</button>
-              <button className="btn gold sm" style={{flex:2}} onClick={() => { setAccepted(true); setTermsOpen(false); }}>✓ I Accept These Terms</button>
-            </div>
+        <div style={{background:"var(--bg)",border:"1px solid var(--line)",borderRadius:"var(--r-lg)",padding:20,marginTop:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800}}>Terms & Conditions</div>
+            <button onClick={() => setTermsOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--mid)"}}>✕</button>
+          </div>
+          <div style={{maxHeight:300,overflowY:"auto",fontSize:12,lineHeight:1.75,color:"var(--ink2)",whiteSpace:"pre-wrap",marginBottom:16,paddingRight:8}}>{CLUBBB_TERMS}</div>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn out sm" style={{flex:1}} onClick={() => setTermsOpen(false)}>Close</button>
+            <button className="btn gold sm" style={{flex:2}} onClick={() => { setAccepted(true); setTermsOpen(false); }}>✓ I Accept These Terms</button>
           </div>
         </div>
       )}
 
-      {/* ── CLUB TERMS MODAL ── */}
       {clubTermsOpen && selectedClub && (
-        <div className="mover" onClick={() => setClubTermsOpen(false)}>
-          <div className="modal" style={{maxWidth:620, maxHeight:"88vh"}} onClick={e => e.stopPropagation()}>
-            <button className="mclose" onClick={() => setClubTermsOpen(false)}>✕</button>
-            <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:6}}>
-              <div style={{width:42, height:42, background:"var(--acc2)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:16, color:"#0a0a0a", flexShrink:0}}>
-                {selectedClub.name.slice(0,2).toUpperCase()}
-              </div>
-              <div>
-                <div className="modal-title" style={{marginBottom:0, fontSize:20}}>{selectedClub.name}</div>
-                <div style={{fontSize:12, color:"var(--mid)"}}>Club Terms & Conditions — Member Agreement</div>
-              </div>
-            </div>
-            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
-            <div style={{overflowY:"auto", maxHeight:"52vh", paddingRight:8, fontSize:13, lineHeight:1.75, color:"var(--ink2)", fontFamily:"'Plus Jakarta Sans',sans-serif", whiteSpace:"pre-wrap"}}>{selectedClub.terms}</div>
-            <div style={{height:1, background:"var(--line)", margin:"16px 0"}} />
-            <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
-              <button className="btn out sm" style={{flex:1}} onClick={() => setClubTermsOpen(false)}>Close</button>
-              <button className="btn gold sm" style={{flex:2}} onClick={() => { setClubAccepted(true); setClubTermsOpen(false); }}>✓ I Accept {selectedClub.name}'s Terms</button>
-            </div>
+        <div style={{background:"var(--bg)",border:"1px solid var(--line)",borderRadius:"var(--r-lg)",padding:20,marginTop:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800}}>{selectedClub.name} — Terms</div>
+            <button onClick={() => setClubTermsOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--mid)"}}>✕</button>
+          </div>
+          <div style={{maxHeight:300,overflowY:"auto",fontSize:13,lineHeight:1.75,color:"var(--ink2)",whiteSpace:"pre-wrap",marginBottom:16,paddingRight:8}}>{selectedClub.terms}</div>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn out sm" style={{flex:1}} onClick={() => setClubTermsOpen(false)}>Close</button>
+            <button className="btn gold sm" style={{flex:2}} onClick={() => { setClubAccepted(true); setClubTermsOpen(false); }}>✓ I Accept {selectedClub.name}'s Terms</button>
           </div>
         </div>
       )}
@@ -3056,7 +3014,35 @@ function AppAdmin({ state, upd, showToast }) {
 
 /* ─── AD DETAIL MODAL ───────────────────────────────────────── */
 function AdDetail({ ad, onClose }) {
-  const isMob = window.innerWidth <= 768;
+  return (
+    <div style={{background:"var(--bg)", minHeight:"100vh"}}>
+      <div style={{position:"sticky",top:0,zIndex:100,background:"var(--bg)",borderBottom:"1px solid var(--line)",padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+        <button onClick={onClose} style={{background:"var(--bg3)",border:"1px solid var(--line2)",borderRadius:10,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer",color:"var(--ink)",fontWeight:700}}>←</button>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:800,color:"var(--ink)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.title}</div>
+      </div>
+      {ad.thumbnail
+        ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",height:220,objectFit:"cover",display:"block"}} />
+        : <div style={{width:"100%",height:140,background:"var(--bg3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:64}}>{ad.icon}</div>
+      }
+      <div style={{padding:"20px 16px 100px",maxWidth:600,margin:"0 auto"}}>
+        {ad.featured && <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--acc2)",color:"#0a0a0a",fontSize:9,fontWeight:800,letterSpacing:2,textTransform:"uppercase",padding:"3px 10px",marginBottom:14,borderRadius:4}}>⭐ FEATURED OFFER</div>}
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:3,textTransform:"uppercase",color:"var(--acc)",marginBottom:8}}>{ad.category||"Offer"}</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:24,fontWeight:800,letterSpacing:-1,color:"var(--ink)",lineHeight:1.1,marginBottom:12}}>{ad.title}</div>
+        <div style={{fontSize:15,color:"var(--ink3)",lineHeight:1.7,marginBottom:20,paddingBottom:20,borderBottom:"1px solid var(--line)"}}>{ad.desc||ad.description}</div>
+        {ad.details && (
+          <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.9,whiteSpace:"pre-line",marginBottom:24,background:"var(--bg2)",padding:16,borderRadius:12,border:"1px solid var(--line)"}}>{ad.details}</div>
+        )}
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          {ad.link
+            ? <a href={safeUrl(ad.link)} target="_blank" rel="noreferrer noopener" className="btn gold" style={{textDecoration:"none",flex:1,justifyContent:"center"}}>VISIT OFFER PAGE →</a>
+            : <span style={{fontSize:12,color:"var(--mid)"}}>Contact the advertiser for more information.</span>
+          }
+          <button className="btn out" onClick={onClose} style={{flex:1}}>← BACK</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   if (isMob) {
     return (
@@ -3121,48 +3107,7 @@ function AdDetail({ ad, onClose }) {
     );
   }
 
-  // Desktop
-  return (
-    <div className="ad-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ad-modal">
-        <button className="ad-modal-close" onClick={onClose}>✕</button>
-        {ad.thumbnail
-          ? <img src={ad.thumbnail} alt={ad.title} className="ad-modal-thumb" />
-          : <div className="ad-modal-thumb-ph"><span style={{position:"relative", zIndex:1}}>{ad.icon}</span></div>
-        }
-        <div className="ad-modal-content">
-          {ad.featured && (
-            <div style={{display:"inline-flex", alignItems:"center", gap:6, background:"var(--acc2)", color:"var(--ink)", fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", padding:"3px 10px", marginBottom:14}}>
-              ⭐ FEATURED OFFER
-            </div>
-          )}
-          <div className="ad-modal-cat">
-            <span style={{width:14, height:2, background:"var(--acc3)", display:"inline-block"}} />
-            {ad.category || "Promotion"}
-          </div>
-          <div className="ad-modal-title">{ad.title}</div>
-          <div className="ad-modal-desc">{ad.desc}</div>
-          {ad.details && (
-            <>
-              <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--acc2)", marginBottom:12, display:"flex", alignItems:"center", gap:8}}>
-                <span style={{width:16, height:2, background:"var(--acc2)", display:"inline-block"}} />
-                Offer Details
-              </div>
-              <div className="ad-modal-details">{ad.details}</div>
-            </>
-          )}
-          <div className="ad-modal-actions">
-            {ad.link
-              ? <a href={safeUrl(ad.link)} target="_blank" rel="noreferrer noopener" className="btn gold sm" style={{textDecoration:"none"}}>VISIT OFFER PAGE →</a>
-              : <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, color:"var(--mid)"}}>Contact the advertiser for more information.</span>
-            }
-            <button className="btn out sm" onClick={onClose}>CLOSE</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 /* ─── MARKETPLACE ───────────────────────────────────────────── */
 function Marketplace({ state }) {
