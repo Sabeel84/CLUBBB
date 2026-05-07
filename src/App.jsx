@@ -2008,8 +2008,8 @@ function MemberRow({ u, cu, myRanks, clubRanks, promos, us, upd, showToast, getR
         </div>
       </div>
 
-      {/* Rank + Role selectors */}
-      {u.id !== cu.id && (
+      {/* Rank + Role selectors — show for everyone except yourself, or if you're app_admin */}
+      {(u.id !== cu.id || cu.role === "app_admin") && (
         <div style={{display:"flex", gap:12, alignItems:"flex-end", flexShrink:0, flexWrap:"wrap"}}>
           <div style={{display:"flex", flexDirection:"column", gap:4}}>
             <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>RANK</div>
@@ -2079,7 +2079,12 @@ function MemberRow({ u, cu, myRanks, clubRanks, promos, us, upd, showToast, getR
           <button className="btn out-red xs" onClick={() => { if (!window.confirm(`PERMANENTLY DELETE "${u.name}"? Cannot be undone.`)) return; upd({ users: us.filter(x => x.id !== u.id) }); showToast(`${u.name} deleted`); }}>🗑 DELETE</button>
         </div>
       )}
-      {u.id === cu.id && <span style={{fontSize:11, color:"var(--mid3)", fontStyle:"italic"}}>— YOU —</span>}
+      {u.id === cu.id && (
+        <div style={{textAlign:"right"}}>
+          <span style={{fontSize:11, color:"var(--mid3)", fontStyle:"italic"}}>— YOU —</span>
+          <div style={{fontSize:10, color:"var(--mid3)", marginTop:3}}>Ask App Admin to change your rank</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3110,8 +3115,36 @@ function AppAdmin({ state, upd, showToast }) {
                   <div style={{fontSize:12, color:"var(--mid)", marginTop:2}}>{u.email} · {u.phone}</div>
                   <div style={{display:"flex", gap:6, flexWrap:"wrap", marginTop:6}}>
                     <RankBadge rankId={u.rankId} clubRanks={clubRanks} clubId={u.clubId} />
-                    <span className={`bdg ${u.role === "admin" ? "r" : u.role === "marshal" ? "o" : u.role === "support" ? "s" : "d"}`}>{(u.role||"member").toUpperCase()}</span>
+                    <span className={`bdg ${u.role === "admin" ? "r" : u.role === "marshal" ? "o" : "d"}`}>{(u.role||"member").toUpperCase()}</span>
                     {cl && <span className="bdg d">🏴 {cl.name}</span>}
+                  </div>
+                  {/* Rank + Role inline editors for App Admin */}
+                  <div style={{display:"flex", gap:8, marginTop:10, flexWrap:"wrap"}}>
+                    <select className="fi fi-sel" style={{width:"auto", fontSize:11, padding:"5px 28px 5px 10px", minWidth:120}}
+                      value={u.rankId}
+                      onChange={e => {
+                        const nId = Number(e.target.value);
+                        upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
+                        showToast("Rank updated");
+                      }}>
+                      {(getClubRanks(clubRanks, u.clubId)||DEFAULT_RANKS).map(r => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                    <select className="fi fi-sel" style={{width:"auto", fontSize:11, padding:"5px 28px 5px 10px", minWidth:110}}
+                      value={u.role || "member"}
+                      onChange={e => {
+                        const newRole = e.target.value;
+                        const ALLOWED = ["member","marshal","admin"];
+                        if (!ALLOWED.includes(newRole)) return;
+                        if (!window.confirm(`Change ${u.name}'s role to ${newRole.toUpperCase()}?`)) return;
+                        upd({ users: us.map(x => x.id === u.id ? {...x, role:newRole} : x) });
+                        showToast(`${u.name} → ${newRole.toUpperCase()}`);
+                      }}>
+                      <option value="member">👤 Member</option>
+                      <option value="marshal">🏴 Marshal</option>
+                      <option value="admin">⚙️ Admin</option>
+                    </select>
                   </div>
                 </div>
                 {/* Actions */}
