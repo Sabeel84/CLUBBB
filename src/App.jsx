@@ -473,7 +473,140 @@ a{color:var(--acc);text-decoration:none}
 .urow{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:8px;flex-wrap:wrap}
 .waitbdg{background:var(--orange-pale);color:var(--orange);border:1px solid rgba(234,88,12,.2);padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;text-transform:uppercase}
 `;
-function fmtDate(d)       { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
+function fmtDate(d) { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
+function fmtTime(t) { if (!t) return null; const [h,m]=t.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; }
+
+/* ═══ SUPABASE REST CLIENT ════════════════════════════════════ */
+const SB = {
+  headers: () => ({
+    "apikey": SUPA_KEY,
+    "Authorization": `Bearer ${SUPA_KEY}`,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation",
+  }),
+  get: async (table, query="") => {
+    if (!SUPA_URL || !SUPA_KEY) return [];
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { headers: SB.headers() });
+      if (!res.ok) { console.warn(`[SB] GET ${table} failed`, res.status); return []; }
+      return await res.json();
+    } catch(e) { console.warn(`[SB] GET ${table}`, e); return []; }
+  },
+  upsert: async (table, data) => {
+    if (!SUPA_URL || !SUPA_KEY) return null;
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: { ...SB.headers(), "Prefer": "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { console.error(`[SB] UPSERT ${table} failed ${res.status}`); return null; }
+      const json = await res.json();
+      return Array.isArray(json) ? json[0] : json;
+    } catch(e) { console.error(`[SB] UPSERT ${table}`, e); return null; }
+  },
+  patch: async (table, match, data) => {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    try {
+      const query = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join("&");
+      await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method:"PATCH", headers:SB.headers(), body:JSON.stringify(data) });
+    } catch(e) { console.error(`[SB] PATCH ${table}`, e); }
+  },
+  del: async (table, match) => {
+    if (!SUPA_URL || !SUPA_KEY) return;
+    try {
+      const query = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join("&");
+      await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method:"DELETE", headers:SB.headers() });
+    } catch(e) { console.error(`[SB] DELETE ${table}`, e); }
+  },
+};
+
+/* ═══ ROW MAPPERS ════════════════════════════════════════════ */
+function dbToUser(r) {
+  return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", role:r.role,
+           rankId:r.rank_id||1, clubId:r.club_id||null, drives:r.drives_count||0,
+           passwordHash:r.password_hash||"", suspended:r.suspended||false, emailVerified:r.email_verified||false };
+}
+function userToDb(u) {
+  return { id:u.id, name:sanitize(u.name), email:(u.email||"").toLowerCase().trim(), phone:sanitize(u.phone)||"",
+           role:u.role, rank_id:u.rankId||1, club_id:u.clubId||null, drives_count:u.drives||0,
+           password_hash:u.passwordHash||"", suspended:u.suspended||false, email_verified:u.emailVerified||false };
+}
+function dbToClub(r) {
+  return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", adminId:r.admin_id,
+           logo:r.logo||"", banner:r.banner||"", description:r.description||"", terms:r.terms||"" };
+}
+function clubToDb(c) {
+  return { id:c.id, name:sanitize(c.name), email:(c.email||"").toLowerCase().trim(), phone:sanitize(c.phone)||"",
+           admin_id:c.adminId||null, logo:c.logo||"", banner:c.banner||"", description:c.description||"", terms:c.terms||"" };
+}
+function dbToDrive(r, regs=[]) {
+  return { id:r.id, clubId:r.club_id, postedBy:r.posted_by, title:r.title,
+           description:r.description||"", location:r.location||"", coordinates:r.coordinates||"",
+           mapLink:r.map_link||"", date:r.date||"", startTime:r.start_time||"",
+           requiredRankId:r.required_rank_id||1, capacity:r.capacity||10,
+           image:r.image||"", attendanceRecorded:r.attendance_recorded||false,
+           registrations: regs.filter(x=>x.drive_id===r.id).map(x=>({userId:x.user_id, status:x.status, attended:x.attended||false})) };
+}
+function driveToDB(d) {
+  const row = { club_id:d.clubId, posted_by:d.postedBy||null, title:d.title,
+                description:d.description||"", location:d.location||"", coordinates:d.coordinates||"",
+                map_link:d.mapLink||"", date:d.date||null, start_time:d.startTime||null,
+                required_rank_id:Number(d.requiredRankId)||1, capacity:Number(d.capacity)||10,
+                attendance_recorded:d.attendanceRecorded||false };
+  if (d.id && typeof d.id==="number" && d.id < 2000000000) row.id = d.id;
+  return row;
+}
+
+/* ═══ PERSISTENCE ════════════════════════════════════════════ */
+const STORAGE_KEY = "clubbb_state_v1";
+
+async function loadRemoteState() {
+  if (!SUPA_URL || !SUPA_KEY) return null;
+  try {
+    const [users, clubs, drives, regs, ads] = await Promise.all([
+      SB.get("users", "select=*&order=created_at.asc"),
+      SB.get("clubs", "select=*&order=created_at.asc"),
+      SB.get("drives", "select=id,club_id,posted_by,title,description,location,coordinates,map_link,date,start_time,required_rank_id,capacity,attendance_recorded,created_at&order=date.desc"),
+      SB.get("drive_registrations", "select=*"),
+      SB.get("ads", "select=*&active=eq.true&order=created_at.desc"),
+    ]);
+    return {
+      users:  users.map(dbToUser),
+      clubs:  clubs.map(dbToClub),
+      drives: drives.map(d => dbToDrive(d, regs)),
+      ads:    ads.map(a => ({...a, desc: a.description||""})),
+    };
+  } catch(e) { console.warn("[CLUBBB] loadRemoteState error:", e); return null; }
+}
+
+function loadLocalState() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function saveLocalState(state) {
+  try {
+    const {liveTrack, ...rest} = state;
+    const safe = {...rest, users: (rest.users||[]).map(u => { const {passwordHash,...ur}=u; return ur; })};
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
+  } catch(e) {}
+}
+
+/* ═══ DEFAULT RANKS & STATE ══════════════════════════════════ */
+const DEFAULT_RANKS = [
+  {id:1, name:"Newbie",       color:"#5b8a9e", level:1},
+  {id:2, name:"Dune Rider",   color:"#9a7b20", level:2},
+  {id:3, name:"Desert Fox",   color:"#c45c1a", level:3},
+  {id:4, name:"Sand Master",  color:"#7b3bb5", level:4},
+  {id:5, name:"Dune Legend",  color:"#1a6b3c", level:5},
+];
+
+const BLANK_STATE = {
+  page:"home", currentUser:null, clubRanks:{},
+  users:[], clubs:[], drives:[], promos:[], chat:{},
+  checklists:{}, ratings:{}, sos:[], liveTrack:{}, ads:[],
+};
+
+const INIT = { ...BLANK_STATE, ...(loadLocalState() || {}), liveTrack:{} };
 
 
 
