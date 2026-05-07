@@ -2277,54 +2277,58 @@ function ClubAdmin({ state, upd, showToast }) {
                 </div>
               </div>
 
-              {/* Rank selector */}
+              {/* Rank + Role selectors — same row with labels */}
               {u.id !== cu.id && (
-                <select
-                  className="fi fi-sel"
-                  style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:130, flexShrink:0}}
-                  value={u.rankId}
-                  onChange={e => {
-                    const nId   = Number(e.target.value);
-                    const nRank = getRank(nId, clubRanks, cu.clubId);
-                    if (nRank && nRank.level >= 4) {
-                      if (promos.find(p => p.userId === u.id && p.status === "voting")) { showToast("Promotion already pending"); return; }
-                      upd({ promos: [...promos, {id:Date.now(), userId:u.id, rankId:nId, role:"marshal", clubId:cu.clubId, by:cu.id, status:"voting", votes:[], date:new Date().toISOString().split("T")[0]}] });
-                      showToast("Promotion request created — awaiting 2 marshal votes");
-                    } else {
-                      upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
-                      showToast("Rank updated!");
-                    }
-                  }}
-                >
-                  {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              )}
+                <div style={{display:"flex", gap:12, alignItems:"flex-end", flexShrink:0, flexWrap:"wrap"}}>
 
-              {/* Role selector */}
-              {u.id !== cu.id && (
-                <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
-                  <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginBottom:2}}>Role</div>
-                  <select
-                    className="fi fi-sel"
-                    style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:120, flexShrink:0,
-                      borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : "var(--line2)",
-                      color: u.role==="admin" ? "var(--red)" : u.role==="marshal" ? "var(--orange)" : u.role==="support" ? "var(--blue)" : "var(--ink)"
-                    }}
-                    value={u.role || "member"}
-                    onChange={e => {
-                      const newRole = e.target.value;
-                      // Whitelist — club admins can ONLY set these roles, never app_admin
-                      const ALLOWED = ["member","marshal","admin"];
-                      if (!ALLOWED.includes(newRole)) { showToast("Invalid role"); return; }
-                      if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
-                      upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
-                      showToast(`${u.name} is now ${newRole.toUpperCase()}`);
-                    }}
-                  >
-                    <option value="member">👤 Member</option>
-                    <option value="marshal">🏴 Marshal</option>
-                    <option value="admin">⚙️ Admin</option>
-                  </select>
+                  {/* Rank */}
+                  <div style={{display:"flex", flexDirection:"column", gap:4}}>
+                    <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>RANK</div>
+                    <select
+                      className="fi fi-sel"
+                      style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:130, flexShrink:0}}
+                      value={u.rankId}
+                      onChange={e => {
+                        const nId   = Number(e.target.value);
+                        const nRank = getRank(nId, clubRanks, cu.clubId);
+                        if (nRank && nRank.level >= 4) {
+                          if (promos.find(p => p.userId === u.id && p.status === "voting")) { showToast("Promotion already pending"); return; }
+                          upd({ promos: [...promos, {id:Date.now(), userId:u.id, rankId:nId, role:"marshal", clubId:cu.clubId, by:cu.id, status:"voting", votes:[], date:new Date().toISOString().split("T")[0]}] });
+                          showToast("Promotion request created — awaiting 2 marshal votes");
+                        } else {
+                          upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
+                          showToast("Rank updated!");
+                        }
+                      }}
+                    >
+                      {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Role */}
+                  <div style={{display:"flex", flexDirection:"column", gap:4}}>
+                    <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>ROLE</div>
+                    <select
+                      className="fi fi-sel"
+                      style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:120, flexShrink:0,
+                        borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : "var(--line2)",
+                        color: u.role==="admin" ? "var(--red)" : u.role==="marshal" ? "var(--orange)" : "var(--ink)"
+                      }}
+                      value={u.role || "member"}
+                      onChange={e => {
+                        const newRole = e.target.value;
+                        const ALLOWED = ["member","marshal","admin"];
+                        if (!ALLOWED.includes(newRole)) { showToast("Invalid role"); return; }
+                        if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
+                        upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
+                        showToast(`${u.name} is now ${newRole.toUpperCase()}`);
+                      }}
+                    >
+                      <option value="member">👤 Member</option>
+                      <option value="marshal">🏴 Marshal</option>
+                      <option value="admin">⚙️ Admin</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
