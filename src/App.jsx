@@ -328,7 +328,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .dcard{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:0;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--sh-sm);transition:box-shadow .2s}
 .dcard-accent{position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--acc3),var(--acc2) 55%,var(--acc));z-index:2;pointer-events:none}
 .dcard-inner{padding:16px 16px 14px 20px;width:100%;box-sizing:border-box}
-.dcard-img{width:100%;height:180px;object-fit:cover;display:block;border-radius:20px 20px 0 0}
+.dcard-img{width:100%;height:auto;max-height:260px;min-height:140px;object-fit:cover;display:block;border-radius:20px 20px 0 0;aspect-ratio:16/9}
 .dcard-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.3px;color:var(--ink);line-height:1.3;margin-bottom:4px;display:block;width:100%;word-break:break-word;overflow-wrap:anywhere}
 .dcard-desc{font-size:13px;color:var(--mid);line-height:1.55;margin-bottom:10px;word-break:break-word}
 .dcard-badges{display:flex;flex-wrap:wrap;gap:4px 6px;margin-bottom:8px;align-items:center}
@@ -423,7 +423,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .upl-icon{font-size:28px}
 .upl-label{font-size:13px;font-weight:700;color:var(--mid)}
 .upl-sub{font-size:11px;color:var(--mid3)}
-.img-preview{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.img-preview{width:100%;height:100%;object-fit:contain;background:var(--bg3);position:absolute;inset:0;border-radius:var(--r-lg)}
 .img-preview-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:12px;font-weight:700;color:#fff;border-radius:var(--r-lg)}
 .img-upload-zone:hover .img-preview-overlay{opacity:1}
 
@@ -458,7 +458,7 @@ body{background:var(--off);color:var(--ink);font-family:'Plus Jakarta Sans',sans
 .clubs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
 .club-tile{background:var(--bg);border:1px solid var(--line);border-radius:20px;position:relative;overflow:hidden;transition:all .22s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-sm)}
 .club-tile:hover{box-shadow:var(--sh-md);transform:translateY(-4px)}
-.club-tile-banner{width:100%;height:110px;object-fit:cover;display:block;flex-shrink:0}
+.club-tile-banner{width:100%;height:130px;object-fit:cover;object-position:center;display:block;flex-shrink:0}
 .club-tile-placeholder{width:100%;height:90px;flex-shrink:0;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
 .club-tile-placeholder::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(255,255,255,.5) 100%)}
 .club-tile-body{padding:14px 14px 16px;flex:1;display:flex;flex-direction:column;gap:6px;position:relative}
@@ -2106,12 +2106,12 @@ function ClubAdmin({ state, upd, showToast }) {
             <div className="card-label">Club Branding</div>
             <div className="fg">
               <label className="fl">Club Banner</label>
-              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={180} label="Upload Banner Image" hint="1200×400px recommended · Max 5MB" />
+              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={220} label="Upload Banner Image" hint="Wide landscape image recommended · Max 10MB" />
             </div>
             <div className="g2" style={{marginTop:8}}>
               <div className="fg">
                 <label className="fl">Club Logo</label>
-                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={130} label="Upload Logo" hint="Square image preferred" />
+                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={160} label="Upload Logo" hint="Square image recommended · Max 10MB" />
               </div>
               <div className="fg">
                 <label className="fl">Club Description</label>
