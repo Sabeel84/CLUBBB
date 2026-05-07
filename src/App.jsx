@@ -555,7 +555,44 @@ function driveToDB(d) {
                 required_rank_id:Number(d.requiredRankId)||1, capacity:Number(d.capacity)||10,
                 attendance_recorded:d.attendanceRecorded||false };
   if (d.id && typeof d.id==="number" && d.id < 2000000000) row.id = d.id;
+  // Store image URL if it's a remote URL (not base64)
+  if (d.image && d.image.startsWith("http")) row.image = d.image;
   return row;
+}
+
+/* ── Upload base64 image to Supabase Storage, return public URL ── */
+async function uploadImageToStorage(base64DataUrl, bucket, path) {
+  if (!SUPA_URL || !SUPA_KEY || !base64DataUrl) return null;
+  try {
+    // Convert base64 to blob
+    const res     = await fetch(base64DataUrl);
+    const blob    = await res.blob();
+    const ext     = blob.type.includes("png") ? "png" : "jpg";
+    const filePath = `${path}_${Date.now()}.${ext}`;
+
+    const uploadRes = await fetch(
+      `${SUPA_URL}/storage/v1/object/${bucket}/${filePath}`,
+      {
+        method: "POST",
+        headers: {
+          "apikey":        SUPA_KEY,
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "Content-Type":  blob.type,
+          "x-upsert":      "true",
+        },
+        body: blob,
+      }
+    );
+    if (!uploadRes.ok) {
+      console.error("[SB Storage] Upload failed:", uploadRes.status, await uploadRes.text());
+      return null;
+    }
+    // Return public URL
+    return `${SUPA_URL}/storage/v1/object/public/${bucket}/${filePath}`;
+  } catch(e) {
+    console.error("[SB Storage] Upload error:", e);
+    return null;
+  }
 }
 
 /* ═══ PERSISTENCE ════════════════════════════════════════════ */
@@ -567,7 +604,7 @@ async function loadRemoteState() {
     const [users, clubs, drives, regs, ads] = await Promise.all([
       SB.get("users", "select=*&order=created_at.asc"),
       SB.get("clubs", "select=*&order=created_at.asc"),
-      SB.get("drives", "select=id,club_id,posted_by,title,description,location,coordinates,map_link,date,start_time,required_rank_id,capacity,attendance_recorded,created_at&order=date.desc"),
+      SB.get("drives", "select=id,club_id,posted_by,title,description,location,coordinates,map_link,date,start_time,required_rank_id,capacity,attendance_recorded,image,created_at&order=date.desc"),
       SB.get("drive_registrations", "select=*"),
       SB.get("ads", "select=*&active=eq.true&order=created_at.desc"),
     ]);
@@ -1655,6 +1692,13 @@ function Drives({ state, upd, showToast, pushNotif }) {
           ranks={myRanks}
           onClose={() => setCreate(false)}
           onSave={async d => {
+            // Upload image to Supabase Storage if present
+            let imageUrl = null;
+            if (d.image && d.image.startsWith("data:")) {
+              showToast("⏫ Uploading image...");
+              imageUrl = await uploadImageToStorage(d.image, "drives", `drive_${cu.clubId}`);
+            }
+
             const row = {
               club_id:             cu.clubId,
               posted_by:           cu.id,
@@ -1668,6 +1712,7 @@ function Drives({ state, upd, showToast, pushNotif }) {
               required_rank_id:    Number(d.requiredRankId) || 1,
               capacity:            Number(d.capacity) || 10,
               attendance_recorded: false,
+              ...(imageUrl ? { image: imageUrl } : {}),
             };
             let realId = null;
             try {
@@ -1683,11 +1728,12 @@ function Drives({ state, upd, showToast, pushNotif }) {
               }
             } catch(e) { console.error("[DRIVE SAVE] exception:", e); }
 
-            const newDrive = { ...d, id: realId || Date.now(), clubId: cu.clubId, postedBy: cu.id, registrations: [], attendanceRecorded: false };
-            // Update local state directly via setS passed through context
+            // Use remote URL if uploaded, otherwise keep base64 for this session
+            const newDrive = { ...d, id: realId || Date.now(), clubId: cu.clubId, postedBy: cu.id,
+                               image: imageUrl || d.image || "", registrations: [], attendanceRecorded: false };
             setCreate(false);
             upd({ drives: [...ds, newDrive] });
-            showToast(realId ? "🚙 Drive posted!" : "⚠️ Saved locally — check console for Supabase error");
+            showToast(realId ? "🚙 Drive posted!" : "⚠️ Saved locally — check console");
             pushNotif && pushNotif({ type:"drive", title:"🚙 New Drive Posted", body:`${newDrive.title} — ${newDrive.location}` });
             notifyDrivePosted({ club_id: cu.clubId, title: newDrive.title, location: newDrive.location, date: newDrive.date, start_time: newDrive.startTime||"", description: newDrive.description||"", required_rank_id: newDrive.requiredRankId||1 }).catch(()=>{});
           }}
