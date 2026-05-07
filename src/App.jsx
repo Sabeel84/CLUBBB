@@ -608,6 +608,20 @@ const BLANK_STATE = {
 
 const INIT = { ...BLANK_STATE, ...(loadLocalState() || {}), liveTrack:{} };
 
+/* ═══ UTILITY FUNCTIONS ══════════════════════════════════════ */
+function getClubRanks(clubRanks, clubId) {
+  if (clubRanks && clubId != null && clubRanks[clubId]) return clubRanks[clubId];
+  return DEFAULT_RANKS;
+}
+function getRank(rankId, clubRanks, clubId) {
+  const list = getClubRanks(clubRanks, clubId);
+  return list.find(r => r.id === rankId) || list[0] || DEFAULT_RANKS[0];
+}
+function getUser(us, id)  { return us ? us.find(u => u.id === id)  : null; }
+function getClub(cs, id)  { return cs ? cs.find(c => c.id === id)  : null; }
+
+/* ═══ CLUB TIER SYSTEM ═══════════════════════════════════════ */
+
 
 
 /* ─── URL SANITIZER ─────────────────────────────────────────
