@@ -1915,7 +1915,15 @@ function MemberRow({ u, cu, myRanks, clubRanks, promos, us, upd, showToast, getR
                 const nRank = getRank(nId, clubRanks, cu.clubId);
                 if (nRank && nRank.level >= 4) {
                   if (promos.find(p => p.userId === u.id && p.status === "voting")) { showToast("Promotion already pending"); return; }
-                  upd({ promos: [...promos, {id:Date.now(), userId:u.id, rankId:nId, role:"marshal", clubId:cu.clubId, by:cu.id, status:"voting", votes:[], date:new Date().toISOString().split("T")[0]}] });
+                  // Save promotion request to Supabase
+                  SB.upsert("promotion_requests", {
+                    club_id:    cu.clubId,
+                    user_id:    u.id,
+                    rank_id:    nId,
+                    status:     "voting",
+                    votes:      [],
+                    created_by: cu.id,
+                  }).catch(e => console.error("[SB] promo request:", e));
                   showToast("Promotion request created — awaiting 2 marshal votes");
                 } else {
                   upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
@@ -2282,65 +2290,105 @@ function ClubAdmin({ state, upd, showToast }) {
       )}
 
       {/* ── PROMOTIONS TAB ── */}
-      {tab === "promotions" && (
-        <div>
-          <div className="ibox" style={{marginBottom:24}}>
-            Two active marshals must vote YES before you can finalize a promotion.
-          </div>
-          {myPromos.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No pending promotion requests.</div>}
-          {myPromos.map(req => {
-            const target = getUser(us, req.userId);
-            const yes    = req.votes.filter(v => v.vote === "yes").length;
-            const no     = req.votes.filter(v => v.vote === "no").length;
-            return (
-              <div key={req.id} className="vcard">
-                <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12}}>
-                  <div>
-                    <div className="vcard-name">{target ? target.name : "Unknown"}</div>
-                    <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginTop:4}}>
-                      <span style={{fontSize:12, color:"var(--mid)"}}>Promote to:</span>
-                      <RankBadge rankId={req.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
+      {tab === "promotions" && (() => {
+        const [promoReqs, setPromoReqs] = useState([]);
+        const [promoLoading, setPromoLoading] = useState(true);
+
+        useEffect(() => {
+          if (!SUPA_URL || !SUPA_KEY) { setPromoLoading(false); return; }
+          SB.get("promotion_requests", `club_id=eq.${cu.clubId}&order=created_at.desc`)
+            .then(rows => { setPromoReqs(rows || []); setPromoLoading(false); });
+        }, []);
+
+        return (
+          <div>
+            <div className="ibox" style={{marginBottom:24}}>
+              Two active marshals must vote YES before you can finalize a promotion.
+            </div>
+            {promoLoading && <div style={{color:"var(--mid)", fontSize:14}}>Loading...</div>}
+            {!promoLoading && promoReqs.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No pending promotion requests.</div>}
+            {promoReqs.map(req => {
+              const target = getUser(us, req.user_id);
+              const votes  = req.votes || [];
+              const yes    = votes.filter(v => v.vote === "yes").length;
+              const no     = votes.filter(v => v.vote === "no").length;
+              return (
+                <div key={req.id} className="vcard">
+                  <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12}}>
+                    <div>
+                      <div className="vcard-name">{target ? target.name : "Unknown"}</div>
+                      <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginTop:4}}>
+                        <span style={{fontSize:12, color:"var(--mid)"}}>Promote to:</span>
+                        <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
+                      </div>
                     </div>
+                    <span className={`bdg ${req.status==="approved" ? "g" : req.status==="rejected" ? "r" : "o"}`}>
+                      {req.status.toUpperCase()}
+                    </span>
                   </div>
-                  <span className={`bdg ${req.status === "approved" ? "g" : "o"}`}>{req.status.toUpperCase()}</span>
-                </div>
-                <div style={{display:"flex", gap:24, marginBottom:12}}>
-                  <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
-                  <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
-                </div>
-                {req.votes.map(v => {
-                  const vtr = getUser(us, v.voterId);
-                  return (
-                    <div key={v.voterId} style={{fontSize:12, color:"var(--mid)", marginBottom:3}}>
-                      <strong style={{color:"var(--ink2)"}}>{vtr ? vtr.name : "Unknown"}</strong>:{" "}
-                      <span style={{color: v.vote === "yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
+                  <div style={{display:"flex", gap:24, marginBottom:12}}>
+                    <div style={{fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
+                    <div style={{fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
+                  </div>
+                  {votes.map((v, i) => (
+                    <div key={i} style={{fontSize:12, color:"var(--mid)", marginBottom:3}}>
+                      <strong style={{color:"var(--ink2)"}}>{v.voterName || "Marshal"}</strong>:{" "}
+                      <span style={{color: v.vote==="yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
                       {v.comment && ` — ${v.comment}`}
                     </div>
-                  );
-                })}
-                {req.status === "voting" && yes >= 2 && (
-                  <button className="btn gold sm" style={{marginTop:14}} onClick={() => {
-                    upd({
-                      users:  us.map(u => u.id === req.userId ? {...u, rankId:req.rankId, role:"marshal"} : u),
-                      promos: promos.map(p => p.id === req.id ? {...p, status:"approved"} : p),
-                    });
-                    showToast("Member promoted to Marshal!");
-                  }}>FINALIZE PROMOTION TO MARSHAL</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  ))}
+                  {req.status === "voting" && yes >= 2 && (
+                    <button className="btn gold sm" style={{marginTop:14}} onClick={async () => {
+                      // Update user rank + role
+                      upd({ users: us.map(u => u.id === req.user_id ? {...u, rankId:req.rank_id, role:"marshal"} : u) });
+                      // Mark approved in Supabase
+                      await SB.patch("promotion_requests", { id: req.id }, { status: "approved" });
+                      setPromoReqs(r => r.map(x => x.id === req.id ? {...x, status:"approved"} : x));
+                      showToast("🎖️ Member promoted to Marshal!");
+                    }}>FINALIZE PROMOTION TO MARSHAL</button>
+                  )}
+                  {req.status === "voting" && (
+                    <button className="btn out-red xs" style={{marginTop:8}} onClick={async () => {
+                      await SB.patch("promotion_requests", { id: req.id }, { status: "rejected" });
+                      setPromoReqs(r => r.map(x => x.id === req.id ? {...x, status:"rejected"} : x));
+                      showToast("Promotion request rejected");
+                    }}>✗ REJECT</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 /* ─── MARSHAL PANEL ─────────────────────────────────────────── */
 function MarshalPanel({ state, upd, showToast }) {
-  const { currentUser:cu, promos, users:us, clubRanks } = state;
-  const reqs = promos.filter(p => p.clubId === cu.clubId && p.status === "voting");
+  const { currentUser:cu, users:us, clubRanks } = state;
+  const [reqs,     setReqs]     = useState([]);
   const [comments, setComments] = useState({});
+  const [loading,  setLoading]  = useState(true);
+
+  async function loadReqs() {
+    if (!SUPA_URL || !SUPA_KEY) { setLoading(false); return; }
+    const rows = await SB.get("promotion_requests",
+      `club_id=eq.${cu.clubId}&status=eq.voting&order=created_at.desc`);
+    setReqs(rows || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadReqs(); }, [cu.clubId]);
+
+  async function castVote(reqId, vote, currentVotes) {
+    const newVotes = [...(currentVotes||[]), { voterId: cu.id, voterName: cu.name, vote, comment: comments[reqId]||"" }];
+    await SB.patch("promotion_requests", { id: reqId }, { votes: newVotes });
+    setReqs(r => r.map(x => x.id === reqId ? {...x, votes: newVotes} : x));
+    setComments(c => ({...c, [reqId]: ""}));
+    showToast(vote === "yes" ? "✓ Voted YES!" : "✗ Voted NO");
+  }
+
   return (
     <div className="page">
       <div className="sh">
@@ -2348,54 +2396,54 @@ function MarshalPanel({ state, upd, showToast }) {
         <div className="sh-title">PROMOTION VOTES</div>
         <div className="sh-sub">Cast your votes on pending promotion requests</div>
       </div>
-      {reqs.length === 0 && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>No pending votes at this time.</div>}
+      {loading && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>Loading...</div>}
+      {!loading && reqs.length === 0 && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>No pending votes at this time.</div>}
       {reqs.map(req => {
-        const target   = getUser(us, req.userId);
-        const hasVoted = req.votes.find(v => v.voterId === cu.id);
-        const isOwnPromo = req.userId === cu.id;
-        const yes      = req.votes.filter(v => v.vote === "yes").length;
+        const target    = getUser(us, req.user_id);
+        const votes     = req.votes || [];
+        const hasVoted  = votes.find(v => v.voterId === cu.id);
+        const isOwnPromo = req.user_id === cu.id;
+        const yes       = votes.filter(v => v.vote === "yes").length;
+        const no        = votes.filter(v => v.vote === "no").length;
         return (
           <div key={req.id} className="vcard">
             <div style={{marginBottom:14}}>
               <div className="vcard-name">{target ? target.name : "Unknown"}</div>
               <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:6}}>
                 <span style={{fontSize:12, color:"var(--mid)"}}>Current:</span>
-                <RankBadge rankId={target ? target.rankId : 1} clubRanks={clubRanks} clubId={cu.clubId} />
+                <RankBadge rankId={target?.rankId || 1} clubRanks={clubRanks} clubId={cu.clubId} />
                 <span style={{fontSize:12, color:"var(--mid)"}}>→ Proposed:</span>
-                <RankBadge rankId={req.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
+                <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
+              </div>
+              <div style={{display:"flex", gap:20, marginTop:12}}>
+                <div style={{fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
+                <div style={{fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
               </div>
             </div>
-            <div style={{marginBottom:14}}>
-              <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, letterSpacing:2, color:"var(--mid)", marginBottom:8}}>VOTES CAST ({req.votes.length})</div>
-              {req.votes.map(v => {
-                const vtr = getUser(us, v.voterId);
-                return (
-                  <div key={v.voterId} style={{fontSize:13, marginBottom:4, color:"var(--mid)"}}>
-                    <strong style={{color:"var(--ink2)"}}>{vtr ? vtr.name : "Unknown"}</strong>:{" "}
-                    <span style={{color: v.vote === "yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
+            {votes.length > 0 && (
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11, letterSpacing:2, color:"var(--mid)", marginBottom:8, textTransform:"uppercase"}}>Votes Cast</div>
+                {votes.map((v, i) => (
+                  <div key={i} style={{fontSize:13, marginBottom:4, color:"var(--mid)"}}>
+                    <strong style={{color:"var(--ink2)"}}>{v.voterName || "Marshal"}</strong>:{" "}
+                    <span style={{color: v.vote==="yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
                     {v.comment && ` — ${v.comment}`}
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
             {hasVoted
               ? <span className="bdg d">YOUR VOTE: {hasVoted.vote.toUpperCase()}</span>
               : isOwnPromo
-              ? <span className="bdg o">⚠️ You cannot vote on your own promotion</span>
+              ? <span className="bdg o">⚠️ Cannot vote on your own promotion</span>
               : <div>
                   <div className="fg">
-                    <label className="fl">Your Comment (optional)</label>
-                    <input className="fi" value={comments[req.id] || ""} onChange={e => setComments({...comments, [req.id]: e.target.value})} placeholder="Reason for your vote..." />
+                    <label className="fl">Comment (optional)</label>
+                    <input className="fi" value={comments[req.id]||""} onChange={e => setComments({...comments, [req.id]: e.target.value})} placeholder="Reason for your vote..." />
                   </div>
                   <div style={{display:"flex", gap:10}}>
-                    <button className="btn out-grn sm" onClick={() => {
-                      upd({ promos: state.promos.map(p => p.id === req.id ? {...p, votes:[...p.votes, {voterId:cu.id, vote:"yes", comment:comments[req.id]||""}]} : p) });
-                      showToast("✓ Voted YES!");
-                    }}>✓ VOTE YES</button>
-                    <button className="btn out-red sm" onClick={() => {
-                      upd({ promos: state.promos.map(p => p.id === req.id ? {...p, votes:[...p.votes, {voterId:cu.id, vote:"no", comment:comments[req.id]||""}]} : p) });
-                      showToast("✗ Voted NO");
-                    }}>✗ VOTE NO</button>
+                    <button className="btn out-grn sm" onClick={() => castVote(req.id, "yes", votes)}>✓ VOTE YES</button>
+                    <button className="btn out-red sm" onClick={() => castVote(req.id, "no",  votes)}>✗ VOTE NO</button>
                   </div>
                 </div>
             }
