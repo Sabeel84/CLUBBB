@@ -2017,23 +2017,25 @@ function MemberRow({ u, cu, myRanks, clubRanks, promos, us, upd, showToast, getR
               style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:130}}
               value={u.rankId}
               onChange={e => {
-                const nId = Number(e.target.value);
-                const nRank = getRank(nId, clubRanks, cu.clubId);
-                if (nRank && nRank.level >= 4) {
-                  if (promos.find(p => p.userId === u.id && p.status === "voting")) { showToast("Promotion already pending"); return; }
-                  // Save promotion request to Supabase
-                  SB.upsert("promotion_requests", {
-                    club_id:    cu.clubId,
-                    user_id:    u.id,
-                    rank_id:    nId,
-                    status:     "voting",
-                    votes:      [],
-                    created_by: cu.id,
-                  }).catch(e => console.error("[SB] promo request:", e));
-                  showToast("Promotion request created — awaiting 2 marshal votes");
-                } else {
+                const nId     = Number(e.target.value);
+                const nRank   = getRank(nId, clubRanks, cu.clubId);
+                const curRank = getRank(u.rankId, clubRanks, cu.clubId);
+                const isDemote = nRank && curRank && nRank.level < curRank.level;
+                if (cu.role === "admin") {
+                  // Club Admin → promote or demote directly, no voting needed
+                  const action = isDemote ? "Demote" : "Promote";
+                  if (!window.confirm(`${action} ${u.name} to "${nRank?.name}"?`)) return;
                   upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
-                  showToast("Rank updated!");
+                  showToast(`${isDemote ? "⬇️ Demoted" : "⬆️ Promoted"}: ${u.name} → ${nRank?.name}`);
+                } else if (cu.role === "marshal") {
+                  // Marshal → can only initiate promotions (not demotions)
+                  if (isDemote) { showToast("Only Club Admin can demote members"); return; }
+                  if (!window.confirm(`Initiate promotion request for ${u.name} to "${nRank?.name}"?\nMarshals vote, then Admin decides.`)) return;
+                  SB.upsert("promotion_requests", {
+                    club_id: cu.clubId, user_id: u.id, rank_id: nId,
+                    status: "voting", votes: [], created_by: cu.id,
+                  }).catch(e => console.error("[SB] promo request:", e));
+                  showToast("📨 Promotion request submitted — marshals will vote, Admin decides");
                 }
               }}>
               {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -2051,6 +2053,8 @@ function MemberRow({ u, cu, myRanks, clubRanks, promos, us, upd, showToast, getR
                 const newRole = e.target.value;
                 const ALLOWED = ["member","marshal","admin"];
                 if (!ALLOWED.includes(newRole)) { showToast("Invalid role"); return; }
+                // Only admin can change roles directly
+                if (cu.role !== "admin") { showToast("Only Club Admin can change roles"); return; }
                 if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
                 upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
                 showToast(`${u.name} is now ${newRole.toUpperCase()}`);
@@ -2414,7 +2418,6 @@ function ClubAdmin({ state, upd, showToast }) {
 function ClubVotesTab({ cu, us, clubRanks, upd, showToast }) {
   const [reqs, setReqs]       = useState([]);
   const [loading, setLoading] = useState(true);
-  const members = us.filter(u => u.clubId === cu.clubId && u.role !== "app_admin" && u.id !== cu.id);
 
   useEffect(() => {
     if (!SUPA_URL || !SUPA_KEY) { setLoading(false); return; }
@@ -2422,95 +2425,86 @@ function ClubVotesTab({ cu, us, clubRanks, upd, showToast }) {
       .then(rows => { setReqs(rows || []); setLoading(false); });
   }, []);
 
-  async function directPromote(userId, rankId) {
-    upd({ users: us.map(u => u.id === userId ? {...u, rankId, role:"marshal"} : u) });
-    showToast("🎖️ Member directly promoted to Marshal!");
-  }
-
-  async function finalizePromo(req) {
+  async function approve(req) {
+    if (!window.confirm(`Approve promotion for ${getUser(us, req.user_id)?.name}?`)) return;
     upd({ users: us.map(u => u.id === req.user_id ? {...u, rankId:req.rank_id, role:"marshal"} : u) });
     await SB.patch("promotion_requests", { id: req.id }, { status: "approved" });
     setReqs(r => r.map(x => x.id === req.id ? {...x, status:"approved"} : x));
-    showToast("🎖️ Promotion finalized!");
+    showToast("🎖️ Promotion approved!");
   }
 
-  async function revokePromo(reqId) {
-    await SB.patch("promotion_requests", { id: reqId }, { status: "rejected" });
-    setReqs(r => r.map(x => x.id === reqId ? {...x, status:"rejected"} : x));
+  async function revoke(req) {
+    if (!window.confirm("Revoke this promotion request?")) return;
+    await SB.patch("promotion_requests", { id: req.id }, { status: "rejected" });
+    setReqs(r => r.map(x => x.id === req.id ? {...x, status:"rejected"} : x));
     showToast("Promotion revoked");
   }
 
-  const myRanks = getClubRanks(clubRanks, cu.clubId);
-
   return (
     <div>
-      {/* ── Direct promote — admin bypasses voting ── */}
-      <div className="card" style={{marginBottom:20}}>
-        <div className="card-label">Direct Promotion (Admin Only)</div>
-        <div className="ibox" style={{marginBottom:16}}>
-          As Club Admin you can promote any member directly without marshal voting.
-        </div>
-        {members.filter(u => u.role === "member").map(u => (
-          <div key={u.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid var(--line)", flexWrap:"wrap"}}>
-            <div className="ava" style={{width:36, height:36, fontSize:14, borderRadius:10, flexShrink:0}}>{(u.name||"?")[0]}</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14, fontWeight:700, color:"var(--ink)"}}>{u.name}</div>
-              <div style={{fontSize:11, color:"var(--mid)"}}>{u.email}</div>
-            </div>
-            <button className="btn gold xs" onClick={() => {
-              const topRank = myRanks.reduce((max, r) => r.level > max.level ? r : max, myRanks[0]);
-              if (window.confirm(`Promote ${u.name} to Marshal (${topRank.name}) directly?`))
-                directPromote(u.id, topRank.id);
-            }}>+ PROMOTE TO MARSHAL</button>
-          </div>
-        ))}
-        {members.filter(u => u.role === "member").length === 0 && (
-          <div style={{color:"var(--mid)", fontSize:13}}>No members available for promotion.</div>
-        )}
+      <div className="ibox" style={{marginBottom:20}}>
+        <strong>How it works:</strong> Marshals can initiate a promotion request from their Members panel. Other marshals vote YES or NO. You as Club Admin make the final decision — approve or revoke at any time regardless of vote count.
       </div>
 
-      {/* ── Marshal voting requests ── */}
-      <div className="card-label" style={{marginBottom:12}}>Marshal Voting Requests</div>
-      <div className="ibox" style={{marginBottom:16}}>
-        Marshals vote on these requests. You can finalize or revoke at any time regardless of vote count.
-      </div>
       {loading && <div style={{color:"var(--mid)", fontSize:14}}>Loading...</div>}
-      {!loading && reqs.length === 0 && <div style={{color:"var(--mid)", fontSize:13}}>No promotion requests yet.</div>}
+      {!loading && reqs.length === 0 && (
+        <div style={{color:"var(--mid)", fontSize:13, padding:"20px 0", textAlign:"center"}}>
+          <div style={{fontSize:32, marginBottom:8}}>🏅</div>
+          No promotion requests yet. Marshals can initiate them from the Members tab.
+        </div>
+      )}
+
       {reqs.map(req => {
-        const target = getUser(us, req.user_id);
-        const votes  = req.votes || [];
-        const yes    = votes.filter(v => v.vote === "yes").length;
-        const no     = votes.filter(v => v.vote === "no").length;
+        const target     = getUser(us, req.user_id);
+        const initiator  = getUser(us, req.created_by);
+        const votes      = req.votes || [];
+        const yes        = votes.filter(v => v.vote === "yes").length;
+        const no         = votes.filter(v => v.vote === "no").length;
+        const total      = votes.length;
         return (
-          <div key={req.id} className="vcard" style={{marginBottom:12}}>
-            <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10}}>
+          <div key={req.id} className="vcard" style={{marginBottom:14}}>
+            {/* Header */}
+            <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12}}>
               <div>
                 <div className="vcard-name">{target?.name || "Unknown"}</div>
-                <div style={{display:"flex", gap:8, alignItems:"center", marginTop:4, flexWrap:"wrap"}}>
-                  <span style={{fontSize:12, color:"var(--mid)"}}>Proposed rank:</span>
-                  <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
+                <div style={{fontSize:12, color:"var(--mid)", marginTop:3}}>
+                  Proposed rank: <strong><RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} /></strong>
                 </div>
+                {initiator && <div style={{fontSize:11, color:"var(--mid3)", marginTop:2}}>Initiated by {initiator.name}</div>}
               </div>
               <span className={`bdg ${req.status==="approved"?"g":req.status==="rejected"?"r":"o"}`}>
                 {req.status.toUpperCase()}
               </span>
             </div>
-            <div style={{display:"flex", gap:20, marginBottom:10}}>
-              <span style={{fontWeight:700, fontSize:13}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span></span>
-              <span style={{fontWeight:700, fontSize:13}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></span>
+
+            {/* Vote summary */}
+            <div style={{display:"flex", gap:16, marginBottom:10, padding:"10px 14px", background:"var(--bg2)", borderRadius:"var(--r-md)"}}>
+              <div style={{fontWeight:700, fontSize:14, color:"var(--green)"}}>✅ YES: {yes}</div>
+              <div style={{fontWeight:700, fontSize:14, color:"var(--red)"}}>❌ NO: {no}</div>
+              <div style={{fontWeight:600, fontSize:13, color:"var(--mid)"}}>Total: {total} vote{total!==1?"s":""}</div>
             </div>
-            {votes.map((v, i) => (
-              <div key={i} style={{fontSize:12, color:"var(--mid)", marginBottom:2}}>
-                <strong style={{color:"var(--ink2)"}}>{v.voterName||"Marshal"}</strong>: <span style={{color:v.vote==="yes"?"var(--green)":"var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
-                {v.comment && ` — ${v.comment}`}
+
+            {/* Individual votes */}
+            {votes.length > 0 && (
+              <div style={{marginBottom:12}}>
+                {votes.map((v, i) => (
+                  <div key={i} style={{fontSize:12, color:"var(--mid)", marginBottom:3, display:"flex", gap:8, alignItems:"center"}}>
+                    <span style={{fontWeight:700, color:"var(--ink2)"}}>{v.voterName||"Marshal"}</span>
+                    <span style={{color:v.vote==="yes"?"var(--green)":"var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
+                    {v.comment && <span>— {v.comment}</span>}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            {votes.length === 0 && <div style={{fontSize:12, color:"var(--mid3)", marginBottom:12}}>No votes cast yet.</div>}
+
+            {/* Admin decision buttons */}
             {req.status === "voting" && (
-              <div style={{display:"flex", gap:10, marginTop:14, flexWrap:"wrap"}}>
-                <button className="btn gold sm" onClick={() => finalizePromo(req)}>
-                  ✓ FINALIZE PROMOTION {yes >= 2 ? "(2 YES votes)" : "(Override)"}
+              <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
+                <button className="btn gold sm" onClick={() => approve(req)}>
+                  ✓ APPROVE {yes >= 2 ? `(${yes} YES votes)` : "(Admin Override)"}
                 </button>
-                <button className="btn out-red sm" onClick={() => revokePromo(req.id)}>✗ REVOKE</button>
+                <button className="btn out-red sm" onClick={() => revoke(req)}>✗ REVOKE</button>
               </div>
             )}
           </div>
@@ -2526,6 +2520,10 @@ function MarshalPanel({ state, upd, showToast }) {
   const [reqs,     setReqs]     = useState([]);
   const [comments, setComments] = useState({});
   const [loading,  setLoading]  = useState(true);
+  const [initTab,  setInitTab]  = useState("vote"); // "vote" | "initiate"
+
+  const clubMembers = us.filter(u => u.clubId === cu.clubId && u.role === "member");
+  const myRanks     = getClubRanks(clubRanks, cu.clubId);
 
   async function loadReqs() {
     if (!SUPA_URL || !SUPA_KEY) { setLoading(false); return; }
@@ -2536,6 +2534,16 @@ function MarshalPanel({ state, upd, showToast }) {
   }
 
   useEffect(() => { loadReqs(); }, [cu.clubId]);
+
+  async function initiate(userId, rankId, memberName) {
+    if (!window.confirm(`Initiate promotion request for ${memberName} to this rank?\nOther marshals will vote, then Admin decides.`)) return;
+    await SB.upsert("promotion_requests", {
+      club_id: cu.clubId, user_id: userId, rank_id: rankId,
+      status: "voting", votes: [], created_by: cu.id,
+    });
+    showToast("📨 Promotion request submitted — marshals will vote, Admin decides");
+    loadReqs();
+  }
 
   async function castVote(reqId, vote, currentVotes) {
     const newVotes = [...(currentVotes||[]), { voterId: cu.id, voterName: cu.name, vote, comment: comments[reqId]||"" }];
@@ -2549,63 +2557,108 @@ function MarshalPanel({ state, upd, showToast }) {
     <div className="page">
       <div className="sh">
         <div className="sh-label">Marshal Panel</div>
-        <div className="sh-title">PROMOTION VOTES</div>
-        <div className="sh-sub">Cast your votes on pending promotion requests</div>
+        <div className="sh-title">PROMOTIONS</div>
+        <div className="sh-sub">Initiate requests or vote on pending promotions</div>
       </div>
-      {loading && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>Loading...</div>}
-      {!loading && reqs.length === 0 && <div style={{color:"var(--mid)", fontSize:14, padding:"20px 0"}}>No pending votes at this time.</div>}
-      {reqs.map(req => {
-        const target    = getUser(us, req.user_id);
-        const votes     = req.votes || [];
-        const hasVoted  = votes.find(v => v.voterId === cu.id);
-        const isOwnPromo = req.user_id === cu.id;
-        const yes       = votes.filter(v => v.vote === "yes").length;
-        const no        = votes.filter(v => v.vote === "no").length;
-        return (
-          <div key={req.id} className="vcard">
-            <div style={{marginBottom:14}}>
-              <div className="vcard-name">{target ? target.name : "Unknown"}</div>
-              <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:6}}>
-                <span style={{fontSize:12, color:"var(--mid)"}}>Current:</span>
-                <RankBadge rankId={target?.rankId || 1} clubRanks={clubRanks} clubId={cu.clubId} />
-                <span style={{fontSize:12, color:"var(--mid)"}}>→ Proposed:</span>
-                <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
+
+      <div className="tabs" style={{marginBottom:20}}>
+        <button className={`tab ${initTab==="vote"?"on":""}`} onClick={() => setInitTab("vote")}>🗳 Vote on Requests</button>
+        <button className={`tab ${initTab==="initiate"?"on":""}`} onClick={() => setInitTab("initiate")}>+ Initiate Promotion</button>
+      </div>
+
+      {/* ── INITIATE TAB ── */}
+      {initTab === "initiate" && (
+        <div>
+          <div className="ibox" style={{marginBottom:16}}>
+            Select a member and the rank you want to propose. Other marshals will vote, and the Club Admin makes the final decision.
+          </div>
+          {clubMembers.length === 0 && <div style={{color:"var(--mid)", fontSize:13}}>No members available.</div>}
+          {clubMembers.map(u => (
+            <div key={u.id} style={{display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid var(--line)", flexWrap:"wrap"}}>
+              <div className="ava" style={{width:36, height:36, fontSize:14, borderRadius:10, flexShrink:0}}>{(u.name||"?")[0]}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14, fontWeight:700, color:"var(--ink)"}}>{u.name}</div>
+                <RankBadge rankId={u.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
               </div>
-              <div style={{display:"flex", gap:20, marginTop:12}}>
-                <div style={{fontWeight:700, fontSize:14}}>✅ YES: <span style={{color:"var(--green)"}}>{yes}</span>/2</div>
-                <div style={{fontWeight:700, fontSize:14}}>❌ NO: <span style={{color:"var(--red)"}}>{no}</span></div>
-              </div>
+              <select className="fi fi-sel" style={{width:"auto", minWidth:130, marginBottom:0, fontSize:12}}
+                defaultValue=""
+                onChange={e => { if (e.target.value) initiate(u.id, Number(e.target.value), u.name); e.target.value = ""; }}>
+                <option value="">Propose rank...</option>
+                {myRanks.filter(r => r.id !== u.rankId).map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
             </div>
-            {votes.length > 0 && (
-              <div style={{marginBottom:14}}>
-                <div style={{fontSize:11, letterSpacing:2, color:"var(--mid)", marginBottom:8, textTransform:"uppercase"}}>Votes Cast</div>
+          ))}
+        </div>
+      )}
+
+      {/* ── VOTE TAB ── */}
+      {initTab === "vote" && (
+        <div>
+          <div className="ibox" style={{marginBottom:16}}>
+            Vote on promotion requests below. Club Admin makes the final approval or rejection.
+          </div>
+          {loading && <div style={{color:"var(--mid)", fontSize:14}}>Loading...</div>}
+          {!loading && reqs.length === 0 && (
+            <div style={{color:"var(--mid)", fontSize:13, padding:"20px 0", textAlign:"center"}}>
+              <div style={{fontSize:32, marginBottom:8}}>🗳️</div>
+              No pending votes. Use "+ Initiate Promotion" to create one.
+            </div>
+          )}
+          {reqs.map(req => {
+            const target   = getUser(us, req.user_id);
+            const votes    = req.votes || [];
+            const hasVoted = votes.find(v => v.voterId === cu.id);
+            const isOwn    = req.user_id === cu.id;
+            const initiated = req.created_by === cu.id;
+            const yes      = votes.filter(v => v.vote === "yes").length;
+            const no       = votes.filter(v => v.vote === "no").length;
+            return (
+              <div key={req.id} className="vcard" style={{marginBottom:14}}>
+                <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10}}>
+                  <div>
+                    <div className="vcard-name">{target?.name || "Unknown"}</div>
+                    <div style={{display:"flex", gap:8, alignItems:"center", marginTop:4, flexWrap:"wrap"}}>
+                      <span style={{fontSize:12, color:"var(--mid)"}}>→</span>
+                      <RankBadge rankId={req.rank_id} clubRanks={clubRanks} clubId={cu.clubId} />
+                    </div>
+                    {initiated && <div style={{fontSize:11, color:"var(--acc)", marginTop:3}}>📨 You initiated this</div>}
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontWeight:700, fontSize:13, color:"var(--green)"}}>✅ {yes} YES</div>
+                    <div style={{fontWeight:700, fontSize:13, color:"var(--red)"}}>❌ {no} NO</div>
+                  </div>
+                </div>
+
                 {votes.map((v, i) => (
-                  <div key={i} style={{fontSize:13, marginBottom:4, color:"var(--mid)"}}>
-                    <strong style={{color:"var(--ink2)"}}>{v.voterName || "Marshal"}</strong>:{" "}
-                    <span style={{color: v.vote==="yes" ? "var(--green)" : "var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
+                  <div key={i} style={{fontSize:12, color:"var(--mid)", marginBottom:2}}>
+                    <strong style={{color:"var(--ink2)"}}>{v.voterName||"Marshal"}</strong>:{" "}
+                    <span style={{color:v.vote==="yes"?"var(--green)":"var(--red)", fontWeight:700}}>{v.vote.toUpperCase()}</span>
                     {v.comment && ` — ${v.comment}`}
                   </div>
                 ))}
+
+                {hasVoted
+                  ? <div className="bdg d" style={{marginTop:10}}>YOUR VOTE: {hasVoted.vote.toUpperCase()}</div>
+                  : isOwn
+                  ? <div className="bdg o" style={{marginTop:10}}>⚠️ Cannot vote on your own promotion</div>
+                  : <div style={{marginTop:12}}>
+                      <div className="fg">
+                        <label className="fl">Comment (optional)</label>
+                        <input className="fi" value={comments[req.id]||""} onChange={e => setComments({...comments, [req.id]: e.target.value})} placeholder="Reason for your vote..." />
+                      </div>
+                      <div style={{display:"flex", gap:10}}>
+                        <button className="btn out-grn sm" onClick={() => castVote(req.id, "yes", votes)}>✓ VOTE YES</button>
+                        <button className="btn out-red sm" onClick={() => castVote(req.id, "no",  votes)}>✗ VOTE NO</button>
+                      </div>
+                    </div>
+                }
               </div>
-            )}
-            {hasVoted
-              ? <span className="bdg d">YOUR VOTE: {hasVoted.vote.toUpperCase()}</span>
-              : isOwnPromo
-              ? <span className="bdg o">⚠️ Cannot vote on your own promotion</span>
-              : <div>
-                  <div className="fg">
-                    <label className="fl">Comment (optional)</label>
-                    <input className="fi" value={comments[req.id]||""} onChange={e => setComments({...comments, [req.id]: e.target.value})} placeholder="Reason for your vote..." />
-                  </div>
-                  <div style={{display:"flex", gap:10}}>
-                    <button className="btn out-grn sm" onClick={() => castVote(req.id, "yes", votes)}>✓ VOTE YES</button>
-                    <button className="btn out-red sm" onClick={() => castVote(req.id, "no",  votes)}>✗ VOTE NO</button>
-                  </div>
-                </div>
-            }
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
