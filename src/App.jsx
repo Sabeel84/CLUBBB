@@ -4195,14 +4195,21 @@ export default function App() {
 
     // ── Always create the account locally first (instant) ──
     if (type === "member") {
+      const cid = Number(form.clubId) || null;
+      // Get the club's rank list — find the lowest rank (level 1 = lowest)
+      const clubRankList = (S.clubRanks && cid && S.clubRanks[cid])
+        ? S.clubRanks[cid]
+        : DEFAULT_RANKS;
+      const lowestRank = clubRankList.reduce((min, r) => r.level < min.level ? r : min, clubRankList[0]);
+      const startRankId = lowestRank?.id || 1;
+
       const u = { id: crypto.randomUUID?.() || String(Date.now()),
                   name:form.name, email:form.email, phone:form.phone||"",
-                  role:"member", rankId:1, clubId:Number(form.clubId) || null, drives:0,
+                  role:"member", rankId:startRankId, clubId:cid, drives:0,
                   passwordHash:form.passwordHash||"", emailVerified:false };
       setS(s => ({...s, users:[...s.users, u], currentUser:u, page:"dashboard"}));
       // Persist to Supabase
       SB.upsert("users", userToDb(u))
-        .catch(() => {})
         .catch(e => console.error("[CLUBBB] Member upsert error:", e));
 
     } else {
