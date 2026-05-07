@@ -395,12 +395,23 @@ a{color:var(--acc);text-decoration:none}
 .cl-label.done{text-decoration:line-through;color:var(--mid)}
 
 /* ── CHAT ── */
-.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:300px}
-.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg2);border-radius:var(--r-lg);margin-bottom:12px}
-.chat-bubble{max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5}
-.chat-bubble.mine{background:var(--acc2);color:#0a0a0a;margin-left:auto;border-bottom-right-radius:4px}
-.chat-bubble.other{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:4px}
-.chat-input-row{display:flex;gap:10px}
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 280px);min-height:400px}
+@media(max-width:600px){.chat-wrap{height:calc(100vh - 220px);min-height:300px}}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--bg2);border-radius:var(--r-lg);margin-bottom:0;border:1px solid var(--line)}
+.chat-msg{display:flex;gap:10px;align-items:flex-end}
+.chat-msg.me{flex-direction:row-reverse}
+.chat-bubble{padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;max-width:100%}
+.chat-bubble.them{background:#fff;border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:4px}
+.chat-bubble.me{background:var(--acc2);color:#0a0a0a;border-bottom-right-radius:4px}
+.chat-bubble.pinned{border:1.5px solid var(--acc-pale3)}
+.chat-meta{font-size:10px;color:var(--mid3);margin-top:3px;display:flex;gap:4px;align-items:center}
+.chat-meta.me{justify-content:flex-end}
+.chat-sender{font-size:11px;font-weight:700;color:var(--mid2);margin-bottom:4px}
+.chat-pin-badge{background:var(--acc-pale2);color:var(--acc);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:100px;margin-bottom:4px;display:inline-block}
+.chat-input-row{display:flex;gap:10px;align-items:flex-end;padding:12px;background:#fff;border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r-lg) var(--r-lg)}
+.chat-input{flex:1;background:var(--bg2);border:1.5px solid var(--line2);border-radius:var(--r-md);padding:12px 16px;font-size:14px;color:var(--ink);outline:none;resize:none;font-family:inherit;line-height:1.5;min-height:48px;max-height:120px;transition:border-color .15s}
+.chat-input:focus{border-color:var(--acc2);background:#fff}
+.chat-send{background:var(--acc2);border:none;border-radius:var(--r-md);width:48px;height:48px;font-size:20px;font-weight:700;color:#0a0a0a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* ── SOS ── */
 .sos-btn{width:100%;padding:18px;background:var(--red);color:#fff;border:none;border-radius:var(--r-xl);font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,.3)}
@@ -3395,13 +3406,19 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
         <div className="chat-input-row">
           <textarea
             className="chat-input"
-            placeholder="Message your club..."
+            placeholder="Message your club... (Enter to send, Shift+Enter for new line)"
             value={text}
-            rows={1}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+            onChange={e => {
+              setText(e.target.value);
+              // Auto-grow
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+            }}
           />
-          <button className="chat-send" onClick={send}>↑</button>
+          <button className="chat-send" onClick={send} title="Send">↑</button>
         </div>
       </div>
     </div>
