@@ -3299,16 +3299,111 @@ function Marketplace({ state }) {
    FEATURE 1 — LIVE DRIVE TRACKER
 ════════════════════════════════════════════════════════ */
 function LiveTracker({ drive, state, upd, showToast }) {
-  const { currentUser:cu, users:us } = state;
-  const [positions, setPositions] = useState([]);
-  const [isSharing, setIsSharing] = useState(false);
-  const [watchId,   setWatchId]   = useState(null);
+  const { currentUser:cu } = state;
+  const [positions,  setPositions]  = useState([]);
+  const [isSharing,  setIsSharing]  = useState(false);
+  const [watchId,    setWatchId]    = useState(null);
+  const [leafletReady, setLeafletReady] = useState(false);
+  const mapRef      = useRef(null); // DOM container
+  const mapObj      = useRef(null); // Leaflet map instance
+  const markersRef  = useRef({});   // userId → marker
 
-  // ── Load positions from Supabase every 5s ──
+  // ── Load Leaflet CSS + JS dynamically ──
+  useEffect(() => {
+    if (window.L) { setLeafletReady(true); return; }
+    // CSS
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+    document.head.appendChild(link);
+    // JS
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+    script.onload = () => setLeafletReady(true);
+    document.head.appendChild(script);
+  }, []);
+
+  // ── Init map once Leaflet is ready ──
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || mapObj.current) return;
+    const L = window.L;
+    // Default center: UAE / Abu Dhabi area
+    const map = L.map(mapRef.current, { zoomControl:true, attributionControl:true })
+                 .setView([24.4539, 54.3773], 10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+    mapObj.current = map;
+    return () => { map.remove(); mapObj.current = null; };
+  }, [leafletReady]);
+
+  // ── Update markers when positions change ──
+  useEffect(() => {
+    if (!mapObj.current || !window.L) return;
+    const L   = window.L;
+    const map = mapObj.current;
+    const existingIds = new Set(positions.map(p => p.user_id));
+
+    // Remove markers for users no longer sharing
+    Object.keys(markersRef.current).forEach(uid => {
+      if (!existingIds.has(uid)) {
+        map.removeLayer(markersRef.current[uid]);
+        delete markersRef.current[uid];
+      }
+    });
+
+    // Add / update markers
+    positions.forEach(p => {
+      const isMe = p.user_id === cu.id;
+      const name = p.user_name?.split(" ")[0] || "?";
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="
+          background:${isMe ? "#f5c842" : "#0f0f0f"};
+          color:${isMe ? "#0a0a0a" : "#fff"};
+          border-radius:50%;
+          width:36px; height:36px;
+          display:flex; align-items:center; justify-content:center;
+          font-size:18px;
+          border:3px solid ${isMe ? "#e8a30c" : "#fff"};
+          box-shadow:0 2px 8px rgba(0,0,0,.3);
+        ">🚙</div>
+        <div style="
+          text-align:center;
+          font-size:10px; font-weight:700;
+          color:${isMe ? "#e8a30c" : "#0f0f0f"};
+          background:rgba(255,255,255,.9);
+          border-radius:6px; padding:1px 6px;
+          margin-top:2px; white-space:nowrap;
+          box-shadow:0 1px 4px rgba(0,0,0,.15);
+        ">${isMe ? "YOU" : name}</div>`,
+        iconSize:  [36, 52],
+        iconAnchor:[18, 52],
+        popupAnchor:[0, -52],
+      });
+
+      if (markersRef.current[p.user_id]) {
+        markersRef.current[p.user_id].setLatLng([p.lat, p.lng]).setIcon(icon);
+      } else {
+        const marker = L.marker([p.lat, p.lng], { icon })
+          .addTo(map)
+          .bindPopup(`<strong>${p.user_name || "Member"}</strong>${isMe ? " (You)" : ""}`);
+        markersRef.current[p.user_id] = marker;
+      }
+    });
+
+    // Fit map to show all markers
+    if (positions.length > 0) {
+      const latLngs = positions.map(p => [p.lat, p.lng]);
+      map.fitBounds(latLngs, { padding:[40, 40], maxZoom:15 });
+    }
+  }, [positions]);
+
+  // ── Poll Supabase every 5s ──
   async function loadPositions() {
     if (!SUPA_URL || !SUPA_KEY) return;
-    const rows = await SB.get("live_positions",
-      `drive_id=eq.${drive.id}&sharing=eq.true`);
+    const rows = await SB.get("live_positions", `drive_id=eq.${drive.id}&sharing=eq.true`);
     setPositions(rows || []);
   }
 
@@ -3319,26 +3414,15 @@ function LiveTracker({ drive, state, upd, showToast }) {
   }, [drive.id]);
 
   useEffect(() => {
-    return () => {
-      if (watchId) navigator.geolocation?.clearWatch(watchId);
-    };
+    return () => { if (watchId) navigator.geolocation?.clearWatch(watchId); };
   }, [watchId]);
 
   async function savePosition(lat, lng) {
     if (!SUPA_URL || !SUPA_KEY) return;
     await SB.upsert("live_positions", {
-      drive_id:  drive.id,
-      user_id:   cu.id,
-      user_name: cu.name,
-      lat, lng,
-      sharing:   true,
-      updated_at: new Date().toISOString(),
+      drive_id: drive.id, user_id: cu.id, user_name: cu.name,
+      lat, lng, sharing: true, updated_at: new Date().toISOString(),
     });
-  }
-
-  async function stopSharingDB() {
-    if (!SUPA_URL || !SUPA_KEY) return;
-    await SB.patch("live_positions", { drive_id: drive.id, user_id: cu.id }, { sharing: false });
   }
 
   function startSharing() {
@@ -3347,11 +3431,12 @@ function LiveTracker({ drive, state, upd, showToast }) {
       pos => {
         const { latitude:lat, longitude:lng } = pos.coords;
         savePosition(lat, lng);
-        // Update local immediately for self-view
         setPositions(p => {
           const others = p.filter(x => x.user_id !== cu.id);
           return [...others, { drive_id:drive.id, user_id:cu.id, user_name:cu.name, lat, lng, sharing:true }];
         });
+        // Pan map to my location
+        if (mapObj.current) mapObj.current.panTo([lat, lng]);
       },
       () => showToast("⚠️ GPS unavailable — enable location in browser settings"),
       { enableHighAccuracy:true, maximumAge:5000 }
@@ -3365,58 +3450,49 @@ function LiveTracker({ drive, state, upd, showToast }) {
     if (watchId) navigator.geolocation?.clearWatch(watchId);
     setWatchId(null);
     setIsSharing(false);
-    stopSharingDB();
+    SB.patch("live_positions", { drive_id:drive.id, user_id:cu.id }, { sharing:false }).catch(()=>{});
     setPositions(p => p.filter(x => x.user_id !== cu.id));
     showToast("Location sharing stopped");
   }
 
-  const sharingCount = positions.length;
-
   return (
     <div>
-      <div className="map-wrap">
-        <div className="map-frame">
-          <div className="map-grid" />
-          {positions.map((p, i) => {
-            const isMe = p.user_id === cu.id;
-            const x = 15 + ((i + 1) / (positions.length + 1)) * 70;
-            const y = 20 + (i % 3) * 25;
-            return (
-              <div key={p.user_id} className="map-car" style={{left:`${x}%`, top:`${y}%`}}>
-                <div style={{width:38, height:38, borderRadius:"50%",
-                  background: isMe ? "var(--acc2)" : "var(--ink)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:18, border: isMe ? "3px solid var(--acc)" : "3px solid #fff",
-                  boxShadow:"var(--sh-sm)"}}>🚙</div>
-                <div className="map-car-label">{isMe ? "YOU" : (p.user_name?.split(" ")[0] || "?")}</div>
-              </div>
-            );
-          })}
-          {sharingCount === 0 && (
-            <div style={{textAlign:"center", zIndex:2, position:"relative"}}>
-              <div style={{fontSize:48, marginBottom:8}}>🏜️</div>
-              <div style={{fontSize:13, color:"var(--mid)", fontWeight:600}}>No one is sharing location yet</div>
-            </div>
-          )}
-          <div className="map-legend">
-            <div className="map-legend-row">🚙 {sharingCount} member{sharingCount!==1?"s":""} live</div>
-            <div className="map-legend-row">📍 {drive.location}</div>
+      {/* Real OpenStreetMap */}
+      <div ref={mapRef} style={{
+        width:"100%", height:360, borderRadius:"var(--r-lg)",
+        border:"1px solid var(--line)", overflow:"hidden",
+        background:"var(--bg3)", marginBottom:12,
+        zIndex:1,
+      }}>
+        {!leafletReady && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",flexDirection:"column",gap:8}}>
+            <div style={{width:28,height:28,border:"3px solid var(--acc2)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite"}} />
+            <div style={{fontSize:13,color:"var(--mid)"}}>Loading map...</div>
           </div>
-        </div>
-
-        <div className="track-bar">
-          {isSharing
-            ? <div className="track-sharing"><div className="track-dot"/><span>Sharing your location live</span></div>
-            : <div style={{fontSize:13, color:"var(--mid)", fontWeight:500, flex:1}}>Your location is private</div>
-          }
-          {!isSharing
-            ? <button className="btn gold sm" onClick={startSharing}>📡 Share My Location</button>
-            : <button className="btn out-red sm" onClick={stopSharing}>⏹ Stop Sharing</button>
-          }
-        </div>
+        )}
       </div>
-      <div className="ibox" style={{fontSize:12, marginTop:8}}>
-        📌 Location is only shared with members of this drive. Sharing stops when you close the app.
+
+      {/* Status bar */}
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",
+        background:"var(--bg2)", border:"1px solid var(--line)",
+        borderRadius:"var(--r-md)", marginBottom:12, flexWrap:"wrap"}}>
+        {isSharing
+          ? <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:"var(--green)",boxShadow:"0 0 8px var(--green)"}} />
+              <span style={{fontSize:13,fontWeight:600,color:"var(--green)"}}>Sharing your live location</span>
+            </div>
+          : <div style={{flex:1,fontSize:13,color:"var(--mid)"}}>
+              👥 {positions.length} member{positions.length!==1?"s":""} sharing · Your location is private
+            </div>
+        }
+        {!isSharing
+          ? <button className="btn gold sm" onClick={startSharing}>📡 Share My Location</button>
+          : <button className="btn out-red sm" onClick={stopSharing}>⏹ Stop Sharing</button>
+        }
+      </div>
+
+      <div className="ibox" style={{fontSize:12}}>
+        📌 Location is only visible to members of this drive. Sharing stops when you close this page.
       </div>
     </div>
   );
