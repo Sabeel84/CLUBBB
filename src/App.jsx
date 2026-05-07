@@ -4099,6 +4099,334 @@ function DriveRating({ drive, state, upd, showToast }) {
   );
 }
 
+/* ─── ROUTE RECORDER ─────────────────────────────────────────── */
+function RouteRecorder({ drive, state, showToast }) {
+  const { currentUser:cu } = state;
+  const canManage   = ["admin","marshal"].includes(cu.role);
+  const [routes,    setRoutes]    = useState([]);
+  const [recording, setRecording] = useState(false);
+  const [path,      setPath]      = useState([]);
+  const [startTime, setStartTime] = useState(null);
+  const [elapsed,   setElapsed]   = useState(0);
+  const [distance,  setDistance]  = useState(0);
+  const [watchId,   setWatchId]   = useState(null);
+  const [selRoute,  setSelRoute]  = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const mapRef  = useRef(null);
+  const mapObj  = useRef(null);
+  const polyRef = useRef({});
+  const timerRef = useRef(null);
+
+  // ── Load Leaflet ──
+  const [leafletReady, setLeafletReady] = useState(!!window.L);
+  useEffect(() => {
+    if (window.L) { setLeafletReady(true); return; }
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+    document.head.appendChild(link);
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+    s.onload = () => setLeafletReady(true);
+    document.head.appendChild(s);
+  }, []);
+
+  // ── Init map ──
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || mapObj.current) return;
+    const L   = window.L;
+    const map = L.map(mapRef.current).setView([24.4539, 54.3773], 10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:"© <a href='https://openstreetmap.org'>OpenStreetMap</a>",
+      maxZoom:19,
+    }).addTo(map);
+    mapObj.current = map;
+    return () => { map.remove(); mapObj.current = null; };
+  }, [leafletReady]);
+
+  // ── Load saved routes ──
+  async function loadRoutes() {
+    if (!SUPA_URL || !SUPA_KEY) { setLoading(false); return; }
+    const rows = await SB.get("drive_routes", `drive_id=eq.${drive.id}&order=created_at.desc`);
+    setRoutes(rows || []);
+    setLoading(false);
+  }
+  useEffect(() => { loadRoutes(); }, [drive.id]);
+
+  // ── Draw routes on map ──
+  useEffect(() => {
+    if (!mapObj.current || !window.L) return;
+    const L   = window.L;
+    const map = mapObj.current;
+    // Clear existing polylines
+    Object.values(polyRef.current).forEach(p => map.removeLayer(p));
+    polyRef.current = {};
+
+    const colors = ["#e8a30c","#2563eb","#16a34a","#dc2626","#7c3aed"];
+    routes.forEach((route, idx) => {
+      const pts = (route.path||[]).map(p => [p.lat, p.lng]);
+      if (pts.length < 2) return;
+      const isOfficial = route.is_official;
+      const color      = isOfficial ? "#e8a30c" : colors[idx % colors.length];
+      const poly = L.polyline(pts, {
+        color, weight: isOfficial ? 5 : 3,
+        opacity: selRoute && selRoute.id !== route.id ? 0.3 : 0.9,
+        dashArray: isOfficial ? null : "8,4",
+      }).addTo(map);
+      poly.bindPopup(`
+        <strong>${route.user_name}</strong><br>
+        📏 ${route.distance_km.toFixed(2)} km<br>
+        ⏱ ${Math.round(route.duration_min)} min<br>
+        ⚡ ${route.avg_speed.toFixed(1)} km/h
+        ${route.is_official ? "<br>⭐ Official Route" : ""}
+      `);
+      // Start/end markers
+      L.circleMarker(pts[0],      {radius:6, color:"#16a34a", fillColor:"#16a34a", fillOpacity:1}).addTo(map).bindPopup("Start");
+      L.circleMarker(pts[pts.length-1],{radius:6, color:"#dc2626", fillColor:"#dc2626", fillOpacity:1}).addTo(map).bindPopup("End");
+      polyRef.current[route.id] = poly;
+    });
+
+    // Fit map to all routes
+    const allPts = routes.flatMap(r => (r.path||[]).map(p => [p.lat, p.lng]));
+    if (allPts.length > 0) map.fitBounds(allPts, {padding:[30,30]});
+  }, [routes, selRoute]);
+
+  // ── Draw live recording path ──
+  const livePolyRef = useRef(null);
+  useEffect(() => {
+    if (!mapObj.current || !window.L || path.length < 2) return;
+    const L   = window.L;
+    const map = mapObj.current;
+    const pts = path.map(p => [p.lat, p.lng]);
+    if (livePolyRef.current) {
+      livePolyRef.current.setLatLngs(pts);
+    } else {
+      livePolyRef.current = L.polyline(pts, {color:"#f5c842", weight:5, opacity:1}).addTo(map);
+    }
+    map.panTo(pts[pts.length - 1]);
+  }, [path]);
+
+  // ── Haversine distance calc ──
+  function haversine(a, b) {
+    const R   = 6371;
+    const dLat = (b.lat - a.lat) * Math.PI / 180;
+    const dLng = (b.lng - a.lng) * Math.PI / 180;
+    const x   = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+  }
+
+  // ── Start recording ──
+  function startRecording() {
+    if (!canManage) { showToast("Only Marshals and Admin can record routes"); return; }
+    if (!navigator.geolocation) { showToast("GPS not available"); return; }
+    const start = Date.now();
+    setStartTime(start);
+    setPath([]);
+    setDistance(0);
+    setElapsed(0);
+
+    timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now()-start)/1000)), 1000);
+
+    const id = navigator.geolocation.watchPosition(pos => {
+      const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
+      setPath(prev => {
+        const d = prev.length > 0 ? haversine(prev[prev.length-1], pt) : 0;
+        setDistance(dist => dist + d);
+        return [...prev, pt];
+      });
+    }, () => showToast("⚠️ GPS unavailable"), { enableHighAccuracy:true, maximumAge:3000 });
+
+    setWatchId(id);
+    setRecording(true);
+    showToast("🛣️ Route recording started!");
+  }
+
+  // ── Stop and save ──
+  async function stopRecording() {
+    if (watchId) navigator.geolocation?.clearWatch(watchId);
+    clearInterval(timerRef.current);
+    setWatchId(null);
+    setRecording(false);
+
+    if (path.length < 2) { showToast("Route too short to save"); return; }
+
+    const durationMin = elapsed / 60;
+    const avgSpeed    = durationMin > 0 ? distance / (durationMin / 60) : 0;
+
+    showToast("💾 Saving route...");
+    const saved = await SB.upsert("drive_routes", {
+      drive_id:     drive.id,
+      user_id:      cu.id,
+      user_name:    cu.name,
+      path:         path,
+      distance_km:  distance,
+      duration_min: durationMin,
+      avg_speed:    avgSpeed,
+      is_official:  false,
+    });
+
+    if (saved) {
+      showToast("✅ Route saved!");
+      if (livePolyRef.current && mapObj.current) {
+        mapObj.current.removeLayer(livePolyRef.current);
+        livePolyRef.current = null;
+      }
+      setPath([]);
+      setDistance(0);
+      setElapsed(0);
+      loadRoutes();
+    }
+  }
+
+  // ── Set official route ──
+  async function setOfficial(routeId) {
+    // Clear previous official
+    await Promise.all(routes.map(r =>
+      SB.patch("drive_routes", { id: r.id }, { is_official: r.id === routeId })
+    ));
+    setRoutes(r => r.map(x => ({...x, is_official: x.id === routeId})));
+    showToast("⭐ Official route set!");
+  }
+
+  // ── Download GPX ──
+  function downloadGPX(route) {
+    const pts = route.path || [];
+    const gpx = `<?xml version="1.0"?>
+<gpx version="1.1" creator="CLUBBB">
+  <trk><name>${drive.title} — ${route.user_name}</name><trkseg>
+${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).toISOString()}</time></trkpt>`).join("\n")}
+  </trkseg></trk>
+</gpx>`;
+    const blob = new Blob([gpx], {type:"application/gpx+xml"});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `${drive.title}-${route.user_name}.gpx`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function fmt(s) {
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m ${sec}s`;
+  }
+
+  return (
+    <div>
+      {/* Map */}
+      <div ref={mapRef} style={{width:"100%", height:340, borderRadius:"var(--r-lg)", border:"1px solid var(--line)", overflow:"hidden", background:"var(--bg3)", marginBottom:14, zIndex:1}}>
+        {!leafletReady && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",flexDirection:"column",gap:8}}>
+            <div style={{width:28,height:28,border:"3px solid var(--acc2)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite"}} />
+            <div style={{fontSize:13,color:"var(--mid)"}}>Loading map...</div>
+          </div>
+        )}
+      </div>
+
+      {/* Live recording stats */}
+      {recording && (
+        <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:14}}>
+          {[
+            ["📏 Distance", `${distance.toFixed(2)} km`],
+            ["⏱ Time",     fmt(elapsed)],
+            ["📍 Points",  String(path.length)],
+          ].map(([l,v]) => (
+            <div key={l} style={{background:"var(--acc-pale)", border:"1px solid var(--acc-pale3)", borderRadius:"var(--r-md)", padding:"10px 12px", textAlign:"center"}}>
+              <div style={{fontSize:11, color:"var(--acc)", fontWeight:700, marginBottom:3}}>{l}</div>
+              <div style={{fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:800, color:"var(--ink)"}}>{v}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Controls — only marshal/admin can record */}
+      <div style={{display:"flex", gap:10, marginBottom:20, flexWrap:"wrap", alignItems:"center"}}>
+        {canManage ? (
+          <>
+            {!recording
+              ? <button className="btn gold" onClick={startRecording}>▶ Start Recording</button>
+              : <button className="btn out-red" onClick={stopRecording}>⏹ Stop & Save Route</button>
+            }
+            {recording && (
+              <div style={{display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--red)", fontWeight:600}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:"var(--red)",boxShadow:"0 0 8px var(--red)"}} />
+                Recording...
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="ibox" style={{flex:1, margin:0}}>
+            🏴 Only Marshals and the Club Admin can record routes. You can view and download all saved routes below.
+          </div>
+        )}
+      </div>
+
+      {/* Saved routes */}
+      <div style={{fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:800, color:"var(--ink)", marginBottom:12}}>
+        Saved Routes ({routes.length})
+      </div>
+      {loading && <div style={{color:"var(--mid)", fontSize:13}}>Loading routes...</div>}
+      {!loading && routes.length === 0 && (
+        <div style={{color:"var(--mid)", fontSize:13, textAlign:"center", padding:"20px 0"}}>
+          <div style={{fontSize:32, marginBottom:8}}>🛣️</div>
+          No routes recorded yet. Start recording during a drive!
+        </div>
+      )}
+      {routes.map((route, idx) => {
+        const colors = ["#e8a30c","#2563eb","#16a34a","#dc2626","#7c3aed"];
+        const color  = route.is_official ? "#e8a30c" : colors[idx % colors.length];
+        return (
+          <div key={route.id} style={{
+            background:"var(--bg)", border:`1px solid ${route.is_official?"var(--acc2)":"var(--line)"}`,
+            borderLeft:`4px solid ${color}`,
+            borderRadius:"var(--r-lg)", padding:"14px 16px", marginBottom:10,
+            cursor:"pointer",
+          }} onClick={() => setSelRoute(selRoute?.id===route.id ? null : route)}>
+            <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:8}}>
+              <div>
+                <div style={{fontWeight:700, fontSize:14, color:"var(--ink)", display:"flex", alignItems:"center", gap:6}}>
+                  {route.is_official && <span style={{fontSize:13}}>⭐</span>}
+                  {route.user_name}
+                  {route.is_official && <span className="bdg g" style={{fontSize:9}}>OFFICIAL</span>}
+                </div>
+                <div style={{fontSize:11, color:"var(--mid)", marginTop:2}}>
+                  {new Date(route.created_at).toLocaleDateString()}
+                </div>
+              </div>
+              <div style={{display:"flex", gap:16}}>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, color:"var(--ink)"}}>{route.distance_km.toFixed(1)}</div>
+                  <div style={{fontSize:9, color:"var(--mid2)", fontWeight:700, letterSpacing:1}}>KM</div>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, color:"var(--ink)"}}>{Math.round(route.duration_min)}</div>
+                  <div style={{fontSize:9, color:"var(--mid2)", fontWeight:700, letterSpacing:1}}>MIN</div>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, color:"var(--ink)"}}>{route.avg_speed.toFixed(0)}</div>
+                  <div style={{fontSize:9, color:"var(--mid2)", fontWeight:700, letterSpacing:1}}>KM/H</div>
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+              <button className="btn out xs" onClick={e => { e.stopPropagation(); downloadGPX(route); }}>⬇ GPX</button>
+              {canManage && !route.is_official && (
+                <button className="btn out xs" onClick={e => { e.stopPropagation(); setOfficial(route.id); }}>⭐ Set Official</button>
+              )}
+              {canManage && route.is_official && (
+                <span className="bdg g" style={{fontSize:10}}>⭐ Official Route — shown to all members</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Legend */}
+      <div className="ibox" style={{fontSize:12, marginTop:8}}>
+        ⭐ Official routes are shown in gold · Dashed lines are member routes · Click a route to highlight it · GPX files work in Garmin, Google Maps & Gaia GPS
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════
    DRIVE DETAIL MODAL — combines tracker, checklist, rating
 ════════════════════════════════════════════════════════ */
@@ -4108,6 +4436,7 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
   const canManage = ["admin","marshal"].includes(cu.role);
   const tabs = [
     { id:"info",      label:"Info" },
+    { id:"route",     label:"🛣️ Route" },
     { id:"tracker",   label:"🗺 Map" },
     { id:"sos",       label:"🚨 SOS" },
     { id:"checklist", label:"✅ Checklist" },
@@ -4258,6 +4587,7 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
         </div>
       )}
 
+      {tab === "route"     && <RouteRecorder drive={drive} state={state} showToast={showToast} />}
       {tab === "tracker"   && <LiveTracker   drive={drive} state={state} upd={upd} showToast={showToast} />}
       {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={showToast} />}
       {tab === "checklist" && <DriveChecklist drive={drive} state={state} upd={upd} showToast={showToast} />}
