@@ -959,115 +959,223 @@ function Modal({ title, onClose, children }) {
 
 /* ─── HOME ──────────────────────────────────────────────────── */
 function Home({ go, state }) {
-  const clubs = state ? state.clubs : [];
-  const users = state ? state.users : [];
+  const clubs  = state ? state.clubs  : [];
+  const users  = state ? state.users  : [];
   const drives = state ? state.drives : [];
+  const ads    = state ? state.ads    : [];
+  const featuredAds = ads.filter(a => a.featured && a.active !== false);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const totalDrives = drives.filter(d => d.attendanceRecorded).length;
+  const totalMembers = users.filter(u => u.role !== "app_admin").length;
+  const upcomingTotal = drives.filter(d => !d.attendanceRecorded && d.date >= todayStr).length;
 
   return (
     <div>
-      <div className="hero">
-        <div className="hero-bg" />
-        <div className="hero-grain" />
-        <div className="hero-blob1" />
-        <div className="hero-blob2" />
-        <div className="hero-eyebrow">Desert Driving Community Platform</div>
-        <div className="hero-title">CLUB<wbr /><span>BB</span></div>
-        <div className="hero-sub">Join the Pack. Master the Dunes.</div>
-        <div className="hero-ctas">
-          <button className="btn gold"  onClick={() => go("reg-member")}>Join a Club</button>
-          <button className="btn ghost" onClick={() => go("reg-club")}>Register Club</button>
-          <button className="btn ghost" onClick={() => go("login")}>Sign In</button>
-        </div>
-        <div className="hero-scroll-hint">
-          <div className="hero-scroll-dot" />
-          <span>Scroll</span>
-        </div>
-      </div>
-      <div className="page">
-        <div className="stats">
-          {[
-            [clubs.length || 0,           "Active Clubs"],
-            [users.filter(u=>u.role!=="app_admin").length || 0, "Members"],
-            [drives.filter(d=>d.attendanceRecorded).length || 0,"Drives Completed"],
-          ].map(([n,l]) => (
-            <div key={l} className="stat"><div className="stat-n">{n}</div><div className="stat-l">{l}</div></div>
-          ))}
+      {/* ── HERO ────────────────────────────────────────── */}
+      <div style={{
+        background:"linear-gradient(160deg,#0a0a0a 0%,#1a1208 50%,#0f0a00 100%)",
+        padding:"60px 20px 50px", textAlign:"center", position:"relative", overflow:"hidden",
+      }}>
+        {/* Subtle desert texture overlay */}
+        <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,.12) 0%,transparent 70%)",pointerEvents:"none"}} />
+
+        {/* Social proof pill — scarcity/authority trigger */}
+        <div style={{
+          display:"inline-flex", alignItems:"center", gap:8,
+          background:"rgba(245,200,66,.12)", border:"1px solid rgba(245,200,66,.25)",
+          borderRadius:100, padding:"6px 16px", marginBottom:24,
+        }}>
+          <span style={{width:8,height:8,borderRadius:"50%",background:"#4ade80",display:"inline-block",boxShadow:"0 0 8px #4ade80"}} />
+          <span style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,.8)",letterSpacing:1}}>
+            {totalMembers} members · {upcomingTotal} drives this week
+          </span>
         </div>
 
-        {/* All Clubs */}
-        {clubs.length > 0 && <>
-          <div className="sh">
-            <div className="sh-label">Community</div>
-            <div className="sh-title">ALL CLUBS</div>
-            <div className="sh-sub">Every club registered on CLUBBB — find yours and join the dunes</div>
-          </div>
-          <div className="clubs-grid">
-            {clubs.map(cl => {
-              const memberCount    = users.filter(u => u.clubId === cl.id && u.role !== "app_admin").length;
-              const todayStr      = new Date().toISOString().split("T")[0];
-              const upcomingDrives = drives.filter(d => d.clubId === cl.id && !d.attendanceRecorded && d.date >= todayStr).length;
-              const initials = (cl.name || "CL").slice(0, 2).toUpperCase();
-              return (
-                <div key={cl.id} className="club-tile">
-                  {cl.banner
-                    ? <img src={cl.banner} alt="" className="club-tile-banner" />
-                    : <div className="club-tile-placeholder"><span style={{fontSize:40, position:"relative", zIndex:1}}>🏜️</span></div>
+        <h1 style={{
+          fontFamily:"'Syne',sans-serif", fontSize:"clamp(42px,10vw,80px)",
+          fontWeight:800, color:"#fff", letterSpacing:"-3px", lineHeight:1,
+          margin:"0 0 8px",
+        }}>CLUB<span style={{color:"var(--acc2)"}}>BB</span></h1>
+
+        <p style={{
+          fontSize:"clamp(16px,3vw,20px)", color:"rgba(255,255,255,.6)",
+          margin:"0 auto 8px", maxWidth:480, lineHeight:1.5, fontWeight:400,
+        }}>The UAE's premier off-road driving community.</p>
+        <p style={{
+          fontSize:14, color:"rgba(255,255,255,.35)",
+          margin:"0 auto 36px", fontWeight:400,
+        }}>Join a club. Conquer the dunes. Build your legend.</p>
+
+        {/* CTA buttons — primary action first (Fitts' law) */}
+        <div style={{display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", marginBottom:40}}>
+          <button className="btn gold" style={{fontSize:15,padding:"14px 32px",borderRadius:14}}
+            onClick={() => go("reg-member")}>
+            🏜️ Join a Club
+          </button>
+          <button style={{
+            background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.15)",
+            color:"#fff", fontSize:15, padding:"14px 28px", borderRadius:14, cursor:"pointer", fontWeight:600,
+          }} onClick={() => go("reg-club")}>Register Your Club</button>
+          <button style={{
+            background:"transparent", border:"none",
+            color:"rgba(255,255,255,.45)", fontSize:14, padding:"14px 20px", cursor:"pointer",
+          }} onClick={() => go("login")}>Sign In →</button>
+        </div>
+
+        {/* Live stats — social proof */}
+        <div style={{
+          display:"flex", justifyContent:"center", gap:0,
+          maxWidth:400, margin:"0 auto",
+          background:"rgba(255,255,255,.05)", border:"1px solid rgba(255,255,255,.1)",
+          borderRadius:16, overflow:"hidden",
+        }}>
+          {[
+            [clubs.length,        "Clubs"],
+            [totalMembers,        "Members"],
+            [totalDrives,         "Drives Done"],
+          ].map(([n,l], i) => (
+            <div key={l} style={{
+              flex:1, padding:"16px 8px", textAlign:"center",
+              borderRight: i < 2 ? "1px solid rgba(255,255,255,.08)" : "none",
+            }}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,color:"#fff",letterSpacing:-1}}>{n}</div>
+              <div style={{fontSize:10,fontWeight:600,letterSpacing:2,color:"rgba(255,255,255,.35)",textTransform:"uppercase",marginTop:2}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="page">
+
+        {/* ── FEATURED MARKETPLACE ADS ──────────────────── */}
+        {featuredAds.length > 0 && (
+          <div style={{marginBottom:40}}>
+            <div className="sh">
+              <div className="sh-label">Exclusive Offers</div>
+              <div className="sh-title">FEATURED DEALS</div>
+              <div className="sh-sub">Hand-picked offers for CLUBBB members</div>
+            </div>
+            <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16}}>
+              {featuredAds.map(ad => (
+                <div key={ad.id} style={{
+                  background:"linear-gradient(135deg,#fffdf5,#fff9e8)",
+                  border:"1px solid rgba(232,163,12,.2)",
+                  borderTop:"3px solid var(--acc2)",
+                  borderRadius:"var(--r-xl)", overflow:"hidden",
+                  boxShadow:"0 4px 20px rgba(232,163,12,.1)",
+                  cursor:"pointer", position:"relative",
+                }} onClick={() => go("market")}>
+                  <div style={{
+                    position:"absolute",top:12,right:12,
+                    background:"var(--acc2)",color:"#0a0a0a",
+                    fontSize:9,fontWeight:800,letterSpacing:2,textTransform:"uppercase",
+                    padding:"3px 10px",borderRadius:100,
+                  }}>FEATURED</div>
+                  {ad.thumbnail
+                    ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",height:160,objectFit:"cover",display:"block"}} />
+                    : <div style={{height:80,display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>{ad.icon||"🚙"}</div>
                   }
-                  <div className="club-tile-body">
-                    {cl.logo
-                      ? <img src={cl.logo} alt="" className="club-tile-logo-img" />
-                      : <div className="club-tile-logo-init">{initials}</div>
-                    }
-                    <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
-                      <div className="club-tile-name">{cl.name}</div>
-                      <ClubTierBadge club={cl} users={users} drives={drives} />
-                    </div>
-                    {cl.description && <div className="club-tile-desc">{cl.description}</div>}
-                    <div className="club-tile-foot">
-                      <div className="club-tile-stat">
-                        <div className="club-tile-stat-num">{memberCount}</div>
-                        <div className="club-tile-stat-label">Members</div>
-                      </div>
-                      <div className="club-tile-stat right">
-                        <div className="club-tile-stat-num">{upcomingDrives}</div>
-                        <div className="club-tile-stat-label">Upcoming Drives</div>
-                      </div>
+                  <div style={{padding:"16px"}}>
+                    <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"var(--acc)",textTransform:"uppercase",marginBottom:6}}>{ad.category||"Offer"}</div>
+                    <div style={{fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:800,color:"var(--ink)",marginBottom:6,letterSpacing:-.3}}>{ad.title}</div>
+                    <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.5,marginBottom:14,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{ad.desc||ad.description}</div>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontSize:12,color:"var(--acc)",fontWeight:700}}>View Offer →</span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </>}
+        )}
 
-        <div className="sh"><div className="sh-label">How It Works</div><div className="sh-title">THREE STEPS TO THE DUNES</div></div>
-        <div className="steps">
-          {[
-            ["01","REGISTER","Sign up and pick your club, or register your own to become Admin."],
-            ["02","JOIN DRIVES","Browse upcoming drives, check your rank, and register your spot."],
-            ["03","EARN RANK","Complete drives, build your record, get promoted by your admin."],
-          ].map(([n,t,d]) => (
-            <div key={n} className="step">
-              <div className="step-num">{n}</div>
-              <div className="step-title">{t}</div>
-              <div className="step-desc">{d}</div>
+        {/* ── CLUBS ─────────────────────────────────────── */}
+        {clubs.length > 0 && (
+          <div style={{marginBottom:40}}>
+            <div className="sh">
+              <div className="sh-label">Community</div>
+              <div className="sh-title">ACTIVE CLUBS</div>
+              <div className="sh-sub">Find your tribe — join a club and hit the dunes</div>
             </div>
-          ))}
-        </div>
-        <div className="sh" style={{marginTop:48}}>
-          <div className="sh-label">Rank System</div>
-          <div className="sh-title">FIVE RANKS. ONE LEGEND.</div>
-        </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {DEFAULT_RANKS.map((r, i) => (
-            <div key={r.id} className="rank-row" style={{flex:"1 1 160px"}}>
-              <div className="rank-num" style={{color:RANK_COLORS[i]}}>{r.level}</div>
-              <div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontSize:16,letterSpacing:2,color:RANK_COLORS[i]}}>{r.name}</div>
-                <div style={{fontSize:11,color:"var(--mid)",marginTop:2,fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:1}}>LEVEL {r.level}</div>
+            <div className="clubs-grid">
+              {clubs.map(cl => {
+                const memberCount    = users.filter(u => u.clubId === cl.id && u.role !== "app_admin").length;
+                const upcomingDrives = drives.filter(d => d.clubId === cl.id && !d.attendanceRecorded && d.date >= todayStr).length;
+                const initials = (cl.name||"CL").slice(0,2).toUpperCase();
+                return (
+                  <div key={cl.id} className="club-tile" onClick={() => go("reg-member")}>
+                    {cl.banner
+                      ? <img src={cl.banner} alt="" className="club-tile-banner" />
+                      : <div className="club-tile-placeholder">🏜️</div>
+                    }
+                    <div className="club-tile-body">
+                      {cl.logo
+                        ? <img src={cl.logo} alt="" className="club-tile-logo-img" />
+                        : <div className="club-tile-logo-init">{initials}</div>
+                      }
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                        <div className="club-tile-name">{cl.name}</div>
+                        <ClubTierBadge club={cl} users={users} drives={drives} />
+                      </div>
+                      {cl.description && <div className="club-tile-desc">{cl.description}</div>}
+                      <div className="club-tile-foot">
+                        <div className="club-tile-stat">
+                          <div className="club-tile-stat-num">{memberCount}</div>
+                          <div className="club-tile-stat-label">Members</div>
+                        </div>
+                        <div className="club-tile-stat right">
+                          <div className="club-tile-stat-num">{upcomingDrives}</div>
+                          <div className="club-tile-stat-label">Upcoming Drives</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── HOW IT WORKS ──────────────────────────────── */}
+        <div style={{
+          background:"var(--bg)", border:"1px solid var(--line)",
+          borderRadius:"var(--r-xl)", padding:"32px 24px", marginBottom:40,
+        }}>
+          <div className="sh" style={{marginBottom:24}}>
+            <div className="sh-label">Get Started</div>
+            <div className="sh-title">HOW IT WORKS</div>
+          </div>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:20}}>
+            {[
+              ["🏁","Register","Sign up and join your club or create your own as Admin"],
+              ["🚙","Join Drives","Browse upcoming drives and register your spot"],
+              ["⭐","Earn Rank","Complete drives and get promoted through the ranks"],
+              ["👑","Lead","Become a Marshal and help shape your club"],
+            ].map(([icon,title,desc]) => (
+              <div key={title} style={{textAlign:"center",padding:"16px 8px"}}>
+                <div style={{fontSize:32,marginBottom:12}}>{icon}</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800,color:"var(--ink)",marginBottom:6}}>{title}</div>
+                <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.5}}>{desc}</div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        {/* ── FINAL CTA ─────────────────────────────────── */}
+        <div style={{
+          background:"linear-gradient(135deg,#0a0a0a,#1a1208)",
+          borderRadius:"var(--r-xl)", padding:"40px 24px", textAlign:"center", marginBottom:20,
+        }}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontSize:"clamp(22px,5vw,32px)",fontWeight:800,color:"#fff",letterSpacing:-1,marginBottom:8}}>
+            Ready to hit the dunes?
+          </div>
+          <div style={{fontSize:14,color:"rgba(255,255,255,.5)",marginBottom:24}}>
+            Join hundreds of off-road enthusiasts across the UAE
+          </div>
+          <button className="btn gold" style={{fontSize:15,padding:"14px 36px",borderRadius:14}}
+            onClick={() => go("reg-member")}>
+            Get Started — It's Free
+          </button>
         </div>
       </div>
     </div>
@@ -4308,7 +4416,7 @@ export default function App() {
       <style>{CSS}</style>
       <div className="wrap">
         <nav className="nav">
-          <div className="nav-brand" onClick={() => go(cu ? "dashboard" : "home")}>
+          <div className="nav-brand" onClick={() => go("home")}>
             <div className="nav-logo-mark">
                 <span style={{color:"#0a0a0a", letterSpacing:.5}}>C</span>
                 <span style={{color:"#0a0a0a", letterSpacing:.5}}>B</span>
