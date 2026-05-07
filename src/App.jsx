@@ -2065,6 +2065,168 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
 }
 
 /* ─── CLUB ADMIN ────────────────────────────────────────────── */
+
+
+function MemberRow({ u, cu, myRanks, clubRanks, promos, us, upd, showToast, getRank }) {
+  return (
+    <div className="ca-mrow"
+      style={{display:"flex", alignItems:"center", gap:14, padding:"16px 20px",
+        background: u.suspended ? "rgba(234,88,12,.04)" : "var(--bg)",
+        border:`1px solid ${u.suspended ? "rgba(234,88,12,.25)" : "var(--line)"}`,
+        borderRadius:"var(--r-xl)", marginBottom:10, boxShadow:"var(--sh-xs)", flexWrap:"wrap", transition:"all .2s"}}>
+
+      {/* Avatar + info */}
+      <div className="ava" style={{flexShrink:0}}>{(u.name||"?")[0]}</div>
+      <div style={{flex:1, minWidth:160}}>
+        <div style={{fontSize:15, fontWeight:700, color:"var(--ink)", marginBottom:3}}>{u.name}</div>
+        <div style={{fontSize:12, color:"var(--mid)", marginBottom:5}}>{u.email} · {u.phone}</div>
+        <div style={{display:"flex", gap:6, flexWrap:"wrap", alignItems:"center"}}>
+          <RankPill rankId={u.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
+          <RolePill role={u.role} />
+          <span style={{fontSize:11, color:"var(--mid2)", fontWeight:600}}>🏁 {u.drives||0} drives</span>
+          {u.suspended && <span className="bdg o">⚠️ SUSPENDED</span>}
+        </div>
+      </div>
+
+      {/* Rank + Role selectors */}
+      {u.id !== cu.id && (
+        <div style={{display:"flex", gap:12, alignItems:"flex-end", flexShrink:0, flexWrap:"wrap"}}>
+          <div style={{display:"flex", flexDirection:"column", gap:4}}>
+            <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>RANK</div>
+            <select className="fi fi-sel"
+              style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:130}}
+              value={u.rankId}
+              onChange={e => {
+                const nId = Number(e.target.value);
+                const nRank = getRank(nId, clubRanks, cu.clubId);
+                if (nRank && nRank.level >= 4) {
+                  if (promos.find(p => p.userId === u.id && p.status === "voting")) { showToast("Promotion already pending"); return; }
+                  upd({ promos: [...promos, {id:Date.now(), userId:u.id, rankId:nId, role:"marshal", clubId:cu.clubId, by:cu.id, status:"voting", votes:[], date:new Date().toISOString().split("T")[0]}] });
+                  showToast("Promotion request created — awaiting 2 marshal votes");
+                } else {
+                  upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
+                  showToast("Rank updated!");
+                }
+              }}>
+              {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex", flexDirection:"column", gap:4}}>
+            <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>ROLE</div>
+            <select className="fi fi-sel"
+              style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:120,
+                borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : "var(--line2)",
+                color: u.role==="admin" ? "var(--red)" : u.role==="marshal" ? "var(--orange)" : "var(--ink)"
+              }}
+              value={u.role || "member"}
+              onChange={e => {
+                const newRole = e.target.value;
+                const ALLOWED = ["member","marshal","admin"];
+                if (!ALLOWED.includes(newRole)) { showToast("Invalid role"); return; }
+                if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
+                upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
+                showToast(`${u.name} is now ${newRole.toUpperCase()}`);
+              }}>
+              <option value="member">👤 Member</option>
+              <option value="marshal">🏴 Marshal</option>
+              <option value="admin">⚙️ Admin</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {u.id !== cu.id && (
+        <div style={{display:"flex", flexDirection:"column", gap:6, flexShrink:0}}>
+          {u.suspended
+            ? <button className="btn out-grn xs" onClick={() => { upd({ users: us.map(x => x.id === u.id ? {...x, suspended:false} : x) }); showToast(`${u.name} reinstated`); }}>✓ REINSTATE</button>
+            : <button className="btn xs" style={{background:"var(--orange-pale)", color:"var(--orange)", border:"1.5px solid rgba(234,88,12,.25)", borderRadius:9}}
+                onClick={() => { if (!window.confirm(`Suspend "${u.name}"?`)) return; upd({ users: us.map(x => x.id === u.id ? {...x, suspended:true} : x) }); showToast(`${u.name} suspended`); }}>⏸ SUSPEND</button>
+          }
+          <button className="btn out-red xs" onClick={() => { if (!window.confirm(`Remove "${u.name}" from club?`)) return; upd({ users: us.map(x => x.id === u.id ? {...x, clubId:null, role:"member"} : x) }); showToast(`${u.name} removed`); }}>REMOVE</button>
+          <button className="btn out-red xs" onClick={() => { if (!window.confirm(`PERMANENTLY DELETE "${u.name}"? Cannot be undone.`)) return; upd({ users: us.filter(x => x.id !== u.id) }); showToast(`${u.name} deleted`); }}>🗑 DELETE</button>
+        </div>
+      )}
+      {u.id === cu.id && <span style={{fontSize:11, color:"var(--mid3)", fontStyle:"italic"}}>— YOU —</span>}
+    </div>
+  );
+}
+
+function MembersTab({ members, myRanks, clubRanks, cu, myCl, promos, us, upd, showToast, RANK_META, getRank }) {
+  const [mSearch, setMSearch] = useState("");
+  const [mRankF,  setMRankF]  = useState("");
+  const [mRoleF,  setMRoleF]  = useState("");
+
+  const filtered = members.filter(u => {
+    const q = mSearch.toLowerCase();
+    const matchQ    = !q || (u.name||"").toLowerCase().includes(q) || (u.email||"").toLowerCase().includes(q);
+    const matchRank = !mRankF || String(u.rankId) === String(mRankF);
+    const matchRole = !mRoleF || u.role === mRoleF;
+    return matchQ && matchRank && matchRole;
+  });
+
+  function exportCSV() {
+    const rows = [
+      ["Name","Email","Phone","Rank","Role","Drives","Status"],
+      ...filtered.map(u => [
+        u.name, u.email, u.phone||"",
+        getRank(u.rankId, clubRanks, cu.clubId)?.name || "",
+        u.role, u.drives||0,
+        u.suspended ? "Suspended" : "Active"
+      ])
+    ];
+    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv"});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `${myCl?.name||"club"}-members.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div>
+      {/* Search + Filters + Export */}
+      <div style={{display:"flex", gap:10, flexWrap:"wrap", marginBottom:16, alignItems:"center"}}>
+        <input className="fi" placeholder="🔍  Search by name or email..."
+          style={{flex:1, minWidth:200, marginBottom:0}}
+          value={mSearch} onChange={e => setMSearch(e.target.value)}
+        />
+        <select className="fi fi-sel" style={{width:"auto", minWidth:130, marginBottom:0}}
+          value={mRankF} onChange={e => setMRankF(e.target.value)}>
+          <option value="">All Ranks</option>
+          {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+        <select className="fi fi-sel" style={{width:"auto", minWidth:120, marginBottom:0}}
+          value={mRoleF} onChange={e => setMRoleF(e.target.value)}>
+          <option value="">All Roles</option>
+          <option value="member">👤 Member</option>
+          <option value="marshal">🏴 Marshal</option>
+          <option value="admin">⚙️ Admin</option>
+        </select>
+        <button className="btn out sm" style={{whiteSpace:"nowrap", marginBottom:0}} onClick={exportCSV}>
+          ⬇ Export CSV
+        </button>
+      </div>
+      {/* Rank legend — click to filter */}
+      <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:20, alignItems:"center"}}>
+        <span style={{fontSize:11, fontWeight:700, letterSpacing:2, color:"var(--mid2)", textTransform:"uppercase", marginRight:4}}>Ranks:</span>
+        {myRanks.map((r, i) => (
+          <span key={r.id} className={`rbdg rbdg-${r.level}`}
+            style={{cursor:"pointer", opacity: mRankF && String(mRankF) !== String(r.id) ? 0.4 : 1, transition:"opacity .15s"}}
+            onClick={() => setMRankF(v => String(v) === String(r.id) ? "" : String(r.id))}>
+            <span style={{fontSize:12}}>{RANK_META[i]?.icon}</span> {r.name}
+          </span>
+        ))}
+      </div>
+      {filtered.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No members match your filters.</div>}
+      {filtered.map(u => (
+        <MemberRow key={u.id} u={u} cu={cu} myRanks={myRanks} clubRanks={clubRanks}
+          promos={promos} us={us} upd={upd} showToast={showToast} getRank={getRank} />
+      ))}
+    </div>
+  );
+}
+
 function ClubAdmin({ state, upd, showToast }) {
   const { currentUser:cu, clubs:cs, users:us, promos, clubRanks } = state;
   const cl      = getClub(cs, cu.clubId);
@@ -2106,12 +2268,12 @@ function ClubAdmin({ state, upd, showToast }) {
             <div className="card-label">Club Branding</div>
             <div className="fg">
               <label className="fl">Club Banner</label>
-              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={220} label="Upload Banner Image" hint="Wide landscape image recommended · Max 10MB" />
+              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={220} label="Upload Banner Image" hint="Recommended: 1200 × 400px (wide landscape) · Max 10MB" />
             </div>
             <div className="g2" style={{marginTop:8}}>
               <div className="fg">
                 <label className="fl">Club Logo</label>
-                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={160} label="Upload Logo" hint="Square image recommended · Max 10MB" />
+                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={160} label="Upload Logo" hint="Recommended: 400 × 400px (square) · Max 10MB" />
               </div>
               <div className="fg">
                 <label className="fl">Club Description</label>
@@ -2238,216 +2400,18 @@ function ClubAdmin({ state, upd, showToast }) {
 
       {/* ── MEMBERS TAB ── */}
       {tab === "members" && (
-        <div>
-          {/* Search */}
-          <input className="fi" placeholder="🔍  Search by name or email..."
-            style={{marginBottom:20}}
-            onChange={e => {
-              const q = e.target.value.toLowerCase();
-              document.querySelectorAll(".ca-mrow").forEach(r => {
-                r.style.display = r.dataset.search.includes(q) ? "" : "none";
-              });
-            }}
-          />
-          {/* Rank legend */}
-          <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:20, alignItems:"center"}}>
-            <span style={{fontSize:11, fontWeight:700, letterSpacing:2, color:"var(--mid2)", textTransform:"uppercase", marginRight:4}}>Ranks:</span>
-            {myRanks.map((r, i) => (
-              <span key={r.id} className={`rbdg rbdg-${r.level}`}>
-                <span style={{fontSize:12}}>{RANK_META[i]?.icon}</span> {r.name}
-              </span>
-            ))}
-          </div>
-          {members.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No members in your club yet.</div>}
-          {members.map((u, i) => (
-            <div key={u.id} className="ca-mrow"
-              data-search={`${(u.name||"").toLowerCase()} ${(u.email||"").toLowerCase()}`}
-              style={{display:"flex", alignItems:"center", gap:14, padding:"16px 20px", background: u.suspended ? "rgba(234,88,12,.04)" : "var(--bg)", border:`1px solid ${u.suspended ? "rgba(234,88,12,.25)" : "var(--line)"}`, borderRadius:"var(--r-xl)", marginBottom:10, boxShadow:"var(--sh-xs)", flexWrap:"wrap", transition:"all .2s"}}>
-
-              {/* Avatar + info */}
-              <div className="ava" style={{flexShrink:0}}>{(u.name||"?")[0]}</div>
-              <div style={{flex:1, minWidth:160}}>
-                <div style={{fontSize:15, fontWeight:700, color:"var(--ink)", marginBottom:3}}>{u.name}</div>
-                <div style={{fontSize:12, color:"var(--mid)", marginBottom:5}}>{u.email} · {u.phone}</div>
-                <div style={{display:"flex", gap:6, flexWrap:"wrap", alignItems:"center"}}>
-                  <RankPill rankId={u.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
-                  <RolePill role={u.role} />
-                  <span style={{fontSize:11, color:"var(--mid2)", fontWeight:600}}>🏁 {u.drives||0} drives</span>
-                  {u.suspended && <span className="bdg o">⚠️ SUSPENDED</span>}
-                </div>
-              </div>
-
-              {/* Rank + Role selectors — same row with labels */}
-              {u.id !== cu.id && (
-                <div style={{display:"flex", gap:12, alignItems:"flex-end", flexShrink:0, flexWrap:"wrap"}}>
-
-                  {/* Rank */}
-                  <div style={{display:"flex", flexDirection:"column", gap:4}}>
-                    <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>RANK</div>
-                    <select
-                      className="fi fi-sel"
-                      style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:130, flexShrink:0}}
-                      value={u.rankId}
-                      onChange={e => {
-                        const nId   = Number(e.target.value);
-                        const nRank = getRank(nId, clubRanks, cu.clubId);
-                        if (nRank && nRank.level >= 4) {
-                          if (promos.find(p => p.userId === u.id && p.status === "voting")) { showToast("Promotion already pending"); return; }
-                          upd({ promos: [...promos, {id:Date.now(), userId:u.id, rankId:nId, role:"marshal", clubId:cu.clubId, by:cu.id, status:"voting", votes:[], date:new Date().toISOString().split("T")[0]}] });
-                          showToast("Promotion request created — awaiting 2 marshal votes");
-                        } else {
-                          upd({ users: us.map(x => x.id === u.id ? {...x, rankId:nId} : x) });
-                          showToast("Rank updated!");
-                        }
-                      }}
-                    >
-                      {myRanks.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Role */}
-                  <div style={{display:"flex", flexDirection:"column", gap:4}}>
-                    <div style={{fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)"}}>ROLE</div>
-                    <select
-                      className="fi fi-sel"
-                      style={{width:"auto", padding:"7px 32px 7px 12px", fontSize:12, fontWeight:600, minWidth:120, flexShrink:0,
-                        borderColor: u.role==="admin" ? "rgba(220,38,38,.3)" : u.role==="marshal" ? "rgba(234,88,12,.3)" : "var(--line2)",
-                        color: u.role==="admin" ? "var(--red)" : u.role==="marshal" ? "var(--orange)" : "var(--ink)"
-                      }}
-                      value={u.role || "member"}
-                      onChange={e => {
-                        const newRole = e.target.value;
-                        const ALLOWED = ["member","marshal","admin"];
-                        if (!ALLOWED.includes(newRole)) { showToast("Invalid role"); return; }
-                        if (!window.confirm(`Change "${u.name}" role to ${newRole.toUpperCase()}?`)) return;
-                        upd({ users: us.map(x => x.id === u.id ? {...x, role: newRole} : x) });
-                        showToast(`${u.name} is now ${newRole.toUpperCase()}`);
-                      }}
-                    >
-                      <option value="member">👤 Member</option>
-                      <option value="marshal">🏴 Marshal</option>
-                      <option value="admin">⚙️ Admin</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              {u.id !== cu.id && (
-                <div style={{display:"flex", flexDirection:"column", gap:6, flexShrink:0}}>
-                  {u.suspended
-                    ? <button className="btn out-grn xs" onClick={() => {
-                        upd({ users: us.map(x => x.id === u.id ? {...x, suspended:false} : x) });
-                        showToast(`${u.name} reinstated`);
-                      }}>✓ REINSTATE</button>
-                    : <button className="btn xs"
-                        style={{background:"var(--orange-pale)", color:"var(--orange)", border:"1.5px solid rgba(234,88,12,.25)", borderRadius:9}}
-                        onClick={() => {
-                          if (!window.confirm(`Suspend "${u.name}"? They won't be able to sign in.`)) return;
-                          upd({ users: us.map(x => x.id === u.id ? {...x, suspended:true} : x) });
-                          showToast(`${u.name} suspended`);
-                        }}>⏸ SUSPEND</button>
-                  }
-                  <button className="btn out-red xs" onClick={() => {
-                    if (!window.confirm(`Remove "${u.name}" from your club? Their account stays active but they leave the club.`)) return;
-                    upd({ users: us.map(x => x.id === u.id ? {...x, clubId:null, role:"member"} : x) });
-                    showToast(`${u.name} removed from club`);
-                  }}>REMOVE</button>
-                  <button className="btn out-red xs" onClick={() => {
-                    if (!window.confirm(`PERMANENTLY DELETE "${u.name}"? This cannot be undone.`)) return;
-                    upd({ users: us.filter(x => x.id !== u.id) });
-                    showToast(`${u.name} deleted`);
-                  }}>🗑 DELETE</button>
-                </div>
-              )}
-              {u.id === cu.id && (
-                <span style={{fontSize:11, color:"var(--mid3)", fontStyle:"italic"}}>— YOU —</span>
-              )}
-            </div>
-          ))}
-        </div>
+        <MembersTab
+          members={members} myRanks={myRanks} clubRanks={clubRanks}
+          cu={cu} myCl={myCl} promos={promos} us={us} upd={upd} showToast={showToast}
+          RANK_META={RANK_META} getRank={getRank}
+        />
       )}
-
-      {/* ── DRIVES TAB ── */}
-      {tab === "drives" && (() => {
-        const myDrives = state.drives.filter(d => d.clubId === cu.clubId);
-        return (
-          <div>
-            <div className="ibox" style={{marginBottom:24}}>
-              Manage all drives posted in your club. You can cancel or delete any drive regardless of who posted it.
-            </div>
-            {myDrives.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No drives posted yet.</div>}
-            {myDrives.map(d => {
-              const confirmed = d.registrations.filter(r => r.status === "confirmed").length;
-              const waiting   = d.registrations.filter(r => r.status === "waiting").length;
-              const poster    = getUser(us, d.postedBy);
-              return (
-                <div key={d.id} className="dcard">
-                  {d.image && <img src={d.image} alt={d.title} className="dcard-img" />}
-                  <div className="dcard-accent" />
-                  <div className="dcard-inner">
-                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10, marginBottom:10}}>
-                      <div style={{flex:1}}>
-                        <div className="dcard-title">{d.title}</div>
-                        <div style={{fontSize:12, color:"var(--mid)", marginTop:3}}>
-                          Posted by: <strong style={{color:"var(--ink)"}}>{poster ? poster.name : "Unknown"}</strong>
-                        </div>
-                      </div>
-                      {d.cancelled && <span className="bdg r">CANCELLED</span>}
-                    </div>
-                    <div className="dcard-meta-grid">
-                      {d.date      && <div className="dm">📅 <strong>{fmtDate(d.date)}</strong></div>}
-                      {d.startTime && <div className="dm">🕐 <strong>{fmtTime(d.startTime)}</strong></div>}
-                      {d.location  && <div className="dm">📍 <strong>{d.location}</strong></div>}
-                      <div className="dm">👥 <strong>{confirmed}/{d.capacity||"∞"}</strong> confirmed</div>
-                      {waiting > 0 && <div className="dm">⏳ <strong>{waiting}</strong> waiting</div>}
-                    </div>
-                    {/* Registered members list */}
-                    {d.registrations.length > 0 && (
-                      <div style={{marginBottom:14}}>
-                        <div style={{fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"var(--mid2)", marginBottom:8}}>Registered Members</div>
-                        <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
-                          {d.registrations.map(reg => {
-                            const ru = getUser(us, reg.userId);
-                            return ru ? (
-                              <span key={reg.userId} className={`bdg ${reg.status === "confirmed" ? "g" : "d"}`}>
-                                {ru.name} {reg.status === "waiting" ? "⏳" : "✓"}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    {/* Action buttons */}
-                    <div style={{display:"flex", gap:8, flexWrap:"wrap", marginTop:10, paddingTop:14, borderTop:"1px solid var(--line)"}}>
-                      {!d.cancelled && !d.attendanceRecorded && (
-                        <button className="btn xs"
-                          style={{background:"var(--orange-pale)", color:"var(--orange)", border:"1.5px solid rgba(234,88,12,.25)", borderRadius:9}}
-                          onClick={() => {
-                            if (!window.confirm(`Cancel drive "${d.title}"? Registered members will be notified.`)) return;
-                            upd({ drives: state.drives.map(x => x.id === d.id ? {...x, cancelled:true} : x) });
-                            showToast(`Drive "${d.title}" cancelled`);
-                          }}>⏸ CANCEL DRIVE</button>
-                      )}
-                      <button className="btn out-red xs" onClick={() => {
-                        if (!window.confirm(`PERMANENTLY DELETE drive "${d.title}"? This cannot be undone.`)) return;
-                        upd({ drives: state.drives.filter(x => x.id !== d.id) });
-                        showToast(`Drive deleted`);
-                      }}>🗑 DELETE DRIVE</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
 
       {/* ── PROMOTIONS TAB ── */}
       {tab === "promotions" && (
         <div>
           <div className="ibox" style={{marginBottom:24}}>
-            Two active marshals must vote YES before you can finalize a Marshal promotion.
+            Two active marshals must vote YES before you can finalize a promotion.
           </div>
           {myPromos.length === 0 && <div style={{color:"var(--mid)", fontSize:14}}>No pending promotion requests.</div>}
           {myPromos.map(req => {
