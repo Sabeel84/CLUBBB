@@ -3322,30 +3322,70 @@ function NotifBanner({ notifs, dismiss }) {
    FEATURE 4 — CLUB CHAT
 ════════════════════════════════════════════════════════ */
 function ClubChat({ state, upd, showToast, forcedClubId }) {
-  const { currentUser:cu, users:us, clubs:cs, chat = {} } = state;
-  const clubId   = forcedClubId || cu.clubId;
-  if (!clubId) return <div style={{padding:"20px 0", color:"var(--mid)", fontSize:14}}>You must be a club member to access chat.</div>;
-  const msgs     = chat[clubId] || [];
-  const [text, setText] = useState("");
-  const endRef   = useRef(null);
-  const isAdmin  = ["admin","marshal"].includes(cu.role);
+  const { currentUser:cu, users:us } = state;
+  const clubId  = forcedClubId || cu?.clubId;
+  const [msgs,  setMsgs]  = useState([]);
+  const [text,  setText]  = useState("");
+  const [loading, setLoading] = useState(true);
+  const endRef  = useRef(null);
+  const isAdmin = ["admin","marshal"].includes(cu?.role);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs.length]);
+  // ── Load messages from Supabase ──
+  async function loadMsgs() {
+    if (!SUPA_URL || !SUPA_KEY || !clubId) { setLoading(false); return; }
+    const rows = await SB.get("chat_messages",
+      `club_id=eq.${clubId}&order=created_at.asc&limit=200`);
+    setMsgs(rows || []);
+    setLoading(false);
+  }
 
-  function send() {
+  useEffect(() => {
+    loadMsgs();
+    // Poll every 5 seconds for new messages
+    const interval = setInterval(loadMsgs, 5000);
+    return () => clearInterval(interval);
+  }, [clubId]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior:"smooth" });
+  }, [msgs.length]);
+
+  if (!clubId) return (
+    <div style={{padding:"40px 0", textAlign:"center", color:"var(--mid)", fontSize:14}}>
+      You must be a club member to access chat.
+    </div>
+  );
+
+  async function send() {
     const t = text.trim();
     if (!t) return;
-    const msg = { id: Date.now(), userId: cu.id, text: t, ts: Date.now(), pinned: false };
-    upd({ chat: { ...chat, [clubId]: [...msgs, msg] } });
     setText("");
+    const msg = {
+      club_id:    clubId,
+      user_id:    cu.id,
+      user_name:  cu.name,
+      text:       sanitize(t),
+      pinned:     false,
+    };
+    // Optimistically add to UI
+    const tempMsg = { ...msg, id: Date.now(), created_at: new Date().toISOString() };
+    setMsgs(m => [...m, tempMsg]);
+    // Save to Supabase
+    const saved = await SB.upsert("chat_messages", msg);
+    if (saved) {
+      // Replace temp with real row
+      setMsgs(m => m.map(x => x.id === tempMsg.id ? saved : x));
+    }
   }
 
-  function pin(id) {
-    upd({ chat: { ...chat, [clubId]: msgs.map(m => m.id === id ? { ...m, pinned: !m.pinned } : m) } });
+  async function pin(id, currentPinned) {
+    await SB.patch("chat_messages", { id }, { pinned: !currentPinned });
+    setMsgs(m => m.map(x => x.id === id ? {...x, pinned: !currentPinned} : x));
   }
 
-  function del(id) {
-    upd({ chat: { ...chat, [clubId]: msgs.filter(m => m.id !== id) } });
+  async function del(id) {
+    await SB.del("chat_messages", { id });
+    setMsgs(m => m.filter(x => x.id !== id));
   }
 
   const pinned = msgs.filter(m => m.pinned);
@@ -3354,46 +3394,74 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
     <div>
       {/* Pinned announcements */}
       {pinned.length > 0 && (
-        <div style={{ marginBottom:16 }}>
-          {pinned.map(m => {
-            const u = getUser(us, m.userId);
-            return (
-              <div key={m.id} style={{ display:"flex", gap:10, padding:"12px 16px", background:"var(--acc-pale)", border:"1.5px solid var(--acc-pale3)", borderRadius:"var(--r-xl)", marginBottom:8 }}>
-                <span style={{ fontSize:16 }}>📌</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"var(--acc)", letterSpacing:1, textTransform:"uppercase", marginBottom:3 }}>Pinned by {u?.name?.split(" ")[0]}</div>
-                  <div style={{ fontSize:13, color:"var(--ink)", lineHeight:1.55 }}>{m.text}</div>
+        <div style={{marginBottom:16}}>
+          {pinned.map(m => (
+            <div key={m.id} style={{display:"flex", gap:10, padding:"12px 16px",
+              background:"var(--acc-pale)", border:"1.5px solid var(--acc-pale3)",
+              borderRadius:"var(--r-lg)", marginBottom:8}}>
+              <span style={{fontSize:16}}>📌</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11, fontWeight:700, color:"var(--acc)",
+                  letterSpacing:1, textTransform:"uppercase", marginBottom:3}}>
+                  Pinned by {m.user_name?.split(" ")[0]}
                 </div>
+                <div style={{fontSize:13, color:"var(--ink)", lineHeight:1.55}}>{m.text}</div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
       <div className="chat-wrap">
         <div className="chat-msgs">
-          {msgs.length === 0 && (
-            <div style={{ textAlign:"center", margin:"auto", color:"var(--mid2)", fontSize:13 }}>
-              <div style={{ fontSize:40, marginBottom:10 }}>💬</div>
+          {loading && (
+            <div style={{textAlign:"center", margin:"auto", color:"var(--mid)", fontSize:13}}>
+              <div style={{width:24, height:24, border:"3px solid var(--acc2)", borderTopColor:"transparent",
+                borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 8px"}} />
+              Loading messages...
+            </div>
+          )}
+          {!loading && msgs.length === 0 && (
+            <div style={{textAlign:"center", margin:"auto", color:"var(--mid2)", fontSize:13}}>
+              <div style={{fontSize:40, marginBottom:10}}>💬</div>
               No messages yet. Say hello to your club!
             </div>
           )}
           {msgs.map(m => {
-            const u   = getUser(us, m.userId);
-            const isMe = m.userId === cu.id;
+            const isMe = m.user_id === cu.id;
+            const name = m.user_name || getUser(us, m.user_id)?.name || "Member";
+            const time = new Date(m.created_at).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
             return (
               <div key={m.id} className={`chat-msg${isMe ? " me" : ""}`}>
-                {!isMe && <div className="ava" style={{ width:32, height:32, fontSize:13, borderRadius:10, flexShrink:0 }}>{(u?.name||"?")[0]}</div>}
-                <div style={{ maxWidth:"72%" }}>
-                  {!isMe && <div className="chat-sender">{u?.name?.split(" ")[0] || "?"}</div>}
+                {!isMe && (
+                  <div className="ava" style={{width:32, height:32, fontSize:13, borderRadius:10, flexShrink:0}}>
+                    {name[0]}
+                  </div>
+                )}
+                <div style={{maxWidth:"75%"}}>
+                  {!isMe && <div className="chat-sender">{name.split(" ")[0]}</div>}
                   {m.pinned && <div className="chat-pin-badge">📌 Pinned</div>}
-                  <div className={`chat-bubble ${isMe ? "me" : "them"}${m.pinned ? " pinned" : ""}`}>{m.text}</div>
-                  <div className={`chat-meta ${isMe ? "me" : ""}`}>
-                    {new Date(m.ts).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" })}
+                  <div className={`chat-bubble ${isMe ? "me" : "them"}${m.pinned ? " pinned" : ""}`}>
+                    {m.text}
+                  </div>
+                  <div className={`chat-meta${isMe ? " me" : ""}`}>
+                    {time}
                     {(isAdmin || isMe) && (
-                      <span style={{ marginLeft:8 }}>
-                        {isAdmin && <button onClick={() => pin(m.id)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:"var(--mid2)", padding:"0 4px" }}>{m.pinned ? "unpin" : "📌 pin"}</button>}
-                        {(isMe || isAdmin) && <button onClick={() => del(m.id)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:"var(--red)", padding:"0 4px" }}>del</button>}
+                      <span style={{marginLeft:6, display:"flex", gap:4}}>
+                        {isAdmin && (
+                          <button onClick={() => pin(m.id, m.pinned)}
+                            style={{background:"none", border:"none", cursor:"pointer",
+                              fontSize:11, color:"var(--mid2)", padding:"0 2px"}}>
+                            {m.pinned ? "unpin" : "📌"}
+                          </button>
+                        )}
+                        {(isMe || isAdmin) && (
+                          <button onClick={() => del(m.id)}
+                            style={{background:"none", border:"none", cursor:"pointer",
+                              fontSize:11, color:"var(--red)", padding:"0 2px"}}>
+                            del
+                          </button>
+                        )}
                       </span>
                     )}
                   </div>
@@ -3403,6 +3471,7 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
           })}
           <div ref={endRef} />
         </div>
+
         <div className="chat-input-row">
           <textarea
             className="chat-input"
@@ -3410,13 +3479,10 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
             value={text}
             onChange={e => {
               setText(e.target.value);
-              // Auto-grow
               e.target.style.height = "auto";
               e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
             }}
-            onKeyDown={e => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-            }}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           />
           <button className="chat-send" onClick={send} title="Send">↑</button>
         </div>
