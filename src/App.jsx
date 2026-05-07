@@ -3112,87 +3112,100 @@ function AdDetail({ ad, onClose }) {
 /* ─── MARKETPLACE ───────────────────────────────────────────── */
 function Marketplace({ state }) {
   const { ads } = state;
-  const active = ads.filter(a => a.active);
+  const active   = ads.filter(a => a.active !== false);
   const categories = ["All", ...Array.from(new Set(active.map(a => a.category).filter(Boolean)))];
-  const [cat, setCat]       = useState("All");
+  const [cat,      setCat]      = useState("All");
   const [selected, setSelected] = useState(null);
-  const list = cat === "All" ? active : active.filter(a => a.category === cat);
+  const list     = cat === "All" ? active : active.filter(a => a.category === cat);
   const featured = active.filter(a => a.featured);
+
+  if (selected) return <AdDetail ad={selected} onClose={() => setSelected(null)} />;
 
   return (
     <div className="page">
-      {selected && <AdDetail ad={selected} onClose={() => setSelected(null)} />}
-
       <div className="sh">
         <div className="sh-label">CLUBBB</div>
         <div className="sh-title">MARKETPLACE</div>
-        <div className="sh-sub">Exclusive offers, gear deals & partner promotions for CLUBBB members</div>
+        <div className="sh-sub">Exclusive deals & partner offers for CLUBBB members</div>
       </div>
 
-      {/* Featured strip */}
+      {/* ── FEATURED — horizontal scroll strip on mobile ── */}
       {featured.length > 0 && (
-        <>
-          <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, letterSpacing:3, color:"var(--acc2)", textTransform:"uppercase", marginBottom:14, display:"flex", alignItems:"center", gap:10}}>
-            <span style={{width:20, height:2, background:"var(--acc2)", display:"inline-block"}} />
-            Featured Promotions
+        <div style={{marginBottom:32}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:3,textTransform:"uppercase",color:"var(--acc)",marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{width:16,height:2,background:"var(--acc2)",display:"inline-block"}} />
+            Featured Offers
           </div>
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, marginBottom:40}}>
+          <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:8,scrollSnapType:"x mandatory",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
             {featured.map(ad => (
-              <div key={ad.id} onClick={() => setSelected(ad)} style={{background:"linear-gradient(135deg,var(--bg3),var(--bg4))", border:"1px solid var(--acc3)", position:"relative", overflow:"hidden", cursor:"pointer", borderRadius:16, WebkitTapHighlightColor:"transparent"}}>
-                <div style={{position:"absolute", top:0, left:0, right:0, height:3, background:"linear-gradient(90deg,var(--acc2),var(--acc3))"}} />
+              <div key={ad.id} onClick={() => setSelected(ad)} style={{
+                minWidth:260, maxWidth:300, flex:"0 0 260px",
+                background:"var(--bg)", border:"1px solid var(--line)",
+                borderTop:"3px solid var(--acc2)",
+                borderRadius:"var(--r-xl)", overflow:"hidden",
+                cursor:"pointer", scrollSnapAlign:"start",
+                boxShadow:"0 4px 20px rgba(232,163,12,.1)",
+              }}>
                 {ad.thumbnail
-                  ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%", height:130, objectFit:"cover", display:"block"}} />
-                  : <div style={{width:"100%", height:130, background:"linear-gradient(135deg,var(--ink3),var(--ink3))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:44}}>{ad.icon}</div>
+                  ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",aspectRatio:"16/9",objectFit:"contain",background:"var(--bg3)",display:"block"}} />
+                  : <div style={{width:"100%",aspectRatio:"16/9",background:"linear-gradient(135deg,var(--bg3),var(--bg4))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:52}}>{ad.icon||"🚙"}</div>
                 }
-                <div style={{padding:"16px 18px 18px"}}>
-                  <div style={{position:"absolute", top:ad.thumbnail ? 112 : 118, right:10, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:"var(--ink)", background:"var(--acc2)", padding:"3px 8px"}}>⭐ FEATURED</div>
-                  <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:10, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", color:"var(--acc3)", marginBottom:5}}>{ad.category}</div>
-                  <div style={{fontFamily:"'Syne',sans-serif", fontSize:17, letterSpacing:2, color:"var(--ink)", lineHeight:1.1, marginBottom:6}}>{ad.title}</div>
-                  <div style={{fontSize:12, color:"var(--mid)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>{ad.desc}</div>
-                  <div style={{marginTop:12, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:11, fontWeight:700, letterSpacing:1.5, color:"var(--acc2)"}}>VIEW DETAILS →</div>
+                <div style={{padding:"14px 16px 18px"}}>
+                  <div style={{fontSize:9,fontWeight:800,letterSpacing:2,textTransform:"uppercase",color:"var(--acc)",marginBottom:6}}>{ad.category||"Offer"}</div>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800,color:"var(--ink)",lineHeight:1.2,marginBottom:6,letterSpacing:-.3}}>{ad.title}</div>
+                  <div style={{fontSize:12,color:"var(--mid)",lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:12}}>{ad.desc||ad.description}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--acc)"}}>View Details →</div>
                 </div>
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
-      {/* Category filter */}
-      <div className="mkt-cats">
+      {/* ── CATEGORY FILTER ── */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
         {categories.map(c => (
-          <button key={c} className={`mkt-cat ${cat === c ? "on" : ""}`} onClick={() => setCat(c)}>{c}</button>
+          <button key={c} onClick={() => setCat(c)} style={{
+            padding:"7px 16px", borderRadius:100, border:"1.5px solid",
+            borderColor: cat===c ? "var(--acc2)" : "var(--line2)",
+            background:  cat===c ? "var(--acc2)" : "var(--bg)",
+            color:       cat===c ? "#0a0a0a"     : "var(--mid)",
+            fontSize:12, fontWeight:600, cursor:"pointer",
+          }}>{c}</button>
         ))}
       </div>
 
-      {/* All offers grid */}
+      {/* ── ALL ADS — vertical list, better for mobile ── */}
       {list.length === 0
-        ? <div style={{color:"var(--mid)", fontSize:14, padding:"24px 0"}}>No offers in this category yet.</div>
-        : <div className="mkt-grid">
+        ? <div style={{color:"var(--mid)",fontSize:14,padding:"24px 0"}}>No offers in this category yet.</div>
+        : <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {list.map(ad => (
-              <div key={ad.id} className="mkt-card" onClick={() => setSelected(ad)}>
-                {ad.featured && <div className="mkt-featured-banner" />}
-                {ad.featured && <div className="mkt-featured-tag">⭐ FEATURED</div>}
+              <div key={ad.id} onClick={() => setSelected(ad)} style={{
+                background:"var(--bg)", border:"1px solid var(--line)",
+                borderRadius:"var(--r-xl)", overflow:"hidden",
+                cursor:"pointer", display:"flex", gap:0,
+                boxShadow:"0 2px 8px rgba(0,0,0,.05)",
+                position:"relative",
+              }}>
+                {ad.featured && <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,var(--acc2),var(--acc))"}} />}
 
-                {/* Thumbnail */}
-                <div style={{position:"relative"}}>
+                {/* Left image — fixed width, full height */}
+                <div style={{width:110,flexShrink:0,background:"var(--bg3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   {ad.thumbnail
-                    ? <img src={ad.thumbnail} alt={ad.title} className="mkt-thumb" />
-                    : <div className="mkt-thumb-placeholder">{ad.icon}</div>
+                    ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",height:"100%",objectFit:"contain",display:"block",minHeight:90}} />
+                    : <div style={{fontSize:40,padding:16}}>{ad.icon||"🚙"}</div>
                   }
-                  <div className="mkt-thumb-overlay" />
                 </div>
 
-                {/* Body */}
-                <div className="mkt-card-body">
-                  <div className="mkt-card-cat">{ad.category || "Promotion"}</div>
-                  <div className="mkt-card-title">{ad.title}</div>
-                  <div className="mkt-card-desc">{ad.desc}</div>
-                </div>
-
-                {/* Footer */}
-                <div className="mkt-card-foot">
-                  <span className="mkt-sponsored">Sponsored</span>
-                  <button className="mkt-view-btn" onClick={e => { e.stopPropagation(); setSelected(ad); }}>VIEW DETAILS</button>
+                {/* Right content */}
+                <div style={{flex:1,padding:"14px 16px",minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                    <span style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"var(--acc)"}}>{ad.category||"Offer"}</span>
+                    {ad.featured && <span style={{fontSize:9,fontWeight:800,letterSpacing:1,textTransform:"uppercase",background:"var(--acc2)",color:"#0a0a0a",padding:"1px 6px",borderRadius:4}}>⭐ FEATURED</span>}
+                  </div>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontSize:14,fontWeight:800,color:"var(--ink)",lineHeight:1.2,marginBottom:5,letterSpacing:-.2}}>{ad.title}</div>
+                  <div style={{fontSize:12,color:"var(--mid)",lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:8}}>{ad.desc||ad.description}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--acc)"}}>View Details →</div>
                 </div>
               </div>
             ))}
