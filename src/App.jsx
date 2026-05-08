@@ -542,16 +542,65 @@ const SB = {
   },
 };
 
+
+/* ═══ PWA — Service Worker + Install Prompt ════════════════════ */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredInstall = e;
+});
+
+function usePWAInstall() {
+  const [canInstall, setCanInstall] = useState(false);
+  useEffect(() => {
+    const check = () => setCanInstall(!!deferredInstall);
+    check();
+    window.addEventListener("beforeinstallprompt", check);
+    return () => window.removeEventListener("beforeinstallprompt", check);
+  }, []);
+  const install = async () => {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    setCanInstall(false);
+  };
+  return { canInstall, install };
+}
+
+function InstallBanner() {
+  const { canInstall, install } = usePWAInstall();
+  if (!canInstall) return null;
+  return (
+    <div style={{background:"linear-gradient(135deg,#1a1208,#0a0a0a)", padding:"12px 20px",
+      display:"flex", alignItems:"center", gap:12, flexWrap:"wrap"}}>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13, fontWeight:700, color:"#fff"}}>📱 Install CLUBBB App</div>
+        <div style={{fontSize:11, color:"rgba(255,255,255,.5)"}}>Add to home screen for the best experience</div>
+      </div>
+      <button className="btn gold sm" onClick={install}>Install</button>
+    </div>
+  );
+}
+
 /* ═══ ROW MAPPERS ════════════════════════════════════════════ */
 function dbToUser(r) {
   return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", role:r.role,
            rankId:r.rank_id||1, clubId:r.club_id||null, drives:r.drives_count||0,
-           passwordHash:r.password_hash||"", suspended:r.suspended||false, emailVerified:r.email_verified||false };
+           passwordHash:r.password_hash||"", suspended:r.suspended||false, emailVerified:r.email_verified||false,
+           iceName:r.ice_name||"", icePhone:r.ice_phone||"" };
 }
 function userToDb(u) {
   return { id:u.id, name:sanitize(u.name), email:(u.email||"").toLowerCase().trim(), phone:sanitize(u.phone)||"",
            role:u.role, rank_id:u.rankId||1, club_id:u.clubId||null, drives_count:u.drives||0,
-           password_hash:u.passwordHash||"", suspended:u.suspended||false, email_verified:u.emailVerified||false };
+           password_hash:u.passwordHash||"", suspended:u.suspended||false, email_verified:u.emailVerified||false,
+           ice_name:u.iceName||"", ice_phone:u.icePhone||"" };
 }
 function dbToClub(r) {
   return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", adminId:r.admin_id,
@@ -4517,6 +4566,9 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
 
       {tab === "info" && (
         <div>
+          {/* Weather Warning */}
+          <WeatherWarning location={drive.location} date={drive.date} />
+
           {/* Drive details */}
           <div style={{background:"var(--bg2)", borderRadius:"var(--r-lg)", padding:"16px", marginBottom:20}}>
             {drive.description && <p style={{fontSize:14, color:"var(--mid)", lineHeight:1.65, marginBottom:14}}>{drive.description}</p>}
@@ -4779,6 +4831,349 @@ function SetupWizard({ onComplete }) {
   );
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   FEATURE 1 — MEMBER PROFILE PAGE
+═══════════════════════════════════════════════════════════════ */
+const BADGE_DEFS = [
+  {id:"first_drive", icon:"🏁", name:"First Drive",    desc:"Attended your first drive"},
+  {id:"veteran",     icon:"🏜️",  name:"Desert Veteran", desc:"Attended 10 drives"},
+  {id:"legend",      icon:"👑", name:"Legend",          desc:"Attended 25 drives"},
+  {id:"streak3",     icon:"🔥", name:"On Fire",          desc:"3-drive streak"},
+  {id:"streak5",     icon:"⚡", name:"Unstoppable",      desc:"5-drive streak"},
+  {id:"pathfinder",  icon:"🗺️", name:"Pathfinder",      desc:"Recorded a route"},
+  {id:"marshal",     icon:"🏴", name:"Marshal",          desc:"Promoted to Marshal"},
+  {id:"sos_responder",icon:"🚑",name:"First Responder",  desc:"Responded to an SOS"},
+];
+
+async function loadUserBadges(userId) {
+  if (!SUPA_URL || !SUPA_KEY) return [];
+  return await SB.get("achievements", `user_id=eq.${userId}&order=earned_at.asc`);
+}
+
+async function awardBadge(userId, badge) {
+  if (!SUPA_URL || !SUPA_KEY) return;
+  await SB.upsert("achievements", {
+    user_id: userId, badge_id: badge.id,
+    badge_name: badge.name, badge_icon: badge.icon,
+  });
+}
+
+function MemberProfile({ state, upd, showToast, go }) {
+  const { currentUser:cu, drives:ds, clubs:cs, clubRanks, users:us } = state;
+  const [badges,    setBadges]   = useState([]);
+  const [editICE,   setEditICE]  = useState(false);
+  const [iceName,   setIceName]  = useState(cu.iceName  || "");
+  const [icePhone,  setIcePhone] = useState(cu.icePhone || "");
+  const [tab,       setTab]      = useState("stats");
+
+  const myCl     = cu.clubId ? getClub(cs, cu.clubId) : null;
+  const myRank   = getRank(cu.rankId, clubRanks, cu.clubId);
+  const attended = ds.filter(d => d.attendanceRecorded && d.registrations?.find(r => r.userId === cu.id && r.attended));
+  const streak   = getMemberStreak(cu.id, ds);
+
+  useEffect(() => {
+    loadUserBadges(cu.id).then(setBadges);
+    // Auto-award badges
+    const checks = [
+      {cond: attended.length >= 1,  badge: BADGE_DEFS[0]},
+      {cond: attended.length >= 10, badge: BADGE_DEFS[1]},
+      {cond: attended.length >= 25, badge: BADGE_DEFS[2]},
+      {cond: streak >= 3,           badge: BADGE_DEFS[3]},
+      {cond: streak >= 5,           badge: BADGE_DEFS[4]},
+      {cond: cu.role === "marshal", badge: BADGE_DEFS[6]},
+    ];
+    checks.forEach(({cond, badge}) => { if (cond) awardBadge(cu.id, badge); });
+  }, []);
+
+  async function saveICE() {
+    const updated = {...cu, iceName: sanitize(iceName), icePhone: sanitize(icePhone)};
+    upd({ users: us.map(u => u.id === cu.id ? updated : u), currentUser: updated });
+    await SB.patch("users", { id: cu.id }, { ice_name: iceName, ice_phone: icePhone });
+    showToast("✅ Emergency contact saved!");
+    setEditICE(false);
+  }
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{background:"linear-gradient(160deg,#0a0a0a 0%,#1a1208 100%)", padding:"32px 20px 24px", textAlign:"center"}}>
+        <div style={{width:80, height:80, background:"var(--acc2)", borderRadius:24, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Syne',sans-serif", fontSize:34, fontWeight:800, color:"#0a0a0a", margin:"0 auto 14px", boxShadow:"0 4px 24px rgba(232,163,12,.4)"}}>
+          {(cu.name||"?")[0]}
+        </div>
+        <div style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-.5, marginBottom:4}}>{cu.name}</div>
+        <div style={{fontSize:12, color:"rgba(255,255,255,.45)", marginBottom:12}}>{cu.email}</div>
+        <div style={{display:"flex", justifyContent:"center", gap:8, flexWrap:"wrap"}}>
+          <RankPill rankId={cu.rankId} clubRanks={clubRanks} clubId={cu.clubId} />
+          <RolePill role={cu.role} />
+          {myCl && <span style={{background:"rgba(255,255,255,.1)", color:"rgba(255,255,255,.7)", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:100}}>{myCl.name}</span>}
+        </div>
+      </div>
+
+      <div className="page">
+        {/* Stats */}
+        <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:24}}>
+          {[["🏁", attended.length, "Drives"], ["🔥", streak, "Streak"], ["🏅", badges.length, "Badges"]].map(([icon,n,label]) => (
+            <div key={label} style={{background:"var(--bg)", border:"1px solid var(--line)", borderRadius:"var(--r-lg)", padding:"16px 8px", textAlign:"center"}}>
+              <div style={{fontSize:24, marginBottom:4}}>{icon}</div>
+              <div style={{fontFamily:"'Syne',sans-serif", fontSize:26, fontWeight:800, color:"var(--ink)", letterSpacing:-1}}>{n}</div>
+              <div style={{fontSize:10, fontWeight:600, letterSpacing:1.5, textTransform:"uppercase", color:"var(--mid2)", marginTop:2}}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="tabs" style={{marginBottom:20}}>
+          {[["stats","🏅 Badges"],["drives","🚙 Drives"],["ice","🚑 Emergency"]].map(([id,l]) => (
+            <button key={id} className={`tab ${tab===id?"on":""}`} onClick={() => setTab(id)}>{l}</button>
+          ))}
+        </div>
+
+        {/* Badges tab */}
+        {tab === "stats" && (
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10}}>
+            {BADGE_DEFS.map(b => {
+              const earned = badges.find(x => x.badge_id === b.id);
+              return (
+                <div key={b.id} style={{padding:"14px 12px", background: earned?"var(--acc-pale)":"var(--bg2)", border:`1px solid ${earned?"var(--acc-pale3)":"var(--line)"}`, borderRadius:"var(--r-lg)", opacity: earned?1:0.45, display:"flex", alignItems:"center", gap:10}}>
+                  <div style={{fontSize:26, flexShrink:0}}>{earned ? b.icon : "🔒"}</div>
+                  <div>
+                    <div style={{fontSize:12, fontWeight:700, color:"var(--ink)"}}>{b.name}</div>
+                    <div style={{fontSize:10, color:"var(--mid)"}}>{b.desc}</div>
+                    {earned && <div style={{fontSize:9, color:"var(--acc)", marginTop:2}}>{new Date(earned.earned_at).toLocaleDateString()}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Drives tab */}
+        {tab === "drives" && (
+          <div>
+            {attended.length === 0 && <div style={{color:"var(--mid)", fontSize:13, textAlign:"center", padding:"20px 0"}}>No drives attended yet.</div>}
+            {attended.map(d => (
+              <div key={d.id} style={{display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid var(--line)"}}>
+                <div style={{width:40, height:40, background:"var(--green-pale)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0}}>🏁</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14, fontWeight:600, color:"var(--ink)"}}>{d.title}</div>
+                  <div style={{fontSize:11, color:"var(--mid)"}}>{fmtDate(d.date)} · {d.location}</div>
+                </div>
+                <span className="bdg g" style={{fontSize:9}}>ATTENDED</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ICE tab */}
+        {tab === "ice" && (
+          <div>
+            <div className="ibox" style={{marginBottom:16}}>
+              🚑 This contact will be shown to marshals if you trigger <strong>SOS</strong> during a drive. Keep it updated.
+            </div>
+            {!editICE ? (
+              <div className="card">
+                <div className="card-label">Emergency Contact</div>
+                {cu.iceName  ? <div style={{fontSize:14, color:"var(--ink)", marginBottom:6}}>👤 {cu.iceName}</div>  : <div style={{fontSize:13, color:"var(--mid)", marginBottom:6}}>No contact name set</div>}
+                {cu.icePhone ? <div style={{fontSize:14, color:"var(--ink)", marginBottom:16}}>📞 {cu.icePhone}</div> : <div style={{fontSize:13, color:"var(--mid)", marginBottom:16}}>No phone set</div>}
+                <button className="btn out sm" onClick={() => setEditICE(true)}>✏️ Edit</button>
+              </div>
+            ) : (
+              <div className="card">
+                <div className="card-label">Edit Emergency Contact</div>
+                <div className="fg"><label className="fl">Full Name</label><input className="fi" value={iceName} onChange={e=>setIceName(e.target.value)} placeholder="Contact's full name" /></div>
+                <div className="fg"><label className="fl">Phone Number</label><input className="fi" value={icePhone} onChange={e=>setIcePhone(e.target.value)} placeholder="+971 xx xxx xxxx" type="tel" /></div>
+                <div style={{display:"flex", gap:10}}>
+                  <button className="btn gold sm" onClick={saveICE}>💾 Save</button>
+                  <button className="btn out sm" onClick={() => setEditICE(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+/* ── Announcement Banner for Dashboard ── */
+function AnnouncementBanner({ state, go }) {
+  const { currentUser:cu } = state;
+  const [latest, setLatest] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!SUPA_URL || !SUPA_KEY || !cu.clubId) return;
+    SB.get("announcements", `club_id=eq.${cu.clubId}&order=pinned.desc,created_at.desc&limit=1`)
+      .then(rows => { if (rows?.length) setLatest(rows[0]); });
+  }, [cu.clubId]);
+
+  if (!latest || dismissed) return null;
+  return (
+    <div style={{background: latest.pinned?"var(--acc-pale)":"var(--bg)", border:`1px solid ${latest.pinned?"var(--acc-pale3)":"var(--line)"}`, borderLeft:`4px solid ${latest.pinned?"var(--acc2)":"var(--line2)"}`, borderRadius:"var(--r-lg)", padding:"14px 16px", marginBottom:20, display:"flex", alignItems:"flex-start", gap:12}}>
+      <div style={{fontSize:20, flexShrink:0}}>{latest.pinned?"📌":"📢"}</div>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontWeight:700, fontSize:13, color:"var(--ink)", marginBottom:3}}>{latest.title}</div>
+        {latest.body && <div style={{fontSize:12, color:"var(--mid)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>{latest.body}</div>}
+        <button onClick={() => go("announce")} style={{background:"none", border:"none", color:"var(--acc)", fontSize:11, fontWeight:700, cursor:"pointer", padding:"4px 0 0"}}>View all →</button>
+      </div>
+      <button onClick={() => setDismissed(true)} style={{background:"none", border:"none", color:"var(--mid3)", cursor:"pointer", fontSize:18, flexShrink:0, lineHeight:1}}>✕</button>
+    </div>
+  );
+}
+
+/* ── ICE contact shown in SOS ── */
+
+/* ═══════════════════════════════════════════════════════════════
+   FEATURE 2 — CLUB ANNOUNCEMENTS
+═══════════════════════════════════════════════════════════════ */
+function Announcements({ state, showToast }) {
+  const { currentUser:cu } = state;
+  const canPost = ["admin","marshal"].includes(cu.role);
+  const [list,     setList]     = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form,     setForm]     = useState({title:"", body:"", pinned:false});
+
+  useEffect(() => {
+    if (!SUPA_URL || !SUPA_KEY || !cu.clubId) { setLoading(false); return; }
+    SB.get("announcements", `club_id=eq.${cu.clubId}&order=pinned.desc,created_at.desc`)
+      .then(rows => { setList(rows||[]); setLoading(false); });
+  }, [cu.clubId]);
+
+  async function post() {
+    if (!form.title.trim()) { showToast("Title required"); return; }
+    const saved = await SB.upsert("announcements", {
+      club_id: cu.clubId, user_id: cu.id, author: cu.name,
+      title: sanitize(form.title), body: sanitize(form.body), pinned: form.pinned,
+    });
+    if (saved) {
+      setList(l => [saved, ...l]);
+      setForm({title:"", body:"", pinned:false});
+      setShowForm(false);
+      showToast("📢 Announcement posted!");
+    }
+  }
+
+  async function del(id) {
+    if (!window.confirm("Delete this announcement?")) return;
+    await SB.del("announcements", {id});
+    setList(l => l.filter(x => x.id !== id));
+    showToast("Deleted");
+  }
+
+  return (
+    <div className="page">
+      <div className="sh">
+        <div className="sh-label">Club</div>
+        <div className="sh-title">ANNOUNCEMENTS</div>
+      </div>
+      {canPost && !showForm && (
+        <button className="btn gold sm" style={{marginBottom:20}} onClick={() => setShowForm(true)}>📢 Post Announcement</button>
+      )}
+      {canPost && showForm && (
+        <div className="card" style={{marginBottom:20}}>
+          <div className="card-label">New Announcement</div>
+          <div className="fg"><label className="fl">Title *</label><input className="fi" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Important notice..." /></div>
+          <div className="fg"><label className="fl">Message</label><textarea className="fi fi-ta" value={form.body} onChange={e=>setForm({...form,body:e.target.value})} placeholder="Details..." /></div>
+          <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,marginBottom:16,cursor:"pointer"}}>
+            <input type="checkbox" checked={form.pinned} onChange={e=>setForm({...form,pinned:e.target.checked})} />
+            📌 Pin to top of announcements
+          </label>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn gold sm" onClick={post}>Post</button>
+            <button className="btn out sm" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {loading && <div style={{color:"var(--mid)",fontSize:13}}>Loading...</div>}
+      {!loading && list.length === 0 && (
+        <div style={{textAlign:"center",padding:"32px 0",color:"var(--mid)"}}>
+          <div style={{fontSize:40,marginBottom:8}}>📢</div>
+          <div style={{fontSize:13}}>No announcements yet.</div>
+        </div>
+      )}
+      {list.map(a => (
+        <div key={a.id} style={{background:a.pinned?"var(--acc-pale)":"var(--bg)", border:`1px solid ${a.pinned?"var(--acc-pale3)":"var(--line)"}`, borderLeft:`4px solid ${a.pinned?"var(--acc2)":"var(--line2)"}`, borderRadius:"var(--r-lg)", padding:"16px", marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8,marginBottom:6}}>
+            <div style={{fontFamily:"'Syne',sans-serif",fontSize:15,fontWeight:800,color:"var(--ink)"}}>
+              {a.pinned && "📌 "}{a.title}
+            </div>
+            {canPost && <button onClick={() => del(a.id)} style={{background:"none",border:"none",color:"var(--mid3)",cursor:"pointer",fontSize:18,lineHeight:1}}>✕</button>}
+          </div>
+          {a.body && <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.65,whiteSpace:"pre-wrap",marginBottom:8}}>{a.body}</div>}
+          <div style={{fontSize:11,color:"var(--mid3)"}}>By {a.author} · {new Date(a.created_at).toLocaleDateString()}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FEATURE 3 — DRIVE WEATHER WARNING
+═══════════════════════════════════════════════════════════════ */
+function WeatherWarning({ location, date }) {
+  const [wx,      setWx]      = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!location) { setLoading(false); return; }
+    async function fetch_wx() {
+      try {
+        // Geocode via Nominatim (free, no key)
+        const geo  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location+" UAE")}&format=json&limit=1`, {headers:{"Accept-Language":"en"}});
+        const gd   = await geo.json();
+        if (!gd?.length) { setLoading(false); return; }
+        const {lat,lon} = gd[0];
+        // open-meteo — free, no API key
+        const w    = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode,windspeed_10m_max,precipitation_sum&timezone=Asia/Dubai&forecast_days=7`);
+        const wd   = await w.json();
+        if (!wd?.daily) { setLoading(false); return; }
+        const driveDay = date || new Date().toISOString().split("T")[0];
+        const idx  = Math.max(0, wd.daily.time.findIndex(t => t === driveDay));
+        const code = wd.daily.weathercode[idx];
+        const tMax = wd.daily.temperature_2m_max[idx];
+        const tMin = wd.daily.temperature_2m_min[idx];
+        const wind = wd.daily.windspeed_10m_max[idx];
+        const getC = c => {
+          if (c===0)   return {label:"Clear Sky",    icon:"☀️", warn:null};
+          if (c<=3)    return {label:"Partly Cloudy",icon:"⛅", warn:null};
+          if (c<=48)   return {label:"Foggy",        icon:"🌫️", warn:"Low visibility — drive with caution"};
+          if (c<=67)   return {label:"Rain",         icon:"🌧️", warn:"Rain forecast — dune driving not recommended"};
+          if (c>=95)   return {label:"Thunderstorm", icon:"⛈️", warn:"⚠️ Thunderstorm — do not drive in desert"};
+          return {label:"Cloudy", icon:"☁️", warn:null};
+        };
+        const cond = getC(code);
+        setWx({tMax,tMin,wind,cond,sandstorm:wind>60,extreme:tMax>47});
+      } catch(e) { /* silent fail */ } finally { setLoading(false); }
+    }
+    fetch_wx();
+  }, [location, date]);
+
+  if (loading) return <div style={{fontSize:12,color:"var(--mid)",padding:"8px 0"}}>⛅ Fetching weather for {location}...</div>;
+  if (!wx) return null;
+  const bad = !!(wx.cond.warn || wx.sandstorm || wx.extreme);
+  return (
+    <div style={{background:bad?"rgba(220,38,38,.05)":"rgba(22,163,74,.05)", border:`1px solid ${bad?"rgba(220,38,38,.2)":"rgba(22,163,74,.2)"}`, borderRadius:"var(--r-lg)", padding:"12px 16px", marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div style={{fontSize:30}}>{wx.cond.icon}</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:14,color:"var(--ink)",marginBottom:2}}>
+            {wx.cond.label} · {Math.round(wx.tMax)}°C high / {Math.round(wx.tMin)}°C low
+          </div>
+          <div style={{fontSize:12,color:"var(--mid)",display:"flex",gap:12,flexWrap:"wrap"}}>
+            <span>💨 {Math.round(wx.wind)} km/h wind</span>
+            {wx.sandstorm && <span style={{color:"var(--orange)",fontWeight:700}}>⚠️ Sandstorm risk</span>}
+            {wx.extreme   && <span style={{color:"var(--red)",fontWeight:700}}>🌡️ Extreme heat</span>}
+          </div>
+          {wx.cond.warn && <div style={{fontSize:12,color:"var(--red)",fontWeight:600,marginTop:3}}>{wx.cond.warn}</div>}
+        </div>
+        <span style={{fontSize:11,fontWeight:800,color:bad?"var(--red)":"var(--green)",flexShrink:0}}>{bad?"⚠️ CAUTION":"✅ CLEAR"}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [S, setS]           = useState(INIT);
   const [toast, setToast]   = useState(null);
@@ -5008,6 +5403,8 @@ export default function App() {
     {id:"drives",     label:"Drives",        hide: cu.role === "app_admin"},
     {id:"chat",       label:"💬 Chat",        hide: !cu.clubId},
     {id:"market",     label:"Marketplace"},
+    {id:"announce",    label:"📢 Board",        hide: !cu.clubId},
+    {id:"profile",     label:"👤 Profile"},
     {id:"club-admin", label:"Club Admin",    hide: cu.role !== "admin"},
     {id:"marshal",    label:"Marshal Panel", hide: cu.role !== "marshal"},
     {id:"app-admin",  label:"App Admin",     hide: cu.role !== "app_admin"},
@@ -5016,6 +5413,7 @@ export default function App() {
   return (
     <div style={{minHeight:"100vh", background:"var(--off)"}}>
       <style>{CSS}</style>
+      <InstallBanner />
       <div className="wrap">
         <nav className="nav">
           <div className="nav-brand" onClick={() => go("home")}>
@@ -5106,6 +5504,8 @@ export default function App() {
           </div>
         )}
         {page === "market"     && cu && <Marketplace state={S} go={go} />}
+        {page === "announce"   && cu && cu.clubId && <Announcements state={S} showToast={showToast} />}
+        {page === "profile"    && cu && <MemberProfile state={S} upd={upd} showToast={showToast} go={go} />}
         {page === "club-admin" && cu && cu.role === "admin"     && <ClubAdmin    state={S} upd={upd} showToast={showToast} />}
         {page === "marshal"    && cu && cu.role === "marshal" && <MarshalPanel state={S} upd={upd} showToast={showToast} />}
         {page === "app-admin"  && cu && cu.role === "app_admin" && <AppAdmin     state={S} upd={upd} showToast={showToast} />}
