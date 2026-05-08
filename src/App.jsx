@@ -320,8 +320,8 @@ a{color:var(--acc);text-decoration:none}
 .mkt-cat.on{background:var(--acc2);color:#0a0a0a;border-color:transparent}
 .mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:40px}
 .mkt-card{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden;cursor:pointer;box-shadow:var(--sh-xs)}
-.mkt-thumb{width:100%;height:160px;object-fit:cover;display:block}
-.mkt-thumb-placeholder{width:100%;height:160px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:48px}
+.mkt-thumb{width:100%;aspect-ratio:16/9;object-fit:contain;background:var(--bg3);display:block}
+.mkt-thumb-placeholder{width:100%;aspect-ratio:16/9;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:48px}
 .mkt-card-body{padding:16px}
 .mkt-card-cat{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--acc);margin-bottom:6px}
 .mkt-card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin-bottom:6px}
@@ -339,7 +339,7 @@ a{color:var(--acc);text-decoration:none}
 @media(min-width:600px){.ad-modal-overlay{align-items:center;padding:20px}}
 .ad-modal{background:var(--bg);width:100%;max-width:600px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-xl) var(--r-xl) 0 0;position:relative;box-shadow:var(--sh-md)}
 @media(min-width:600px){.ad-modal{border-radius:var(--r-xl);max-height:88vh}}
-.ad-modal-thumb{width:100%;height:200px;object-fit:cover;display:block}
+.ad-modal-thumb{width:100%;aspect-ratio:16/9;object-fit:contain;background:var(--bg2);display:block}
 .ad-modal-thumb-ph{width:100%;height:160px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:64px}
 .ad-modal-thumb-ph::after{display:none}
 .ad-modal-close{position:absolute;top:12px;right:12px;width:36px;height:36px;background:rgba(255,255,255,.92);border:1px solid var(--line2);border-radius:50%;color:var(--mid);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;font-weight:700}
@@ -432,7 +432,7 @@ a{color:var(--acc);text-decoration:none}
 .hero-scroll-hint{display:none}
 
 /* ── AUTO-GENERATED MISSING CLASSES ── */
-.adbanner{width:100%;height:160px;object-fit:cover;display:block;border-radius:var(--r-lg) var(--r-lg) 0 0}
+.adbanner{width:100%;aspect-ratio:16/9;object-fit:contain;background:var(--bg3);display:block;border-radius:var(--r-lg) var(--r-lg) 0 0}
 .adicon{font-size:48px;display:block;text-align:center;padding:24px 0}
 .admin-urow{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:10px;flex-wrap:wrap}
 .adsub{font-size:13px;color:var(--mid);line-height:1.5;margin-bottom:12px}
@@ -1032,20 +1032,37 @@ function Home({ go, state }) {
           margin:"0 auto 36px", fontWeight:400,
         }}>Join a club. Conquer the dunes. Build your legend.</p>
 
-        {/* CTA buttons — primary action first (Fitts' law) */}
-        <div style={{display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", marginBottom:40}}>
-          <button className="btn gold" style={{fontSize:15,padding:"14px 32px",borderRadius:14}}
-            onClick={() => go("reg-member")}>
-            🏜️ Join a Club
-          </button>
-          <button style={{
-            background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.15)",
-            color:"#fff", fontSize:15, padding:"14px 28px", borderRadius:14, cursor:"pointer", fontWeight:600,
-          }} onClick={() => go("reg-club")}>Register Your Club</button>
-          <button style={{
-            background:"transparent", border:"none",
-            color:"rgba(255,255,255,.45)", fontSize:14, padding:"14px 20px", cursor:"pointer",
-          }} onClick={() => go("login")}>Sign In →</button>
+        {/* CTA buttons — stacked on mobile, row on desktop */}
+        <div style={{
+          display:"flex", gap:12, justifyContent:"center",
+          flexDirection:"column", alignItems:"center",
+          maxWidth:320, margin:"0 auto 40px",
+        }}>
+          <style>{`@media(min-width:600px){.hero-cta-wrap{flex-direction:row!important;max-width:none!important}}`}</style>
+          <div className="hero-cta-wrap" style={{display:"flex", flexDirection:"column", gap:12, width:"100%", alignItems:"center"}}>
+            {/* Primary — Gold */}
+            <button onClick={() => go("reg-member")} style={{
+              width:"100%", padding:"15px 28px", borderRadius:14, border:"none",
+              background:"linear-gradient(135deg,var(--acc2),var(--acc))",
+              color:"#0a0a0a", fontSize:15, fontWeight:800, cursor:"pointer",
+              fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:.3,
+              boxShadow:"0 4px 20px rgba(232,163,12,.4)",
+            }}>🏜️ Join a Club</button>
+            {/* Secondary — Dark outlined */}
+            <button onClick={() => go("reg-club")} style={{
+              width:"100%", padding:"15px 28px", borderRadius:14,
+              background:"rgba(255,255,255,.08)", border:"1.5px solid rgba(255,255,255,.2)",
+              color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer",
+              fontFamily:"'Plus Jakarta Sans',sans-serif",
+            }}>🏴 Register Your Club</button>
+            {/* Tertiary — Subtle */}
+            <button onClick={() => go("login")} style={{
+              width:"100%", padding:"14px 28px", borderRadius:14,
+              background:"rgba(255,255,255,.04)", border:"1px solid rgba(255,255,255,.1)",
+              color:"rgba(255,255,255,.55)", fontSize:14, fontWeight:600, cursor:"pointer",
+              fontFamily:"'Plus Jakarta Sans',sans-serif",
+            }}>Sign In →</button>
+          </div>
         </div>
 
         {/* Live stats — social proof */}
@@ -1098,7 +1115,7 @@ function Home({ go, state }) {
                     padding:"3px 10px",borderRadius:100,
                   }}>FEATURED</div>
                   {ad.thumbnail
-                    ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",height:160,objectFit:"cover",display:"block"}} />
+                    ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",aspectRatio:"16/9",objectFit:"contain",background:"var(--bg3)",display:"block"}} />
                     : <div style={{height:80,display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>{ad.icon||"🚙"}</div>
                   }
                   <div style={{padding:"16px"}}>
@@ -3246,7 +3263,7 @@ function AdDetail({ ad, onClose }) {
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:800,color:"var(--ink)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.title}</div>
       </div>
       {ad.thumbnail
-        ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",height:220,objectFit:"cover",display:"block"}} />
+        ? <img src={ad.thumbnail} alt={ad.title} style={{width:"100%",aspectRatio:"16/9",objectFit:"contain",background:"var(--bg3)",display:"block"}} />
         : <div style={{width:"100%",height:140,background:"var(--bg3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:64}}>{ad.icon}</div>
       }
       <div style={{padding:"20px 16px 100px",maxWidth:600,margin:"0 auto"}}>
