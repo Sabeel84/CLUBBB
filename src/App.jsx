@@ -3623,9 +3623,21 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
 
   function triggerSOS() {
     if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals with your GPS location.")) return;
-    navigator.geolocation?.getCurrentPosition(
+    if (!navigator.geolocation) {
+      showToast("GPS not available — sending SOS without location");
+      sendSOS(null, null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
       pos => sendSOS(pos.coords.latitude, pos.coords.longitude),
-      ()  => sendSOS(null, null)
+      err => {
+        const msg = err.code === 1
+          ? "⚠️ Location blocked — SOS sent without GPS. Allow location in browser settings."
+          : "⚠️ GPS unavailable — SOS sent without coordinates.";
+        showToast(msg);
+        sendSOS(null, null);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   }
 
@@ -3767,25 +3779,33 @@ function NotifBanner({ notifs, dismiss }) {
 function ClubChat({ state, upd, showToast, forcedClubId }) {
   const { currentUser:cu, users:us } = state;
   const clubId  = forcedClubId || cu?.clubId;
-  const [msgs,  setMsgs]  = useState([]);
-  const [text,  setText]  = useState("");
+  const [msgs,    setMsgs]    = useState([]);
+  const [text,    setText]    = useState("");
   const [loading, setLoading] = useState(true);
-  const endRef  = useRef(null);
-  const isAdmin = ["admin","marshal"].includes(cu?.role);
+  const [sending, setSending] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const endRef   = useRef(null);
+  const inputRef = useRef(null);
+  const isAdmin  = ["admin","marshal"].includes(cu?.role);
 
   // ── Load messages from Supabase ──
-  async function loadMsgs() {
-    if (!SUPA_URL || !SUPA_KEY || !clubId) { setLoading(false); return; }
-    const rows = await SB.get("chat_messages",
-      `club_id=eq.${clubId}&order=created_at.asc&limit=200`);
-    setMsgs(rows || []);
-    setLoading(false);
+  async function loadMsgs(quiet = false) {
+    if (!clubId) { setLoading(false); return; }
+    if (!SUPA_URL || !SUPA_KEY) { setOffline(true); setLoading(false); return; }
+    try {
+      const rows = await SB.get("chat_messages",
+        `club_id=eq.${clubId}&order=created_at.asc&limit=200`);
+      if (rows !== null) { setMsgs(rows || []); setOffline(false); }
+    } catch(e) {
+      if (!quiet) setOffline(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     loadMsgs();
-    // Poll every 5 seconds for new messages
-    const interval = setInterval(loadMsgs, 5000);
+    const interval = setInterval(() => loadMsgs(true), 5000);
     return () => clearInterval(interval);
   }, [clubId]);
 
@@ -3801,23 +3821,33 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
 
   async function send() {
     const t = text.trim();
-    if (!t) return;
+    if (!t || sending) return;
+    if (!SUPA_URL || !SUPA_KEY) { showToast("❌ Chat requires Supabase — not configured"); return; }
     setText("");
-    const msg = {
-      club_id:    clubId,
-      user_id:    cu.id,
-      user_name:  cu.name,
-      text:       sanitize(t),
-      pinned:     false,
-    };
-    // Optimistically add to UI
-    const tempMsg = { ...msg, id: Date.now(), created_at: new Date().toISOString() };
+    setSending(true);
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    const tempId = `temp_${Date.now()}`;
+    const tempMsg = { id: tempId, club_id: clubId, user_id: cu.id, user_name: cu.name,
+                      text: sanitize(t), pinned: false, created_at: new Date().toISOString(), _sending: true };
     setMsgs(m => [...m, tempMsg]);
-    // Save to Supabase
-    const saved = await SB.upsert("chat_messages", msg);
-    if (saved) {
-      // Replace temp with real row
-      setMsgs(m => m.map(x => x.id === tempMsg.id ? saved : x));
+    try {
+      const saved = await SB.upsert("chat_messages", {
+        club_id: clubId, user_id: cu.id, user_name: cu.name, text: sanitize(t), pinned: false,
+      });
+      if (saved?.id) {
+        setMsgs(m => m.map(x => x.id === tempId ? {...saved, _sending: false} : x));
+        setOffline(false);
+      } else {
+        setMsgs(m => m.filter(x => x.id !== tempId));
+        showToast("❌ Message failed to send — check connection");
+        setText(t);
+      }
+    } catch(e) {
+      setMsgs(m => m.filter(x => x.id !== tempId));
+      showToast("❌ Message failed — no connection");
+      setText(t);
+    } finally {
+      setSending(false);
     }
   }
 
@@ -3835,6 +3865,15 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
 
   return (
     <div>
+      {/* Offline warning */}
+      {offline && (
+        <div style={{background:"rgba(220,38,38,.08)", border:"1px solid rgba(220,38,38,.2)", borderRadius:"var(--r-md)", padding:"10px 14px", marginBottom:12, fontSize:13, color:"var(--red)", display:"flex", alignItems:"center", gap:8}}>
+          <span>⚠️</span>
+          <span>Can't reach chat server. Check your connection.</span>
+          <button onClick={() => loadMsgs()} style={{marginLeft:"auto", background:"none", border:"1px solid rgba(220,38,38,.3)", borderRadius:6, padding:"3px 10px", color:"var(--red)", cursor:"pointer", fontSize:12, fontWeight:700}}>Retry</button>
+        </div>
+      )}
+
       {/* Pinned announcements */}
       {pinned.length > 0 && (
         <div style={{marginBottom:16}}>
@@ -3864,7 +3903,7 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
               Loading messages...
             </div>
           )}
-          {!loading && msgs.length === 0 && (
+          {!loading && msgs.length === 0 && !offline && (
             <div style={{textAlign:"center", margin:"auto", color:"var(--mid2)", fontSize:13}}>
               <div style={{fontSize:40, marginBottom:10}}>💬</div>
               No messages yet. Say hello to your club!
@@ -3875,7 +3914,8 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
             const name = m.user_name || getUser(us, m.user_id)?.name || "Member";
             const time = new Date(m.created_at).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
             return (
-              <div key={m.id} className={`chat-msg${isMe ? " me" : ""}`}>
+              <div key={m.id} className={`chat-msg${isMe ? " me" : ""}`}
+                style={{opacity: m._sending ? 0.6 : 1, transition:"opacity .2s"}}>
                 {!isMe && (
                   <div className="ava" style={{width:32, height:32, fontSize:13, borderRadius:10, flexShrink:0}}>
                     {name[0]}
@@ -3888,8 +3928,8 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
                     {m.text}
                   </div>
                   <div className={`chat-meta${isMe ? " me" : ""}`}>
-                    {time}
-                    {(isAdmin || isMe) && (
+                    {m._sending ? "Sending..." : time}
+                    {!m._sending && (isAdmin || isMe) && (
                       <span style={{marginLeft:6, display:"flex", gap:4}}>
                         {isAdmin && (
                           <button onClick={() => pin(m.id, m.pinned)}
@@ -3917,9 +3957,11 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
 
         <div className="chat-input-row">
           <textarea
+            ref={inputRef}
             className="chat-input"
             placeholder="Message your club... (Enter to send, Shift+Enter for new line)"
             value={text}
+            disabled={sending}
             onChange={e => {
               setText(e.target.value);
               e.target.style.height = "auto";
@@ -3927,7 +3969,10 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
             }}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           />
-          <button className="chat-send" onClick={send} title="Send">↑</button>
+          <button className="chat-send" onClick={send} disabled={sending || !text.trim()} title="Send"
+            style={{opacity: sending || !text.trim() ? 0.5 : 1}}>
+            {sending ? "…" : "↑"}
+          </button>
         </div>
       </div>
     </div>
@@ -4201,7 +4246,8 @@ function DriveRating({ drive, state, upd, showToast }) {
 /* ─── ROUTE RECORDER ─────────────────────────────────────────── */
 function RouteRecorder({ drive, state, showToast }) {
   const { currentUser:cu } = state;
-  const canManage   = ["admin","marshal"].includes(cu.role);
+  const isRegistered = drive.registrations?.find(r => r.userId === cu.id && r.status === "confirmed");
+  const canManage   = ["admin","marshal"].includes(cu.role) || !!isRegistered;
   const [routes,    setRoutes]    = useState([]);
   const [recording, setRecording] = useState(false);
   const [path,      setPath]      = useState([]);
@@ -4317,7 +4363,7 @@ function RouteRecorder({ drive, state, showToast }) {
   // ── Start recording ──
   function startRecording() {
     if (!canManage) { showToast("Only Marshals and Admin can record routes"); return; }
-    if (!navigator.geolocation) { showToast("GPS not available"); return; }
+    if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
     const start = Date.now();
     setStartTime(start);
     setPath([]);
@@ -4326,14 +4372,29 @@ function RouteRecorder({ drive, state, showToast }) {
 
     timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now()-start)/1000)), 1000);
 
-    const id = navigator.geolocation.watchPosition(pos => {
-      const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
-      setPath(prev => {
-        const d = prev.length > 0 ? haversine(prev[prev.length-1], pt) : 0;
-        setDistance(dist => dist + d);
-        return [...prev, pt];
-      });
-    }, () => showToast("⚠️ GPS unavailable"), { enableHighAccuracy:true, maximumAge:3000 });
+    const id = navigator.geolocation.watchPosition(
+      pos => {
+        const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
+        setPath(prev => {
+          const d = prev.length > 0 ? haversine(prev[prev.length-1], pt) : 0;
+          setDistance(dist => dist + d);
+          return [...prev, pt];
+        });
+      },
+      err => {
+        clearInterval(timerRef.current);
+        setRecording(false);
+        setWatchId(null);
+        if (err.code === 1) {
+          showToast("❌ Location permission denied. Allow location in browser settings, then try again.");
+        } else if (err.code === 2) {
+          showToast("❌ GPS signal lost. Move to open area and try again.");
+        } else {
+          showToast("❌ GPS timed out. Try again in a better location.");
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    );
 
     setWatchId(id);
     setRecording(true);
@@ -4453,7 +4514,7 @@ ${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).
           </>
         ) : (
           <div className="ibox" style={{flex:1, margin:0}}>
-            🏴 Only Marshals and the Club Admin can record routes. You can view and download all saved routes below.
+            🔒 You must be a confirmed member of this drive to record a route.
           </div>
         )}
       </div>
@@ -4536,7 +4597,6 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
   const tabs = [
     { id:"info",      label:"Info" },
     { id:"route",     label:"🛣️ Route" },
-    { id:"tracker",   label:"🗺 Map" },
     { id:"sos",       label:"🚨 SOS" },
     { id:"checklist", label:"✅ Checklist" },
     { id:"chat",      label:"💬 Chat" },
@@ -4690,7 +4750,6 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
       )}
 
       {tab === "route"     && <RouteRecorder drive={drive} state={state} showToast={showToast} />}
-      {tab === "tracker"   && <LiveTracker   drive={drive} state={state} upd={upd} showToast={showToast} />}
       {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={showToast} />}
       {tab === "checklist" && <DriveChecklist drive={drive} state={state} upd={upd} showToast={showToast} />}
       {tab === "chat"      && <ClubChat      state={state} upd={upd} showToast={showToast} forcedClubId={drive.clubId} />}
