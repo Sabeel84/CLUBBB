@@ -85,7 +85,7 @@ function validatePassword(pw) {
    Modern White Theme: Plus Jakarta Sans + Syne
 ═══════════════════════════════════════════════════════════════ */
 
-const CSS = `
+function getCSS() { return `
 /* ═══════════════════════════════════════════════════════
    CLUBBB — Mobile-first clean UI, no animations
 ═══════════════════════════════════════════════════════ */
@@ -511,7 +511,7 @@ a{color:var(--acc);text-decoration:none}
 .uname{font-size:15px;font-weight:700;color:var(--ink)}
 .urow{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:8px;flex-wrap:wrap}
 .waitbdg{background:var(--orange-pale);color:var(--orange);border:1px solid rgba(234,88,12,.2);padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;text-transform:uppercase}
-`;
+`; }
 function fmtDate(d) { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
 function fmtTime(t) { if (!t) return null; const [h,m]=t.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; }
 
@@ -5549,7 +5549,7 @@ export default function App() {
   if (!sbReady) {
     return (
       <>
-        <style>{CSS}</style>
+        <style>{getCSS()}</style>
         <div style={{minHeight:"100vh", background:"var(--off)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16}}>
           <div style={{width:56, height:56, background:"var(--acc2)", borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"var(--sh-gold)"}}>
             <span style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"#0a0a0a"}}>CB</span>
@@ -5567,7 +5567,7 @@ export default function App() {
   if (S.users.length === 0) {
     return (
       <>
-        <style>{CSS}</style>
+        <style>{getCSS()}</style>
         <SetupWizard onComplete={adminUser => {
           setS(s => ({ ...s, users: [adminUser], currentUser: adminUser, page: "app-admin" }));
           SB.upsert("users", userToDb(adminUser))
@@ -5749,7 +5749,7 @@ export default function App() {
 
   return (
     <div style={{minHeight:"100vh", background:"var(--off)"}}>
-      <style>{CSS}</style>
+      <style>{getCSS()}</style>
       <InstallBanner />
       <div className="wrap">
         <nav className="nav">
