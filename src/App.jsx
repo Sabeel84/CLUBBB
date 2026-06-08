@@ -539,10 +539,23 @@ const SB = {
         headers: { ...SB.headers(), "Prefer": "resolution=merge-duplicates,return=representation" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) { console.error(`[SB] UPSERT ${table} failed ${res.status}`); return null; }
+      if (!res.ok) { console.error(`[SB] UPSERT ${table} failed ${res.status}`, await res.text()); return null; }
       const json = await res.json();
       return Array.isArray(json) ? json[0] : json;
     } catch(e) { console.error(`[SB] UPSERT ${table}`, e); return null; }
+  },
+  insert: async (table, data) => {
+    if (!SUPA_URL || !SUPA_KEY) return null;
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: { ...SB.headers(), "Prefer": "return=representation" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { console.error(`[SB] INSERT ${table} failed ${res.status}`, await res.text()); return null; }
+      const json = await res.json();
+      return Array.isArray(json) ? json[0] : json;
+    } catch(e) { console.error(`[SB] INSERT ${table}`, e); return null; }
   },
   patch: async (table, match, data) => {
     if (!SUPA_URL || !SUPA_KEY) return;
@@ -3686,7 +3699,7 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
       lng:       lng || null,
       resolved:  false,
     };
-    const saved = await SB.upsert("sos_alerts", entry);
+    const saved = await SB.insert("sos_alerts", entry);
     if (saved) {
       setAlerts(a => [saved, ...a]);
       setMyActive(saved);
@@ -3867,7 +3880,7 @@ function ClubChat({ state, upd, showToast, forcedClubId }) {
                       text: sanitize(t), pinned: false, created_at: new Date().toISOString(), _sending: true };
     setMsgs(m => [...m, tempMsg]);
     try {
-      const saved = await SB.upsert("chat_messages", {
+      const saved = await SB.insert("chat_messages", {
         club_id: clubId, user_id: cu.id, user_name: cu.name, text: sanitize(t), pinned: false,
       });
       if (saved?.id) {
@@ -4450,7 +4463,7 @@ function RouteRecorder({ drive, state, showToast }) {
     const avgSpeed    = durationMin > 0 ? distance / (durationMin / 60) : 0;
 
     showToast("💾 Saving route...");
-    const saved = await SB.upsert("drive_routes", {
+    const saved = await SB.insert("drive_routes", {
       drive_id:     drive.id,
       user_id:      cu.id,
       user_name:    cu.name,
@@ -5155,7 +5168,7 @@ function Announcements({ state, showToast }) {
 
   async function post() {
     if (!form.title.trim()) { showToast("Title required"); return; }
-    const saved = await SB.upsert("announcements", {
+    const saved = await SB.insert("announcements", {
       club_id: cu.clubId, user_id: cu.id, author: cu.name,
       title: sanitize(form.title), body: sanitize(form.body), pinned: form.pinned,
     });
