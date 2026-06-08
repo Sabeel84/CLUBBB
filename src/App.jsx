@@ -1550,44 +1550,8 @@ function ResetPassword({ token, users, upd, showToast, onDone }) {
 }
 
 /* ─── REGISTRATION ──────────────────────────────────────────── */
-const CLUBBB_TERMS = `CLUBBB PLATFORM — TERMS & CONDITIONS FOR CLUB REGISTRATION
+const CLUBBB_TERMS = "CLUBBB PLATFORM — TERMS & CONDITIONS FOR CLUB REGISTRATION\n\nLast Updated: March 2026 | Version 1.0\n\nBy registering a club on CLUBBB, the Club Administrator agrees on behalf of themselves and all club members to these terms. This is a legally binding agreement between the Club Admin, members, and CLUBBB.\n\n1. NATURE OF THE PLATFORM\nCLUBBB is a social networking platform only. It is not an event organiser, tour operator, or safety authority. All drives are organised independently by clubs. CLUBBB bears no responsibility for planning, execution, safety, or outcome of any activity.\n\n2. ACCIDENTS & PERSONAL INJURY\nDesert and off-road driving is inherently dangerous. The Club Admin accepts full responsibility for the safety of all participants. CLUBBB expressly disclaims all liability for any personal injury, bodily harm, death, or medical emergency occurring during any drive or activity, whether or not advertised on CLUBBB. Members participate entirely at their own risk. All clubs and members are strongly advised to carry comprehensive personal accident and vehicle insurance suitable for off-road desert driving.\n\n3. VEHICLE DAMAGE & PROPERTY CLAIMS\nCLUBBB accepts no responsibility for any damage to, loss of, or destruction of any vehicle, equipment, or property arising from any club activity. Any damage claim between members is solely between those parties. CLUBBB will not mediate, arbitrate, or act as guarantor in any such dispute. Vehicle roadworthiness is solely the owner's responsibility.\n\n4. CONDUCT, RACISM & DISCRIMINATION\nAny form of racism, racial vilification, ethnic discrimination, religious intolerance, sexism, or harassment is strictly prohibited. Club Admins must immediately remove any offending member. CLUBBB reserves the right to permanently remove any club or member engaging in discriminatory behaviour. Any racial expression claim or discrimination allegation between members is solely the legal responsibility of those individuals and clubs.\n\n5. MISCONDUCT & MEMBER BEHAVIOUR\nClub Admins are solely responsible for member conduct. Misconduct includes reckless driving, altercations, threatening behaviour, fraud, impersonation, and criminal activity. Any resulting civil or criminal matter is entirely the responsibility of the individuals involved. CLUBBB's liability is expressly excluded.\n\n6. PLATFORM LIABILITY LIMITATION\nTO THE MAXIMUM EXTENT PERMITTED BY LAW, CLUBBB SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES. CLUBBB's total aggregate liability shall not exceed AED 0 (zero), as the Platform is a free social community service.\n\n7. DATA & PRIVACY\nRegistration constitutes consent to collection of name, email, phone, and activity data to operate the Platform. GPS data from the Live Tracker is visible only to same-drive members and not stored permanently. Personal data will not be sold to third parties.\n\n8. SOS & EMERGENCY FEATURES\nThe SOS feature is a supplementary tool only — not a substitute for official emergency services (Police: 999, Ambulance: 998, Civil Defence: 997). CLUBBB does not guarantee SOS alert delivery and accepts no liability for failures.\n\n9. INDEMNIFICATION\nThe Club Admin agrees to fully indemnify and hold harmless CLUBBB from all claims, damages, losses, liabilities, and expenses arising from any drive, injury, property damage, member conduct, or breach of these Terms.\n\n10. GOVERNING LAW\nThese Terms are governed by the laws of the United Arab Emirates. All disputes are subject to UAE court jurisdiction. CLUBBB may amend these Terms at any time; continued use constitutes acceptance.\n\nCLUBBB — Desert Driving Community Platform\ncontact@clubbb.ae | clubbb.ae";
 
-Last Updated: March 2026 | Version 1.0
-
-By registering a club on CLUBBB, the Club Administrator agrees on behalf of themselves and all club members to these terms. This is a legally binding agreement between the Club Admin, members, and CLUBBB.
-
-1. NATURE OF THE PLATFORM
-CLUBBB is a social networking platform only. It is not an event organiser, tour operator, or safety authority. All drives are organised independently by clubs. CLUBBB bears no responsibility for planning, execution, safety, or outcome of any activity.
-
-2. ACCIDENTS & PERSONAL INJURY
-Desert and off-road driving is inherently dangerous. The Club Admin accepts full responsibility for the safety of all participants. CLUBBB expressly disclaims all liability for any personal injury, bodily harm, death, or medical emergency occurring during any drive or activity, whether or not advertised on CLUBBB. Members participate entirely at their own risk. All clubs and members are strongly advised to carry comprehensive personal accident and vehicle insurance suitable for off-road desert driving.
-
-3. VEHICLE DAMAGE & PROPERTY CLAIMS
-CLUBBB accepts no responsibility for any damage to, loss of, or destruction of any vehicle, equipment, or property arising from any club activity. Any damage claim between members is solely between those parties. CLUBBB will not mediate, arbitrate, or act as guarantor in any such dispute. Vehicle roadworthiness is solely the owner's responsibility.
-
-4. CONDUCT, RACISM & DISCRIMINATION
-Any form of racism, racial vilification, ethnic discrimination, religious intolerance, sexism, or harassment is strictly prohibited. Club Admins must immediately remove any offending member. CLUBBB reserves the right to permanently remove any club or member engaging in discriminatory behaviour. Any racial expression claim or discrimination allegation between members is solely the legal responsibility of those individuals and clubs.
-
-5. MISCONDUCT & MEMBER BEHAVIOUR
-Club Admins are solely responsible for member conduct. Misconduct includes reckless driving, altercations, threatening behaviour, fraud, impersonation, and criminal activity. Any resulting civil or criminal matter is entirely the responsibility of the individuals involved. CLUBBB's liability is expressly excluded.
-
-6. PLATFORM LIABILITY LIMITATION
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, CLUBBB SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES. CLUBBB's total aggregate liability shall not exceed AED 0 (zero), as the Platform is a free social community service.
-
-7. DATA & PRIVACY
-Registration constitutes consent to collection of name, email, phone, and activity data to operate the Platform. GPS data from the Live Tracker is visible only to same-drive members and not stored permanently. Personal data will not be sold to third parties.
-
-8. SOS & EMERGENCY FEATURES
-The SOS feature is a supplementary tool only — not a substitute for official emergency services (Police: 999, Ambulance: 998, Civil Defence: 997). CLUBBB does not guarantee SOS alert delivery and accepts no liability for failures.
-
-9. INDEMNIFICATION
-The Club Admin agrees to fully indemnify and hold harmless CLUBBB from all claims, damages, losses, liabilities, and expenses arising from any drive, injury, property damage, member conduct, or breach of these Terms.
-
-10. GOVERNING LAW
-These Terms are governed by the laws of the United Arab Emirates. All disputes are subject to UAE court jurisdiction. CLUBBB may amend these Terms at any time; continued use constitutes acceptance.
-
-CLUBBB — Desert Driving Community Platform
-contact@clubbb.ae | clubbb.ae`;
 
 function Registration({ type, clubs, onReg, back }) {
   const [f, setF]               = useState({name:"", email:"", phone:"", clubId:""});
