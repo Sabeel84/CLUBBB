@@ -751,7 +751,7 @@ const BLANK_STATE = {
 
 const INIT = { ...BLANK_STATE, ...(loadLocalState() || {}), liveTrack:{} };
 
-/* ── Detect ?reset=TOKEN in URL on page load ── */
+/* ── Detect ?reset=TOKEN in URL — checked once at module load ── */
 const URL_RESET_TOKEN = (() => {
   try { return new URLSearchParams(window.location.search).get("reset") || null; }
   catch(e) { return null; }
@@ -1347,10 +1347,9 @@ function Login({ users, onLogin, back }) {
           disabled={loading || Date.now() < lockUntil}>
           {loading ? "SIGNING IN..." : Date.now() < lockUntil ? "LOCKED..." : "SIGN IN"}
         </button>
-        <div style={{textAlign:"center", marginTop:16}}>
+        <div style={{textAlign:"center",marginTop:16}}>
           <button onClick={() => back("forgot")}
-            style={{background:"none", border:"none", color:"var(--acc)", fontSize:13,
-              fontWeight:600, cursor:"pointer", textDecoration:"underline", padding:4}}>
+            style={{background:"none",border:"none",color:"var(--acc)",fontSize:13,fontWeight:600,cursor:"pointer",textDecoration:"underline",padding:4}}>
             Forgot your password?
           </button>
         </div>
@@ -1372,44 +1371,32 @@ function ForgotPassword({ users, back, showToast }) {
     const emailClean = email.trim().toLowerCase();
     if (!emailClean) { setErrMsg("Please enter your email address."); return; }
     const u = users.find(u => u.email.toLowerCase() === emailClean);
-    if (!u) { setStep("sent"); return; } // don't reveal if email exists
+    if (!u) { setStep("sent"); return; }
     if (!SUPA_URL || !SUPA_KEY) {
       setErrMsg("Email service not configured. Contact the App Admin to reset your password.");
       return;
     }
     setLoading(true);
     try {
-      const token   = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-                        .map(b => b.toString(16).padStart(2,"0")).join("");
-      const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      await SB.upsert("password_reset_tokens", {
-        user_id: u.id, email: emailClean, token, expires_at: expires, used: false,
-      });
-      await invokeEdge("send-verification", {
-        email: emailClean,
-        type:  "password-reset",
-        payload: { name: u.name, resetLink: `${window.location.origin}?reset=${token}` },
-      });
+      const token   = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,"0")).join("");
+      const expires = new Date(Date.now() + 60*60*1000).toISOString();
+      await SB.upsert("password_reset_tokens", { user_id:u.id, email:emailClean, token, expires_at:expires, used:false });
+      await invokeEdge("send-verification", { email:emailClean, type:"password-reset", payload:{ name:u.name, resetLink:`${window.location.origin}?reset=${token}` } });
       setStep("sent");
     } catch(e) {
       setErrMsg("Failed to send reset email. Try again or contact your Admin.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
   if (step === "sent") return (
     <div className="page" style={{maxWidth:480}}>
-      <div style={{textAlign:"center", padding:"40px 20px"}}>
-        <div style={{fontSize:56, marginBottom:16}}>📧</div>
-        <div style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"var(--ink)", marginBottom:12}}>
-          Check Your Email
+      <div style={{textAlign:"center",padding:"40px 20px"}}>
+        <div style={{fontSize:56,marginBottom:16}}>📧</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:"var(--ink)",marginBottom:12}}>Check Your Email</div>
+        <div style={{fontSize:14,color:"var(--mid)",lineHeight:1.7,marginBottom:28}}>
+          If an account exists for <strong>{email}</strong>, a reset link has been sent. It expires in <strong>1 hour</strong>.
         </div>
-        <div style={{fontSize:14, color:"var(--mid)", lineHeight:1.7, marginBottom:28}}>
-          If an account exists for <strong>{email}</strong>, a password reset link has been sent.
-          The link expires in <strong>1 hour</strong>.
-        </div>
-        <div style={{background:"var(--bg2)", border:"1px solid var(--line)", borderRadius:"var(--r-lg)", padding:"14px 18px", fontSize:13, color:"var(--mid)", marginBottom:28, lineHeight:1.6}}>
+        <div style={{background:"var(--bg2)",border:"1px solid var(--line)",borderRadius:"var(--r-lg)",padding:"14px 18px",fontSize:13,color:"var(--mid)",marginBottom:28,lineHeight:1.6}}>
           💡 Check your spam folder if you don't see it within a few minutes.
         </div>
         <button className="btn out" onClick={back} style={{width:"100%"}}>← BACK TO SIGN IN</button>
@@ -1431,12 +1418,10 @@ function ForgotPassword({ users, back, showToast }) {
           <input className="fi" type="email" value={email}
             onChange={e => { setEmail(e.target.value); setErrMsg(""); }}
             placeholder="your@email.com"
-            onKeyDown={e => e.key === "Enter" && requestReset()}
-            autoFocus />
+            onKeyDown={e => e.key==="Enter" && requestReset()} autoFocus />
         </div>
         {errMsg && (
-          <div style={{background:"rgba(220,38,38,.08)", border:"1px solid rgba(220,38,38,.25)",
-            borderRadius:10, padding:"10px 14px", fontSize:13, color:"var(--red)", marginBottom:8}}>
+          <div style={{background:"rgba(220,38,38,.08)",border:"1px solid rgba(220,38,38,.25)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"var(--red)",marginBottom:8}}>
             ⚠️ {errMsg}
           </div>
         )}
@@ -1448,7 +1433,7 @@ function ForgotPassword({ users, back, showToast }) {
   );
 }
 
-/* ─── RESET PASSWORD (token from URL) ──────────────────────── */
+/* ─── RESET PASSWORD (opened via email link ?reset=TOKEN) ──── */
 function ResetPassword({ token, users, upd, showToast, onDone }) {
   const [step,     setStep]     = useState("validating");
   const [userId,   setUserId]   = useState(null);
@@ -1463,16 +1448,12 @@ function ResetPassword({ token, users, upd, showToast, onDone }) {
     async function validate() {
       if (!token || !SUPA_URL || !SUPA_KEY) { setStep("invalid"); return; }
       try {
-        const rows = await SB.get("password_reset_tokens",
-          `token=eq.${token}&used=eq.false&order=created_at.desc&limit=1`);
-        const row = rows?.[0];
-        if (!row) { setStep("invalid"); return; }
-        if (new Date(row.expires_at) < new Date()) { setStep("invalid"); return; }
+        const rows = await SB.get("password_reset_tokens", `token=eq.${token}&used=eq.false&order=created_at.desc&limit=1`);
+        const row  = rows?.[0];
+        if (!row || new Date(row.expires_at) < new Date()) { setStep("invalid"); return; }
         const u = users.find(u => u.id === row.user_id);
         if (!u) { setStep("invalid"); return; }
-        setUserId(u.id);
-        setUserName(u.name);
-        setStep("valid");
+        setUserId(u.id); setUserName(u.name); setStep("valid");
       } catch(e) { setStep("invalid"); }
     }
     validate();
@@ -1488,41 +1469,36 @@ function ResetPassword({ token, users, upd, showToast, onDone }) {
       const passwordHash = await hashPassword(password);
       await SB.patch("users", { id: userId }, { password_hash: passwordHash });
       await SB.patch("password_reset_tokens", { token }, { used: true });
-      upd({ users: users.map(u => u.id === userId ? {...u, passwordHash} : u) });
+      upd({ users: users.map(u => u.id===userId ? {...u, passwordHash} : u) });
       setStep("done");
-    } catch(e) {
-      setPwError("Failed to update password. Try requesting a new reset link.");
-    } finally { setLoading(false); }
+    } catch(e) { setPwError("Failed to update password. Try requesting a new reset link."); }
+    finally { setLoading(false); }
   }
 
-  if (step === "validating") return (
-    <div style={{minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16}}>
-      <div style={{width:36, height:36, border:"3px solid var(--acc2)", borderTopColor:"transparent", borderRadius:"50%", animation:"spin .8s linear infinite"}} />
-      <div style={{fontSize:14, color:"var(--mid)"}}>Validating reset link...</div>
+  if (step==="validating") return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{width:36,height:36,border:"3px solid var(--acc2)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
+      <div style={{fontSize:14,color:"var(--mid)"}}>Validating reset link...</div>
     </div>
   );
 
-  if (step === "invalid") return (
+  if (step==="invalid") return (
     <div className="page" style={{maxWidth:480}}>
-      <div style={{textAlign:"center", padding:"40px 20px"}}>
-        <div style={{fontSize:56, marginBottom:16}}>⛔</div>
-        <div style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"var(--ink)", marginBottom:12}}>Link Invalid or Expired</div>
-        <div style={{fontSize:14, color:"var(--mid)", lineHeight:1.7, marginBottom:28}}>
-          This reset link has expired or already been used. Links are valid for 1 hour.
-        </div>
+      <div style={{textAlign:"center",padding:"40px 20px"}}>
+        <div style={{fontSize:56,marginBottom:16}}>⛔</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:"var(--ink)",marginBottom:12}}>Link Invalid or Expired</div>
+        <div style={{fontSize:14,color:"var(--mid)",lineHeight:1.7,marginBottom:28}}>This reset link has expired or already been used. Links are valid for 1 hour.</div>
         <button className="btn gold" style={{width:"100%"}} onClick={onDone}>REQUEST NEW LINK →</button>
       </div>
     </div>
   );
 
-  if (step === "done") return (
+  if (step==="done") return (
     <div className="page" style={{maxWidth:480}}>
-      <div style={{textAlign:"center", padding:"40px 20px"}}>
-        <div style={{fontSize:56, marginBottom:16}}>✅</div>
-        <div style={{fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, color:"var(--ink)", marginBottom:12}}>Password Updated!</div>
-        <div style={{fontSize:14, color:"var(--mid)", lineHeight:1.7, marginBottom:28}}>
-          Your password has been changed. Sign in with your new password.
-        </div>
+      <div style={{textAlign:"center",padding:"40px 20px"}}>
+        <div style={{fontSize:56,marginBottom:16}}>✅</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:"var(--ink)",marginBottom:12}}>Password Updated!</div>
+        <div style={{fontSize:14,color:"var(--mid)",lineHeight:1.7,marginBottom:28}}>Your password has been changed. Sign in with your new password.</div>
         <button className="btn gold" style={{width:"100%"}} onClick={onDone}>SIGN IN →</button>
       </div>
     </div>
@@ -1539,46 +1515,32 @@ function ResetPassword({ token, users, upd, showToast, onDone }) {
         <div className="fg">
           <label className="fl">New Password *</label>
           <div style={{position:"relative"}}>
-            <input className="fi" type={showPw ? "text" : "password"} value={password}
-              onChange={e => { setPassword(e.target.value); setPwError(""); }}
-              placeholder="Min 8 chars, 1 uppercase, 1 number"
-              style={{paddingRight:44}} autoFocus />
-            <button type="button" onClick={() => setShowPw(v => !v)}
-              style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
-                background:"none", border:"none", cursor:"pointer", fontSize:16, color:"var(--mid)", padding:4}}>
-              {showPw ? "🙈" : "👁️"}
+            <input className="fi" type={showPw?"text":"password"} value={password}
+              onChange={e=>{setPassword(e.target.value);setPwError("");}}
+              placeholder="Min 8 chars, 1 uppercase, 1 number" style={{paddingRight:44}} autoFocus />
+            <button type="button" onClick={()=>setShowPw(v=>!v)}
+              style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--mid)",padding:4}}>
+              {showPw?"🙈":"👁️"}
             </button>
           </div>
           {password && (() => {
-            const checks = [password.length>=8,/[A-Z]/.test(password),/[0-9]/.test(password),/[^A-Za-z0-9]/.test(password)];
-            const score  = checks.filter(Boolean).length;
-            const colors = ["","#ef4444","#f59e0b","#84cc16","#22c55e"];
-            const labels = ["","Weak","Fair","Good","Strong"];
-            return (
-              <div style={{marginTop:6}}>
-                <div style={{display:"flex",gap:4,marginBottom:3}}>
-                  {[1,2,3,4].map(i=><div key={i} style={{flex:1,height:4,borderRadius:4,background:score>=i?colors[score]:"var(--line2)",transition:"background .2s"}}/>)}
-                </div>
-                <div style={{fontSize:11,color:colors[score],fontWeight:600}}>{labels[score]}</div>
-              </div>
-            );
+            const score = [password.length>=8,/[A-Z]/.test(password),/[0-9]/.test(password),/[^A-Za-z0-9]/.test(password)].filter(Boolean).length;
+            const colors=["","#ef4444","#f59e0b","#84cc16","#22c55e"];
+            const labels=["","Weak","Fair","Good","Strong"];
+            return (<div style={{marginTop:6}}><div style={{display:"flex",gap:4,marginBottom:3}}>{[1,2,3,4].map(i=><div key={i} style={{flex:1,height:4,borderRadius:4,background:score>=i?colors[score]:"var(--line2)"}}/>)}</div><div style={{fontSize:11,color:colors[score],fontWeight:600}}>{labels[score]}</div></div>);
           })()}
         </div>
         <div className="fg">
           <label className="fl">Confirm New Password *</label>
           <div style={{position:"relative"}}>
-            <input className="fi" type={showPw ? "text" : "password"} value={confirm}
-              onChange={e => { setConfirm(e.target.value); setPwError(""); }}
+            <input className="fi" type={showPw?"text":"password"} value={confirm}
+              onChange={e=>{setConfirm(e.target.value);setPwError("");}}
               placeholder="Re-enter new password" style={{paddingRight:44}}
-              onKeyDown={e => e.key === "Enter" && saveNewPassword()} />
+              onKeyDown={e=>e.key==="Enter"&&saveNewPassword()} />
             {confirm && <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:15}}>{confirm===password?"✅":"❌"}</span>}
           </div>
         </div>
-        {pwError && (
-          <div style={{background:"rgba(220,38,38,.08)",border:"1px solid rgba(220,38,38,.25)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"var(--red)",marginBottom:8}}>
-            ⚠️ {pwError}
-          </div>
-        )}
+        {pwError && <div style={{background:"rgba(220,38,38,.08)",border:"1px solid rgba(220,38,38,.25)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"var(--red)",marginBottom:8}}>⚠️ {pwError}</div>}
         <button className="btn gold" style={{width:"100%"}} onClick={saveNewPassword} disabled={loading}>
           {loading ? "SAVING..." : "SET NEW PASSWORD"}
         </button>
@@ -5694,8 +5656,7 @@ export default function App() {
   const go   = page  => { setS(s => ({...s, page})); setMob(false); };
   const login  = u   => { setS(s => ({...s, currentUser:u, page:"dashboard"})); setMob(false); };
   const logout = ()  => { setS(s => ({...s, currentUser:null, page:"home"})); setMob(false); };
-  // If a ?reset= token is in the URL and no one is logged in, force the reset page
-  const activePage = (URL_RESET_TOKEN && !S.currentUser) ? "reset" : page;
+  const activePage   = (URL_RESET_TOKEN && !S.currentUser) ? "reset" : page;
 
   async function reg(type, form) {
     const emailExists = S.users.find(u => u.email.toLowerCase() === form.email.toLowerCase());
@@ -5838,7 +5799,7 @@ export default function App() {
             {navItems.map(i => {
               const icons = {dashboard:"🏠", drives:"🚙", chat:"💬", market:"🛍", "club-admin":"⚙️", marshal:"🏴", "app-admin":"🔐"};
               return (
-                <button key={i.id} className={`nbtn ${page === i.id ? "on" : ""}`} onClick={() => go(i.id)}>
+                <button key={i.id} className={`nbtn ${activePage === i.id ? "on" : ""}`} onClick={() => go(i.id)}>
                   <span className="mob-drawer-icon">{icons[i.id] || "•"}</span>
                   {i.label}
                 </button>
@@ -5868,9 +5829,9 @@ export default function App() {
         </div>
 
         {activePage === "home"       && <Home go={go} state={S} />}
-        {activePage === "login"      && <Login users={S.users} onLogin={login} back={dest => go(dest === "forgot" ? "forgot" : "home")} />}
+        {activePage === "login"      && <Login users={S.users} onLogin={login} back={dest => go(dest==="forgot"?"forgot":"home")} />}
         {activePage === "forgot"     && <ForgotPassword users={S.users} back={() => go("login")} showToast={showToast} />}
-        {activePage === "reset"      && <ResetPassword token={URL_RESET_TOKEN} users={S.users} upd={upd} showToast={showToast} onDone={() => { window.history.replaceState({}, "", window.location.pathname); go("login"); }} />}
+        {activePage === "reset"      && <ResetPassword token={URL_RESET_TOKEN} users={S.users} upd={upd} showToast={showToast} onDone={() => { window.history.replaceState({},"",window.location.pathname); go("login"); }} />}
         {activePage === "reg-member" && <Registration type="member" clubs={S.clubs} onReg={f => reg("member", f)} back={() => go("home")} />}
         {activePage === "reg-club"   && <Registration type="club"   clubs={S.clubs} onReg={f => reg("club",   f)} back={() => go("home")} />}
         {activePage === "dashboard"  && cu && <Dashboard   state={S} go={go} showToast={showToast} />}
@@ -5907,7 +5868,7 @@ export default function App() {
                     ? {id:"marshal", label:"Marshal", icon:"🏴"}
                     : null,
             ].filter(Boolean).filter(i => !i.hide).map(i => (
-              <button key={i.id} className={`mnav-btn ${page === i.id ? "on" : ""}`} onClick={() => go(i.id)}>
+              <button key={i.id} className={`mnav-btn ${activePage === i.id ? "on" : ""}`} onClick={() => go(i.id)}>
                 <span className="mnav-icon">{i.icon}</span>
                 <span className="mnav-label">{i.label}</span>
               </button>
