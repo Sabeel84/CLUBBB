@@ -431,6 +431,24 @@ a{color:var(--acc);text-decoration:none}
 .noise{display:none}
 .hero-scroll-hint{display:none}
 
+
+/* ── CHECKLIST ITEMS ── */
+.check-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:8px;cursor:pointer;background:var(--bg);transition:all .15s}
+.check-item.done{background:var(--green-pale);border-color:rgba(22,163,74,.3)}
+.check-item .check-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center}
+.check-item .check-label{flex:1;font-size:14px;color:var(--ink)}
+.check-item.done .check-label{text-decoration:line-through;color:var(--mid)}
+.check-item .check-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line2);background:transparent;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:800;flex-shrink:0;transition:all .15s}
+.check-item.done .check-box{background:var(--green);border-color:var(--green)}
+
+/* ── MARSHAL CHECK ROW ── */
+.marshal-check-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:8px}
+.marshal-check-row.all-done{background:var(--green-pale);border-color:rgba(22,163,74,.3)}
+
+/* ── STAR RATING ── */
+.star{font-size:28px;cursor:pointer;transition:transform .1s;user-select:none;line-height:1}
+.star.lit{transform:scale(1.15)}
+
 /* ── AUTO-GENERATED MISSING CLASSES ── */
 .adbanner{width:100%;aspect-ratio:16/9;object-fit:contain;background:var(--bg3);display:block;border-radius:var(--r-lg) var(--r-lg) 0 0}
 .adicon{font-size:48px;display:block;text-align:center;padding:24px 0}
@@ -604,11 +622,13 @@ function userToDb(u) {
 }
 function dbToClub(r) {
   return { id:r.id, name:r.name, email:r.email, phone:r.phone||"", adminId:r.admin_id,
-           logo:r.logo||"", banner:r.banner||"", description:r.description||"", terms:r.terms||"" };
+           logo:r.logo||"", banner:r.banner||"", description:r.description||"", terms:r.terms||"",
+           ranks: r.ranks || null };
 }
 function clubToDb(c) {
   return { id:c.id, name:sanitize(c.name), email:(c.email||"").toLowerCase().trim(), phone:sanitize(c.phone)||"",
-           admin_id:c.adminId||null, logo:c.logo||"", banner:c.banner||"", description:c.description||"", terms:c.terms||"" };
+           admin_id:c.adminId||null, logo:c.logo||"", banner:c.banner||"", description:c.description||"", terms:c.terms||"",
+           ranks: c.ranks || null };
 }
 function dbToDrive(r, regs=[]) {
   return { id:r.id, clubId:r.club_id, postedBy:r.posted_by, title:r.title,
@@ -678,11 +698,14 @@ async function loadRemoteState() {
       SB.get("drive_registrations", "select=*"),
       SB.get("ads", "select=*&active=eq.true&order=created_at.desc"),
     ]);
+    const clubRanks = {};
+    clubs.forEach(r => { if (r.ranks) clubRanks[r.id] = r.ranks; });
     return {
-      users:  users.map(dbToUser),
-      clubs:  clubs.map(dbToClub),
-      drives: drives.map(d => dbToDrive(d, regs)),
-      ads:    ads.map(a => ({...a, desc: a.description||""})),
+      users:      users.map(dbToUser),
+      clubs:      clubs.map(dbToClub),
+      drives:     drives.map(d => dbToDrive(d, regs)),
+      ads:        ads.map(a => ({...a, desc: a.description||""})),
+      clubRanks,
     };
   } catch(e) { console.warn("[CLUBBB] loadRemoteState error:", e); return null; }
 }
@@ -1591,6 +1614,7 @@ function Registration({ type, clubs, onReg, back }) {
 /* ─── DASHBOARD ─────────────────────────────────────────────── */
 function Dashboard({ state, go, showToast }) {
   const { currentUser:cu, clubs:cs, drives:ds, ads, users:us, clubRanks } = state;
+  const [detailDrive, setDetail] = useState(null);
   const today    = new Date().toISOString().split("T")[0];
   const myCl     = cu.clubId ? getClub(cs, cu.clubId) : null;
   const rk       = getRank(cu.rankId, clubRanks, cu.clubId);
@@ -1734,6 +1758,15 @@ function Dashboard({ state, go, showToast }) {
           </div>
         ))}
       </>}
+      {detailDrive && (
+        <DriveDetailModal
+          drive={detailDrive}
+          state={state}
+          upd={() => {}}
+          showToast={showToast}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2391,7 +2424,10 @@ function ClubAdmin({ state, upd, showToast }) {
           <div style={{display:"flex", gap:12, flexWrap:"wrap", alignItems:"center"}}>
             <button className="btn gold sm" onClick={() => {
               const ranked = editRanks.map((r, i) => ({...r, level:i + 1}));
-              upd({ clubRanks: {...clubRanks, [cu.clubId]: ranked} });
+              upd({
+                clubRanks: {...clubRanks, [cu.clubId]: ranked},
+                clubs: cs.map(c => c.id === cu.clubId ? {...c, ranks: ranked} : c),
+              });
               showToast("Rank structure saved!");
             }}>SAVE RANK STRUCTURE</button>
             <button className="btn out sm" onClick={() => setEditRanks(DEFAULT_RANKS.map(r => ({...r})))}>RESET TO DEFAULTS</button>
@@ -5197,7 +5233,7 @@ function WeatherWarning({ location, date }) {
     async function fetch_wx() {
       try {
         // Geocode via Nominatim (free, no key)
-        const geo  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location+" UAE")}&format=json&limit=1`, {headers:{"Accept-Language":"en"}});
+        const geo  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location+" UAE")}&format=json&limit=1`, {headers:{"Accept-Language":"en","User-Agent":"CLUBBB/1.0"}});
         const gd   = await geo.json();
         if (!gd?.length) { setLoading(false); return; }
         const {lat,lon} = gd[0];
@@ -5276,12 +5312,13 @@ export default function App() {
         // Supabase is the source of truth — always use its data, even if empty
         setS(s => ({
           ...s,
-          users:  remote.users,
-          clubs:  remote.clubs,
-          drives: remote.drives,
-          ads:    remote.ads,
+          users:     remote.users,
+          clubs:     remote.clubs,
+          drives:    remote.drives,
+          ads:       remote.ads,
+          clubRanks: remote.clubRanks || s.clubRanks || {},
         }));
-        saveLocalState({ ...remote });
+        saveLocalState({ ...remote, clubRanks: remote.clubRanks || {} });
       }
       setSbReady(true);
     }).catch(() => setSbReady(true));
@@ -5365,6 +5402,13 @@ export default function App() {
       S.drives.forEach(o => {
         if (!patch.drives.find(d => d.id === o.id))
           SB.del("drives", { id: o.id }).catch(() => {});
+      });
+    }
+    // ── clubRanks: write ranks into the club row ──
+    if (patch.clubRanks) {
+      Object.entries(patch.clubRanks).forEach(([clubId, ranks]) => {
+        const club = (patch.clubs || S.clubs).find(c => String(c.id) === String(clubId));
+        if (club) SB.upsert("clubs", clubToDb({...club, ranks})).catch(e => console.error("[SB] clubRanks:", e));
       });
     }
     // ── ads: upsert changed (with temp→real id swap), delete removed ──
