@@ -1,29 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-/* ── SERVICE WORKER CACHE BUSTER ─────────────────────────────────
-   If there's a stale SW serving a cached blank page, this kills it
-   and forces a fresh reload. Runs once, then never again.
-─────────────────────────────────────────────────────────────────── */
-(async () => {
-  try {
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      if (regs.length > 0) {
-        // Check if we've already busted - avoid reload loop
-        const busted = sessionStorage.getItem("sw_busted_v3");
-        if (!busted) {
-          sessionStorage.setItem("sw_busted_v3", "1");
-          await Promise.all(regs.map(r => r.unregister()));
-          // Clear all caches
-          const keys = await caches.keys();
-          await Promise.all(keys.map(k => caches.delete(k)));
-          window.location.reload();
-        }
-      }
-    }
-  } catch(e) { /* silent */ }
-})();
-
 /* ═══ SUPABASE EDGE FUNCTION HELPERS ═══════════════════════════════
    Calls Supabase Edge Functions for email verification & notifications.
    Reads VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from .env
