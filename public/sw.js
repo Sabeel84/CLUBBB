@@ -1,5 +1,5 @@
 // CLUBBB Service Worker — enables PWA install + offline shell
-const CACHE = "clubbb-v1";
+const CACHE = "clubbb-v3";  // ← bumped to bust old cached blank page
 const SHELL  = ["/", "/index.html"];
 
 self.addEventListener("install", e => {
@@ -8,6 +8,7 @@ self.addEventListener("install", e => {
 });
 
 self.addEventListener("activate", e => {
+  // Delete ALL old caches (clubbb-v1, clubbb-v2, etc.)
   e.waitUntil(caches.keys().then(keys =>
     Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
   ));
@@ -16,10 +17,11 @@ self.addEventListener("activate", e => {
 
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
-  // Network first for API calls, cache first for shell
+  // Always network for Supabase API calls
   if (e.request.url.includes("/rest/v1/") || e.request.url.includes("supabase")) {
-    return; // Always network for Supabase
+    return;
   }
+  // Network first — fall back to cache only if offline
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request).then(r => r || caches.match("/")))
   );
