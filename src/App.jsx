@@ -575,17 +575,18 @@ const SB = {
 
 
 /* ═══ PWA — Service Worker + Install Prompt ════════════════════ */
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
-}
-
 let deferredInstall = null;
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  deferredInstall = e;
-});
+try {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredInstall = e;
+  });
+} catch(e) { /* PWA not supported */ }
 
 function usePWAInstall() {
   const [canInstall, setCanInstall] = useState(false);
@@ -749,12 +750,17 @@ const BLANK_STATE = {
   checklists:{}, ratings:{}, sos:[], liveTrack:{}, ads:[],
 };
 
-const INIT = { ...BLANK_STATE, ...(loadLocalState() || {}), liveTrack:{} };
+const INIT = (() => {
+  try { return { ...BLANK_STATE, ...(loadLocalState() || {}), liveTrack:{} }; }
+  catch(e) { return { ...BLANK_STATE }; }
+})();
 
 /* ── Detect ?reset=TOKEN in URL — checked once at module load ── */
 const URL_RESET_TOKEN = (() => {
-  try { return new URLSearchParams(window.location.search).get("reset") || null; }
-  catch(e) { return null; }
+  try {
+    if (typeof window === "undefined" || !window.location) return null;
+    return new URLSearchParams(window.location.search).get("reset") || null;
+  } catch(e) { return null; }
 })();
 
 /* ═══ UTILITY FUNCTIONS ══════════════════════════════════════ */
