@@ -56,6 +56,12 @@ serve(async (req) => {
       subject = "CLUBBB — Email Test ✅";
       html = testEmailHtml(APP_URL);
 
+    } else if (type === "password-reset") {
+      const name      = payload?.name      || "there";
+      const resetLink = payload?.resetLink || APP_URL;
+      subject = "CLUBBB — Reset Your Password";
+      html = passwordResetEmailHtml(name, resetLink, APP_URL);
+
     } else {
       return new Response(
         JSON.stringify({ error: `Unknown type: ${type}` }),
@@ -177,6 +183,27 @@ function clubEmailHtml(adminName: string, clubName: string, email: string, appUr
     <a href="${appUrl}" class="btn">VIEW STATUS →</a>
     <p class="text" style="margin-top:24px;font-size:13px;color:#9ca3af;">
       Questions? Reply to this email or contact the App Admin.
+    </p>
+  `, appUrl);
+}
+
+function passwordResetEmailHtml(name: string, resetLink: string, appUrl: string): string {
+  return baseHtml(`
+    <div class="title">Reset Your Password 🔑</div>
+    <p class="text">Hi ${name}, we received a request to reset your CLUBBB password.</p>
+    <p class="text">Click the button below to choose a new password. This link expires in <strong>1 hour</strong>.</p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${resetLink}" class="btn">RESET MY PASSWORD →</a>
+    </div>
+    <div class="highlight">
+      <div class="highlight-label">Security Notice</div>
+      <div class="highlight-value" style="font-size:13px;font-weight:400;color:#4a4a4a;line-height:1.6;">
+        If you did not request this, you can safely ignore this email.
+        Your password will not change unless you click the link above.
+      </div>
+    </div>
+    <p class="text" style="font-size:12px;color:#9ca3af;margin-top:24px;">
+      This link expires at ${new Date(Date.now() + 60*60*1000).toLocaleString("en-GB", {timeZone:"Asia/Dubai"})} (Dubai time).
     </p>
   `, appUrl);
 }
