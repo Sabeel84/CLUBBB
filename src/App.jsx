@@ -5623,7 +5623,6 @@ export default function App() {
   const go   = page  => { setS(s => ({...s, page})); setMob(false); };
   const login  = u   => { setS(s => ({...s, currentUser:u, page:"dashboard"})); setMob(false); };
   const logout = ()  => { setS(s => ({...s, currentUser:null, page:"home"})); setMob(false); };
-  const activePage   = (URL_RESET_TOKEN && !S.currentUser) ? "reset" : page;
 
   async function reg(type, form) {
     const emailExists = S.users.find(u => u.email.toLowerCase() === form.email.toLowerCase());
@@ -5701,6 +5700,7 @@ export default function App() {
   }
 
   const { currentUser:cu, page } = S;
+  const activePage = (URL_RESET_TOKEN && !S.currentUser) ? "reset" : page;
 
   const navItems = cu ? [
     {id:"dashboard",  label:"Dashboard"},
