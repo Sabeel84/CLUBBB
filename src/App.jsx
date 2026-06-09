@@ -1221,13 +1221,10 @@ function Home({ go, state }) {
                 const initials = (cl.name||"CL").slice(0,2).toUpperCase();
                 return (
                   <div key={cl.id} className="club-tile" onClick={() => go("reg-member")}>
-                    {cl.banner
-                      ? <img src={cl.banner} alt="" className="club-tile-banner" />
-                      : <div className="club-tile-placeholder">🏜️</div>
-                    }
+                    <div className="club-tile-placeholder" style={{height:60, fontSize:28}}>🏜️</div>
                     <div className="club-tile-body">
                       {cl.logo
-                        ? <img src={cl.logo} alt="" className="club-tile-logo-img" />
+                        ? <img src={cl.logo} alt="" style={{width:56,height:56,objectFit:"contain",borderRadius:10,marginTop:-28,position:"relative",zIndex:2,background:"transparent"}} />
                         : <div className="club-tile-logo-init">{initials}</div>
                       }
                       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
@@ -2520,18 +2517,14 @@ function ClubAdmin({ state, upd, showToast }) {
         <div>
           <div className="card">
             <div className="card-label">Club Branding</div>
-            <div className="fg">
-              <label className="fl">Club Banner</label>
-              <ImageUpload value={form.banner || ""} onChange={v => setForm({...form, banner:v})} height={180} label="Upload Banner Image" hint="Recommended: 1200 × 400px (wide landscape) · Max 10MB" />
-            </div>
-            <div className="g2" style={{marginTop:8}}>
-              <div className="fg">
+            <div style={{display:"flex", gap:20, alignItems:"flex-start", flexWrap:"wrap"}}>
+              <div style={{flex:"0 0 180px"}}>
                 <label className="fl">Club Logo</label>
-                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={160} label="Upload Logo" hint="Recommended: 400 × 400px (square) · Max 10MB" />
+                <ImageUpload value={form.logo || ""} onChange={v => setForm({...form, logo:v})} height={180} label="Upload Logo" hint="Square · 400×400px · Max 10MB" />
               </div>
-              <div className="fg">
+              <div style={{flex:1, minWidth:200}}>
                 <label className="fl">Club Description</label>
-                <textarea className="fi fi-ta" style={{height:130, resize:"none"}} value={form.description || ""} onChange={s("description")} />
+                <textarea className="fi fi-ta" style={{height:180, resize:"none"}} value={form.description || ""} onChange={s("description")} />
               </div>
             </div>
             <button className="btn gold sm" style={{marginTop:4}} onClick={() => {
