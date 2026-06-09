@@ -574,6 +574,30 @@ const SB = {
 };
 
 
+/* ═══ LOCATION PERMISSION HELPER ═══════════════════════════════
+   Requests location permission explicitly before GPS features are used.
+   Shows a friendly UI if denied instead of a cryptic error.
+═══════════════════════════════════════════════════════════════ */
+async function requestLocationPermission() {
+  if (!navigator.geolocation) return { ok: false, reason: "unavailable" };
+  // Check current permission state if supported
+  if (navigator.permissions) {
+    try {
+      const status = await navigator.permissions.query({ name: "geolocation" });
+      if (status.state === "granted")  return { ok: true };
+      if (status.state === "denied")   return { ok: false, reason: "denied" };
+    } catch(e) { /* permissions API not available */ }
+  }
+  // Trigger the browser permission prompt
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      ()    => resolve({ ok: true }),
+      err   => resolve({ ok: false, reason: err.code === 1 ? "denied" : "unavailable" }),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
 /* ═══ PWA — Service Worker + Install Prompt ════════════════════ */
 let deferredInstall = null;
 try {
@@ -3844,22 +3868,18 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
     return () => clearInterval(t);
   }, [cu.clubId]);
 
-  function triggerSOS() {
+  async function triggerSOS() {
     if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals with your GPS location.")) return;
-    if (!navigator.geolocation) {
-      showToast("GPS not available — sending SOS without location");
+    if (!navigator.geolocation) { sendSOS(null, null); return; }
+    const perm = await requestLocationPermission();
+    if (!perm.ok) {
+      showToast("⚠️ Location blocked — SOS sent without GPS coordinates");
       sendSOS(null, null);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       pos => sendSOS(pos.coords.latitude, pos.coords.longitude),
-      err => {
-        const msg = err.code === 1
-          ? "⚠️ Location blocked — SOS sent without GPS. Allow location in browser settings."
-          : "⚠️ GPS unavailable — SOS sent without coordinates.";
-        showToast(msg);
-        sendSOS(null, null);
-      },
+      ()  => sendSOS(null, null),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   }
@@ -4504,6 +4524,7 @@ function RouteRecorder({ drive, state, showToast }) {
   const [watchId,   setWatchId]   = useState(null);
   const [selRoute,  setSelRoute]  = useState(null);
   const [loading,   setLoading]   = useState(true);
+  const [gpsBlocked, setGpsBlocked] = useState(false);
   const mapRef  = useRef(null);
   const mapObj  = useRef(null);
   const polyRef = useRef({});
@@ -4608,9 +4629,20 @@ function RouteRecorder({ drive, state, showToast }) {
   }
 
   // ── Start recording ──
-  function startRecording() {
-    if (!canManage) { showToast("Only Marshals and Admin can record routes"); return; }
+  async function startRecording() {
+    if (!canManage) { showToast("Only registered members can record routes"); return; }
     if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
+    // Request permission first
+    const perm = await requestLocationPermission();
+    if (!perm.ok) {
+      if (perm.reason === "denied") {
+        setGpsBlocked(true);
+        return;
+      }
+      showToast("❌ GPS unavailable. Move to an open area and try again.");
+      return;
+    }
+    setGpsBlocked(false);
     const start = Date.now();
     setStartTime(start);
     setPath([]);
@@ -4745,6 +4777,25 @@ ${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).
 
       {/* Controls — only marshal/admin can record */}
       <div style={{display:"flex", gap:10, marginBottom:20, flexWrap:"wrap", alignItems:"center"}}>
+        {gpsBlocked && (
+          <div style={{background:"rgba(220,38,38,.06)", border:"1px solid rgba(220,38,38,.25)", borderRadius:"var(--r-lg)", padding:"14px 16px", marginBottom:8, width:"100%"}}>
+            <div style={{fontWeight:700, fontSize:14, color:"var(--red)", marginBottom:6}}>📍 Location Access Blocked</div>
+            <div style={{fontSize:13, color:"var(--mid)", lineHeight:1.6, marginBottom:10}}>
+              Your browser has blocked location access for this site. To enable it:
+            </div>
+            <div style={{fontSize:12, color:"var(--ink)", lineHeight:1.8}}>
+              <strong>Chrome/Edge:</strong> Click the 🔒 lock icon in the address bar → Location → Allow<br/>
+              <strong>Firefox:</strong> Click the lock icon → Clear Permission → refresh and Allow<br/>
+              <strong>iPhone Safari:</strong> Settings → Safari → Location → Allow<br/>
+              <strong>Android Chrome:</strong> Tap ⋮ menu → Settings → Site Settings → Location → Allow
+            </div>
+            <button className="btn gold sm" style={{marginTop:12}} onClick={async () => {
+              const perm = await requestLocationPermission();
+              if (perm.ok) { setGpsBlocked(false); showToast("✅ Location access granted!"); }
+              else showToast("Still blocked — please follow the steps above");
+            }}>🔄 Try Again</button>
+          </div>
+        )}
         {canManage ? (
           <>
             {!recording
