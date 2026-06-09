@@ -513,7 +513,7 @@ a{color:var(--acc);text-decoration:none}
 .waitbdg{background:var(--orange-pale);color:var(--orange);border:1px solid rgba(234,88,12,.2);padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;text-transform:uppercase}
 `; }
 function fmtDate(d) { if (!d) return null; try { return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"}); } catch(e) { return d; } }
-function fmtTime(t) { if (!t) return null; const [h,m]=t.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; }
+function fmtTime(t) { if (!t) return null; const parts=t.split(":"); const hr=Number(parts[0]); const mn=parts[1]; return `${hr===0?12:hr>12?hr-12:hr}:${mn} ${hr<12?"AM":"PM"}`; }
 
 /* ═══ SUPABASE REST CLIENT ════════════════════════════════════ */
 const SB = {
@@ -2248,7 +2248,7 @@ function CreateDrive({ clubId, ranks, onClose, onSave }) {
         <label className="fl">Start Time <span style={{color:"var(--red)"}}>*</span></label>
         <input className="fi" type="time" value={f.startTime} onChange={s("startTime")} />
         {f.startTime && <div style={{fontSize:11, color:"var(--mid)", marginTop:5}}>
-          Meetup: {(() => { const [h,m]=f.startTime.split(":"); const hr=Number(h); return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`; })()}
+          Meetup: {fmtTime(f.startTime)}
         </div>}
       </div>
       <div className="fg"><label className="fl">GPS Coordinates</label><input className="fi" value={f.coordinates} onChange={s("coordinates")} placeholder="23.11° N, 53.77° E" /></div>
@@ -4687,8 +4687,8 @@ ${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).
   }
 
   function fmt(s) {
-    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m ${sec}s`;
+    const hrs = Math.floor(s/3600); const mins = Math.floor((s%3600)/60); const secs = s%60;
+    return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m ${secs}s`;
   }
 
   return (
