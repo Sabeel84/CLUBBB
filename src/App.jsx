@@ -3847,10 +3847,17 @@ function LiveTracker({ drive, state, upd, showToast }) {
 /* ════════════════════════════════════════════════════════
    FEATURE 2 — SOS EMERGENCY
 ════════════════════════════════════════════════════════ */
-function SOSPanel({ state, upd, showToast, pushNotif }) {
+function SOSPanel({ state, upd, showToast, pushNotif, drive }) {
   const { currentUser:cu, users:us, clubs:cs } = state;
   const myClub   = cu.clubId ? getClub(cs, cu.clubId) : null;
-  const marshals = us.filter(u => u.clubId === cu.clubId && ["marshal","admin"].includes(u.role) && u.id !== cu.id);
+  // Only alert marshals/admins who are registered in THIS specific drive
+  const driveRegisteredIds = drive?.registrations?.map(r => r.userId) || [];
+  const marshals = us.filter(u =>
+    u.clubId === cu.clubId &&
+    ["marshal","admin"].includes(u.role) &&
+    u.id !== cu.id &&
+    (driveRegisteredIds.length === 0 || driveRegisteredIds.includes(u.id))
+  );
   const [alerts,    setAlerts]    = useState([]);
   const [myActive,  setMyActive]  = useState(null);
 
@@ -3869,7 +3876,7 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
   }, [cu.clubId]);
 
   function triggerSOS() {
-    if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals with your GPS location.")) return;
+    if (!window.confirm("🚨 SEND SOS?\n\nThis will alert the marshals in this drive with your GPS location.")) return;
     if (!navigator.geolocation) { sendSOS(null, null); return; }
     navigator.geolocation.getCurrentPosition(
       pos => sendSOS(pos.coords.latitude, pos.coords.longitude),
@@ -3898,14 +3905,18 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
       setAlerts(a => [saved, ...a]);
       setMyActive(saved);
     }
-    marshals.forEach(m => pushNotif({
-      type:"sos", title:"🚨 SOS ALERT",
-      body: lat
-        ? `${cu.name} needs help at ${lat.toFixed(4)}°N ${lng.toFixed(4)}°E`
-        : `${cu.name} needs help — no GPS`,
-      to: m.id
-    }));
-    showToast("🚨 SOS sent to " + marshals.length + " marshal(s)!");
+    // Send push notification only to marshals registered in this drive
+    const sosBody = lat
+      ? `${cu.name} needs help at ${lat.toFixed(4)}°N ${lng.toFixed(4)}°E`
+      : `${cu.name} needs help — no GPS`;
+    invokeEdge("send-push", {
+      user_ids: marshals.map(m => m.id),
+      title:    "🚨 SOS ALERT",
+      body:     sosBody,
+      url:      "/",
+      tag:      "sos",
+    }).catch(() => {});
+    showToast("🚨 SOS sent to " + marshals.length + " marshal(s) in this drive!");
   }
 
   async function resolveAlert(id) {
@@ -5037,7 +5048,7 @@ function DriveDetailModal({ drive: driveProp, state, upd, showToast, onClose }) 
       )}
 
       {tab === "route"     && <RouteRecorder drive={drive} state={state} showToast={showToast} />}
-      {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={showToast} />}
+      {tab === "sos"       && <SOSPanel      state={state} upd={upd} showToast={showToast} pushNotif={showToast} drive={state.drives.find(d=>d.id===drive.id)||drive} />}
       {tab === "checklist" && <DriveChecklist drive={drive} state={state} upd={upd} showToast={showToast} />}
       {tab === "chat"      && <ClubChat      state={state} upd={upd} showToast={showToast} forcedClubId={drive.clubId} />}
       {tab === "rating"    && <DriveRating   drive={drive} state={state} upd={upd} showToast={showToast} />}
