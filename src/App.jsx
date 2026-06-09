@@ -3868,18 +3868,18 @@ function SOSPanel({ state, upd, showToast, pushNotif }) {
     return () => clearInterval(t);
   }, [cu.clubId]);
 
-  async function triggerSOS() {
+  function triggerSOS() {
     if (!window.confirm("🚨 SEND SOS?\n\nThis will alert all marshals with your GPS location.")) return;
     if (!navigator.geolocation) { sendSOS(null, null); return; }
-    const perm = await requestLocationPermission();
-    if (!perm.ok) {
-      showToast("⚠️ Location blocked — SOS sent without GPS coordinates");
-      sendSOS(null, null);
-      return;
-    }
     navigator.geolocation.getCurrentPosition(
       pos => sendSOS(pos.coords.latitude, pos.coords.longitude),
-      ()  => sendSOS(null, null),
+      err => {
+        const msg = err.code === 1
+          ? "⚠️ Location blocked — SOS sent without GPS. Allow location:\nSettings → Privacy → Location Services → Safari → While Using"
+          : "⚠️ GPS unavailable — SOS sent without coordinates.";
+        showToast(msg);
+        sendSOS(null, null);
+      },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   }
@@ -4629,19 +4629,9 @@ function RouteRecorder({ drive, state, showToast }) {
   }
 
   // ── Start recording ──
-  async function startRecording() {
+  function startRecording() {
     if (!canManage) { showToast("Only registered members can record routes"); return; }
     if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
-    // Request permission first
-    const perm = await requestLocationPermission();
-    if (!perm.ok) {
-      if (perm.reason === "denied") {
-        setGpsBlocked(true);
-        return;
-      }
-      showToast("❌ GPS unavailable. Move to an open area and try again.");
-      return;
-    }
     setGpsBlocked(false);
     const start = Date.now();
     setStartTime(start);
@@ -4665,11 +4655,11 @@ function RouteRecorder({ drive, state, showToast }) {
         setRecording(false);
         setWatchId(null);
         if (err.code === 1) {
-          showToast("❌ Location permission denied. Allow location in browser settings, then try again.");
+          setGpsBlocked(true);  // Show the step-by-step unblock guide
         } else if (err.code === 2) {
-          showToast("❌ GPS signal lost. Move to open area and try again.");
+          showToast("❌ GPS signal unavailable. Move to open area and try again.");
         } else {
-          showToast("❌ GPS timed out. Try again in a better location.");
+          showToast("❌ GPS timed out. Move to open area and try again.");
         }
       },
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
@@ -4789,10 +4779,9 @@ ${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).
               <strong>iPhone Safari:</strong> Settings → Safari → Location → Allow<br/>
               <strong>Android Chrome:</strong> Tap ⋮ menu → Settings → Site Settings → Location → Allow
             </div>
-            <button className="btn gold sm" style={{marginTop:12}} onClick={async () => {
-              const perm = await requestLocationPermission();
-              if (perm.ok) { setGpsBlocked(false); showToast("✅ Location access granted!"); }
-              else showToast("Still blocked — please follow the steps above");
+            <button className="btn gold sm" style={{marginTop:12}} onClick={() => {
+              setGpsBlocked(false);
+              setTimeout(() => startRecording(), 100);
             }}>🔄 Try Again</button>
           </div>
         )}
