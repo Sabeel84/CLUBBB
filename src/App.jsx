@@ -1100,43 +1100,39 @@ function Home({ go, state }) {
         <p style={{
           fontSize:"clamp(16px,3vw,20px)", color:"rgba(255,255,255,.6)",
           margin:"0 auto 8px", maxWidth:480, lineHeight:1.5, fontWeight:400,
-        }}>The UAE's premier off-road driving community.</p>
+        }}>The world's premier off-road driving community.</p>
         <p style={{
           fontSize:14, color:"rgba(255,255,255,.35)",
           margin:"0 auto 36px", fontWeight:400,
         }}>Join a club. Conquer the dunes. Build your legend.</p>
 
-        {/* CTA buttons — stacked on mobile, row on desktop */}
+        {/* CTA buttons — clean row on desktop, stacked on mobile */}
         <div style={{
-          display:"flex", gap:12, justifyContent:"center",
-          flexDirection:"column", alignItems:"center",
-          maxWidth:320, margin:"0 auto 40px",
+          display:"flex", gap:12, justifyContent:"center", alignItems:"center",
+          flexWrap:"wrap", margin:"0 auto 40px", maxWidth:600,
         }}>
-          <style>{`@media(min-width:600px){.hero-cta-wrap{flex-direction:row!important;max-width:none!important}}`}</style>
-          <div className="hero-cta-wrap" style={{display:"flex", flexDirection:"column", gap:12, width:"100%", alignItems:"center"}}>
-            {/* Primary — Gold */}
-            <button onClick={() => go("reg-member")} style={{
-              width:"100%", padding:"15px 28px", borderRadius:14, border:"none",
-              background:"linear-gradient(135deg,var(--acc2),var(--acc))",
-              color:"#0a0a0a", fontSize:15, fontWeight:800, cursor:"pointer",
-              fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:.3,
-              boxShadow:"0 4px 20px rgba(232,163,12,.4)",
-            }}>🏜️ Join a Club</button>
-            {/* Secondary — Dark outlined */}
-            <button onClick={() => go("reg-club")} style={{
-              width:"100%", padding:"15px 28px", borderRadius:14,
-              background:"rgba(255,255,255,.08)", border:"1.5px solid rgba(255,255,255,.2)",
-              color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer",
-              fontFamily:"'Plus Jakarta Sans',sans-serif",
-            }}>🏴 Register Your Club</button>
-            {/* Tertiary — Subtle */}
-            <button onClick={() => go("login")} style={{
-              width:"100%", padding:"14px 28px", borderRadius:14,
-              background:"rgba(255,255,255,.04)", border:"1px solid rgba(255,255,255,.1)",
-              color:"rgba(255,255,255,.55)", fontSize:14, fontWeight:600, cursor:"pointer",
-              fontFamily:"'Plus Jakarta Sans',sans-serif",
-            }}>Sign In →</button>
-          </div>
+          <button onClick={() => go("reg-member")} style={{
+            padding:"14px 32px", borderRadius:12, border:"none",
+            background:"linear-gradient(135deg,var(--acc2),var(--acc))",
+            color:"#0a0a0a", fontSize:15, fontWeight:800, cursor:"pointer",
+            fontFamily:"'Plus Jakarta Sans',sans-serif",
+            boxShadow:"0 4px 20px rgba(232,163,12,.4)",
+            whiteSpace:"nowrap",
+          }}>🏜️ Join a Club</button>
+          <button onClick={() => go("reg-club")} style={{
+            padding:"14px 32px", borderRadius:12,
+            background:"rgba(255,255,255,.08)", border:"1.5px solid rgba(255,255,255,.25)",
+            color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer",
+            fontFamily:"'Plus Jakarta Sans',sans-serif",
+            whiteSpace:"nowrap",
+          }}>🏴 Register Your Club</button>
+          <button onClick={() => go("login")} style={{
+            padding:"14px 28px", borderRadius:12,
+            background:"transparent", border:"1px solid rgba(255,255,255,.15)",
+            color:"rgba(255,255,255,.6)", fontSize:14, fontWeight:600, cursor:"pointer",
+            fontFamily:"'Plus Jakarta Sans',sans-serif",
+            whiteSpace:"nowrap",
+          }}>Sign In →</button>
         </div>
 
         {/* Live stats — social proof */}
