@@ -4836,9 +4836,11 @@ ${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).
 /* ════════════════════════════════════════════════════════
    DRIVE DETAIL MODAL — combines tracker, checklist, rating
 ════════════════════════════════════════════════════════ */
-function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
+function DriveDetailModal({ drive: driveProp, state, upd, showToast, onClose }) {
   const [tab, setTab] = useState("info");
   const { currentUser:cu, users:us, clubRanks } = state;
+  // Always use live drive from state so updates (checklist items, registrations) are reflected
+  const drive = state.drives.find(d => d.id === driveProp.id) || driveProp;
   const canManage = ["admin","marshal"].includes(cu.role);
   const tabs = [
     { id:"info",      label:"Info" },
