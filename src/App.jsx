@@ -650,6 +650,7 @@ function dbToDrive(r, regs=[]) {
            mapLink:r.map_link||"", date:r.date||"", startTime:r.start_time||"",
            requiredRankId:r.required_rank_id||1, capacity:r.capacity||10,
            image:r.image||"", attendanceRecorded:r.attendance_recorded||false,
+           checklistItems: r.checklist_items || [],
            registrations: regs.filter(x=>x.drive_id===r.id).map(x=>({userId:x.user_id, status:x.status, attended:x.attended||false})) };
 }
 function driveToDB(d) {
@@ -657,7 +658,8 @@ function driveToDB(d) {
                 description:d.description||"", location:d.location||"", coordinates:d.coordinates||"",
                 map_link:d.mapLink||"", date:d.date||null, start_time:d.startTime||null,
                 required_rank_id:Number(d.requiredRankId)||1, capacity:Number(d.capacity)||10,
-                attendance_recorded:d.attendanceRecorded||false };
+                attendance_recorded:d.attendanceRecorded||false,
+                checklist_items: d.checklistItems && d.checklistItems.length > 0 ? d.checklistItems : null };
   if (d.id && typeof d.id==="number" && d.id < 2000000000) row.id = d.id;
   // Store image URL if it's a remote URL (not base64)
   if (d.image && d.image.startsWith("http")) row.image = d.image;
@@ -708,7 +710,7 @@ async function loadRemoteState() {
     const [users, clubs, drives, regs, ads] = await Promise.all([
       SB.get("users", "select=*&order=created_at.asc"),
       SB.get("clubs", "select=*&order=created_at.asc"),
-      SB.get("drives", "select=id,club_id,posted_by,title,description,location,coordinates,map_link,date,start_time,required_rank_id,capacity,attendance_recorded,image,created_at&order=date.desc"),
+      SB.get("drives", "select=id,club_id,posted_by,title,description,location,coordinates,map_link,date,start_time,required_rank_id,capacity,attendance_recorded,image,checklist_items,created_at&order=date.desc"),
       SB.get("drive_registrations", "select=*"),
       SB.get("ads", "select=*&active=eq.true&order=created_at.desc"),
     ]);
@@ -4214,6 +4216,23 @@ const CHECKLIST_ITEMS = [
 
 function DriveChecklist({ drive, state, upd, showToast }) {
   const { currentUser:cu, users:us, checklists = {}, clubs:cs } = state;
+  const [loaded, setLoaded] = useState(false);
+
+  // Load ticks from Supabase on mount
+  useEffect(() => {
+    if (!SUPA_URL || !SUPA_KEY || loaded) return;
+    SB.get("checklist_ticks", `drive_id=eq.${drive.id}`)
+      .then(rows => {
+        if (!rows || rows.length === 0) { setLoaded(true); return; }
+        const newChecks = { ...(state.checklists[drive.id] || {}) };
+        rows.forEach(r => {
+          try { newChecks[r.user_id] = JSON.parse(r.ticks); } catch(e) {}
+        });
+        upd({ checklists: { ...state.checklists, [drive.id]: newChecks } });
+        setLoaded(true);
+      }).catch(() => setLoaded(true));
+  }, [drive.id]);
+
   const driveChecks  = checklists[drive.id] || {};
   const myCheck      = driveChecks[cu.id]   || {};
   const isAdmin      = ["admin","marshal"].includes(cu.role);
@@ -4235,6 +4254,13 @@ function DriveChecklist({ drive, state, upd, showToast }) {
   function toggle(itemId) {
     const updated = { ...myCheck, [itemId]: !myCheck[itemId], ts: Date.now() };
     upd({ checklists: { ...checklists, [drive.id]: { ...driveChecks, [cu.id]: updated } } });
+    // Persist tick to Supabase
+    if (SUPA_URL && SUPA_KEY) {
+      SB.upsert("checklist_ticks", {
+        drive_id: drive.id, user_id: cu.id,
+        ticks: JSON.stringify({ ...updated }),
+      }).catch(() => {});
+    }
     if (!myCheck[itemId] && done + 1 === allItems.length) showToast("✅ All checks done — you're ready!");
   }
 
