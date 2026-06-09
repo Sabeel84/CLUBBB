@@ -2400,8 +2400,7 @@ function MembersTab({ members, myRanks, clubRanks, cu, myCl, promos, us, upd, sh
     const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], {type:"text/csv"});
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = `${myCl?.name||"club"}-members.csv`; a.click();
+    Object.assign(document.createElement("a"),{href:url,download:`${myCl?.name||"club"}-members.csv`}).click();
     URL.revokeObjectURL(url);
   }
 
@@ -4681,8 +4680,7 @@ ${pts.map(p => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts).
 </gpx>`;
     const blob = new Blob([gpx], {type:"application/gpx+xml"});
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = `${drive.title}-${route.user_name}.gpx`; a.click();
+    Object.assign(document.createElement("a"),{href:url,download:`${drive.title}-${route.user_name}.gpx`}).click();
     URL.revokeObjectURL(url);
   }
 
@@ -4841,8 +4839,7 @@ function DriveDetailModal({ drive, state, upd, showToast, onClose }) {
     const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], {type:"text/csv"});
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = `${drive.title}-registrations.csv`; a.click();
+    Object.assign(document.createElement("a"),{href:url,download:`${drive.title}-registrations.csv`}).click();
     URL.revokeObjectURL(url);
   }
 
