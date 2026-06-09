@@ -1221,17 +1221,19 @@ function Home({ go, state }) {
                 const initials = (cl.name||"CL").slice(0,2).toUpperCase();
                 return (
                   <div key={cl.id} className="club-tile" onClick={() => go("reg-member")}>
-                    <div className="club-tile-placeholder" style={{height:60, fontSize:28}}>🏜️</div>
-                    <div className="club-tile-body">
-                      {cl.logo
-                        ? <img src={cl.logo} alt="" style={{width:56,height:56,objectFit:"contain",borderRadius:10,marginTop:-28,position:"relative",zIndex:2,background:"transparent"}} />
-                        : <div className="club-tile-logo-init">{initials}</div>
-                      }
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                        <div className="club-tile-name">{cl.name}</div>
-                        <ClubTierBadge club={cl} users={users} drives={drives} />
+                    <div className="club-tile-body" style={{padding:"20px 16px 16px"}}>
+                      {/* Logo + Name row */}
+                      <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:10}}>
+                        {cl.logo
+                          ? <img src={cl.logo} alt="" style={{width:48,height:48,objectFit:"contain",borderRadius:10,flexShrink:0,background:"var(--bg3)"}} />
+                          : <div className="club-tile-logo-init" style={{margin:0,flexShrink:0}}>{initials}</div>
+                        }
+                        <div style={{flex:1,minWidth:0}}>
+                          <div className="club-tile-name">{cl.name}</div>
+                          <ClubTierBadge club={cl} users={users} drives={drives} />
+                        </div>
                       </div>
-                      {cl.description && <div className="club-tile-desc">{cl.description}</div>}
+                      {cl.description && <div className="club-tile-desc" style={{marginBottom:12}}>{cl.description}</div>}
                       <div className="club-tile-foot">
                         <div className="club-tile-stat">
                           <div className="club-tile-stat-num">{memberCount}</div>
