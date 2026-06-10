@@ -6,6 +6,62 @@ import { useState, useEffect, useRef } from "react";
    Set these in Vercel → Project → Settings → Environment Variables.
 ═══════════════════════════════════════════════════════════════════ */
 const SUPA_URL  = import.meta.env.VITE_SUPABASE_URL  || "";
+
+/* ══ GLOBAL GPS RECORDER — lives outside React, survives navigation ══
+   This singleton keeps GPS running even when DriveDetailModal closes.
+══════════════════════════════════════════════════════════════════════ */
+const GPS = {
+  watchId:   null,
+  driveId:   null,
+  userId:    null,
+  userName:  null,
+  path:      [],        // ALL collected points
+  distance:  0,
+  startTime: null,
+  active:    false,
+  listeners: [],
+
+  subscribe(fn) { this.listeners.push(fn); return () => { this.listeners = this.listeners.filter(l => l !== fn); }; },
+  emit()        { this.listeners.forEach(fn => fn()); },
+
+  start(driveId, userId, userName) {
+    if (this.active) return;
+    if (!navigator.geolocation) return false;
+    this.driveId   = driveId;
+    this.userId    = userId;
+    this.userName  = userName;
+    this.path      = [];
+    this.distance  = 0;
+    this.startTime = Date.now();
+    this.active    = true;
+
+    this.watchId = navigator.geolocation.watchPosition(
+      pos => {
+        const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
+        if (this.path.length > 0) {
+          const prev = this.path[this.path.length - 1];
+          const R = 6371, dLat = (pt.lat-prev.lat)*Math.PI/180, dLng = (pt.lng-prev.lng)*Math.PI/180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(prev.lat*Math.PI/180)*Math.cos(pt.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+          this.distance += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        this.path.push(pt);
+        this.emit();
+      },
+      err => { if (err.code === 1) { this.stop(); } },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
+    );
+    this.emit();
+    return true;
+  },
+
+  stop() {
+    if (this.watchId !== null) { navigator.geolocation.clearWatch(this.watchId); this.watchId = null; }
+    this.active = false;
+    this.emit();
+  },
+
+  getElapsed() { return this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0; },
+};
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 async function invokeEdge(fnName, body) {
@@ -4518,19 +4574,38 @@ function RouteRecorder({ drive, state, showToast }) {
   const isRegistered = drive.registrations?.find(r => r.userId === cu.id && r.status === "confirmed");
   const canManage   = ["admin","marshal"].includes(cu.role) || !!isRegistered;
   const [routes,    setRoutes]    = useState([]);
-  const [recording, setRecording] = useState(false);
-  const [path,      setPath]      = useState([]);
-  const [startTime, setStartTime] = useState(null);
+  // Sync from GPS singleton — works even after navigating away and back
+  const [recording, setRecording] = useState(GPS.active && GPS.driveId === drive.id);
+  const [path,      setPath]      = useState(GPS.active && GPS.driveId === drive.id ? [...GPS.path] : []);
   const [elapsed,   setElapsed]   = useState(0);
-  const [distance,  setDistance]  = useState(0);
-  const [watchId,   setWatchId]   = useState(null);
+  const [distance,  setDistance]  = useState(GPS.active && GPS.driveId === drive.id ? GPS.distance : 0);
   const [selRoute,  setSelRoute]  = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [gpsBlocked, setGpsBlocked] = useState(false);
-  const mapRef  = useRef(null);
-  const mapObj  = useRef(null);
-  const polyRef = useRef({});
-  const timerRef = useRef(null);
+  const mapRef     = useRef(null);
+  const mapObj     = useRef(null);
+  const polyRef    = useRef({});
+  const livePolyRef = useRef(null);
+  const timerRef   = useRef(null);
+
+  // Subscribe to GPS updates — re-renders whenever a new GPS point arrives
+  useEffect(() => {
+    const unsub = GPS.subscribe(() => {
+      if (GPS.driveId !== drive.id) return;
+      setRecording(GPS.active);
+      setPath([...GPS.path]);
+      setDistance(GPS.distance);
+    });
+    // If recording is active when we mount, restart the elapsed timer
+    if (GPS.active && GPS.driveId === drive.id) {
+      timerRef.current = setInterval(() => setElapsed(GPS.getElapsed()), 1000);
+    }
+    return () => {
+      unsub();
+      clearInterval(timerRef.current);
+      // NOTE: GPS keeps running — do NOT stop it on unmount
+    };
+  }, [drive.id]);
 
   // ── Load Leaflet ──
   const [leafletReady, setLeafletReady] = useState(!!window.L);
@@ -4606,19 +4681,23 @@ function RouteRecorder({ drive, state, showToast }) {
     if (allPts.length > 0) map.fitBounds(allPts, {padding:[30,30]});
   }, [routes, selRoute]);
 
-  // ── Draw live recording path ──
-  const livePolyRef = useRef(null);
+  // ── Draw live path through ALL collected GPS points ──
   useEffect(() => {
-    if (!mapObj.current || !window.L || path.length < 2) return;
+    if (!mapObj.current || !window.L || path.length < 1) return;
     const L   = window.L;
     const map = mapObj.current;
     const pts = path.map(p => [p.lat, p.lng]);
     if (livePolyRef.current) {
+      // Update existing polyline with all points
       livePolyRef.current.setLatLngs(pts);
-    } else {
-      livePolyRef.current = L.polyline(pts, {color:"#f5c842", weight:5, opacity:1}).addTo(map);
+    } else if (pts.length >= 2) {
+      livePolyRef.current = L.polyline(pts, {
+        color:"#f5c842", weight:5, opacity:1,
+        lineJoin:"round", lineCap:"round",
+      }).addTo(map);
     }
-    map.panTo(pts[pts.length - 1]);
+    // Pan to latest position
+    if (pts.length > 0) map.panTo(pts[pts.length - 1]);
   }, [path]);
 
   // ── Haversine distance calc ──
@@ -4635,76 +4714,52 @@ function RouteRecorder({ drive, state, showToast }) {
     if (!canManage) { showToast("Only registered members can record routes"); return; }
     if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
     setGpsBlocked(false);
-    const start = Date.now();
-    setStartTime(start);
+    const ok = GPS.start(drive.id, cu.id, cu.name);
+    if (ok === false) { showToast("❌ GPS not available"); return; }
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setElapsed(GPS.getElapsed()), 1000);
+    setRecording(true);
     setPath([]);
     setDistance(0);
     setElapsed(0);
-
-    timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now()-start)/1000)), 1000);
-
-    const id = navigator.geolocation.watchPosition(
-      pos => {
-        const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
-        setPath(prev => {
-          const d = prev.length > 0 ? haversine(prev[prev.length-1], pt) : 0;
-          setDistance(dist => dist + d);
-          return [...prev, pt];
-        });
-      },
-      err => {
-        clearInterval(timerRef.current);
-        setRecording(false);
-        setWatchId(null);
-        if (err.code === 1) {
-          setGpsBlocked(true);  // Show the step-by-step unblock guide
-        } else if (err.code === 2) {
-          showToast("❌ GPS signal unavailable. Move to open area and try again.");
-        } else {
-          showToast("❌ GPS timed out. Move to open area and try again.");
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
-    );
-
-    setWatchId(id);
-    setRecording(true);
-    showToast("🛣️ Route recording started!");
+    showToast("🛣️ Recording started — you can navigate away, GPS keeps running!");
   }
 
   // ── Stop and save ──
   async function stopRecording() {
-    if (watchId) navigator.geolocation?.clearWatch(watchId);
     clearInterval(timerRef.current);
-    setWatchId(null);
+    const finalPath     = [...GPS.path];
+    const finalDistance = GPS.distance;
+    const finalElapsed  = GPS.getElapsed();
+    GPS.stop();
     setRecording(false);
 
-    if (path.length < 2) { showToast("Route too short to save"); return; }
-
-    const durationMin = elapsed / 60;
-    const avgSpeed    = durationMin > 0 ? distance / (durationMin / 60) : 0;
-
-    showToast("💾 Saving route...");
+    if (finalPath.length < 2) {
+      showToast("Route too short — need at least 2 GPS points");
+      return;
+    }
+    const durationMin = finalElapsed / 60;
+    const avgSpeed    = durationMin > 0 ? finalDistance / (durationMin / 60) : 0;
+    showToast("💾 Saving route (" + finalPath.length + " points)...");
     const saved = await SB.insert("drive_routes", {
       drive_id:     drive.id,
       user_id:      cu.id,
       user_name:    cu.name,
-      path:         path,
-      distance_km:  distance,
+      path:         finalPath,
+      distance_km:  finalDistance,
       duration_min: durationMin,
       avg_speed:    avgSpeed,
       is_official:  false,
     });
-
     if (saved) {
-      showToast("✅ Route saved!");
+      showToast("✅ Route saved! " + finalPath.length + " GPS points, " + finalDistance.toFixed(2) + "km");
+      setPath([]);
+      setDistance(0);
+      setElapsed(0);
       if (livePolyRef.current && mapObj.current) {
         mapObj.current.removeLayer(livePolyRef.current);
         livePolyRef.current = null;
       }
-      setPath([]);
-      setDistance(0);
-      setElapsed(0);
       loadRoutes();
     }
   }
@@ -5611,6 +5666,19 @@ export default function App() {
             .catch(() => {});
         }} />
         {toast && <Toast msg={toast} done={() => setToast(null)} />}
+      {GPS.active && (
+        <div onClick={() => { go("drives"); }} style={{
+          position:"fixed", top:56, left:0, right:0, zIndex:450, cursor:"pointer",
+          background:"rgba(220,38,38,.92)", backdropFilter:"blur(4px)",
+          padding:"9px 16px", display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+        }}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:"#fff",
+            boxShadow:"0 0 0 2px rgba(255,255,255,.4)",animation:"spin 2s linear infinite"}} />
+          <span style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:.3}}>
+            🛣️ Route recording active — tap to return
+          </span>
+        </div>
+      )}
       </>
     );
   }
