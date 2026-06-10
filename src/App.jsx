@@ -2279,14 +2279,46 @@ function Drives({ state, upd, showToast, pushNotif }) {
           drive={ds.find(d => d.id === attM.id) || attM}
           state={state}
           onClose={() => setAttM(null)}
-          onSave={(driveId, presentMap, presentCount) => {
-            upd({ drives: ds.map(d => d.id === driveId
+          onSave={async (driveId, presentMap, presentCount) => {
+            // 1. Update local state immediately
+            const updatedDrives = ds.map(d => d.id === driveId
               ? {...d, attendanceRecorded:true,
                  registrations: d.registrations.map(r => r.status === "confirmed"
                    ? {...r, attended: !!presentMap[r.userId]} : r)}
-              : d) });
+              : d);
+            upd({ drives: updatedDrives });
+
+            // 2. Save attendance_recorded on the drive
+            if (SUPA_URL && SUPA_KEY) {
+              await SB.patch("drives", { id: driveId }, { attendance_recorded: true });
+
+              // 3. Save each registration's attended status directly via PATCH
+              const drive = ds.find(d => d.id === driveId);
+              if (drive) {
+                for (const reg of drive.registrations.filter(r => r.status === "confirmed")) {
+                  const attended = !!presentMap[reg.userId];
+                  // Use patch by composite match
+                  await fetch(`${SUPA_URL}/rest/v1/drive_registrations?drive_id=eq.${driveId}&user_id=eq.${reg.userId}`, {
+                    method: "PATCH",
+                    headers: {
+                      "apikey": SUPA_KEY,
+                      "Authorization": `Bearer ${SUPA_KEY}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ attended }),
+                  }).catch(() => {});
+                  // 4. Increment drives_count for attended members
+                  if (attended) {
+                    const u = state.users.find(u => u.id === reg.userId);
+                    if (u) {
+                      await SB.patch("users", { id: u.id }, { drives_count: (u.drives || 0) + 1 });
+                    }
+                  }
+                }
+              }
+            }
             setAttM(null);
-            showToast(`Attendance recorded — ${presentCount} present`);
+            showToast(`✅ Attendance recorded — ${presentCount} present`);
           }}
         />
       )}
